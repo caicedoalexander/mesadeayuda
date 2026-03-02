@@ -74,8 +74,7 @@ php bin/cake.php migrations migrate       # Run database migrations
 ### Running the Application
 ```bash
 php bin/cake.php server                   # Start dev server on http://localhost:8765
-docker compose up -d --build              # Start Docker environment (dev)
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d  # Production
+docker compose up -d --build              # Start Docker environment
 ```
 
 ### Testing
@@ -190,21 +189,13 @@ See `DOCKER.md` for comprehensive environment variable documentation.
 
 ## Docker Deployment
 
-### Multi-container (Recommended)
 ```bash
 docker compose up -d --build
 # Services: web (PHP-FPM), nginx, worker (Gmail import)
 # Network: containers communicate via Docker network
 ```
 
-### All-in-one Container
-```bash
-docker build -t mesadeayuda .
-docker run -d -p 80:80 -e DB_HOST=... mesadeayuda
-# Single container: Nginx + PHP-FPM + Supervisor (manages worker)
-```
-
-Worker initialization waits for database with exponential backoff (10 attempts, 5s intervals). Gmail worker must be enabled in admin panel after configuring OAuth.
+The `worker` container runs `php bin/cake.php gmail_worker` in a continuous loop. It waits for database connectivity on startup (10 attempts, 5s intervals). Gmail OAuth must be configured in admin panel (`/admin/settings`) before emails are imported. Set `WORKER_ENABLED=false` to disable.
 
 ## Troubleshooting
 
@@ -236,4 +227,4 @@ docker compose exec web chown -R www-data:www-data logs tmp webroot/uploads
 - **Sensitive Data**: Never commit `.env` or `config/app_local.php`. Use `.example` templates
 - **Migrations**: Always run migrations before starting application (`php bin/cake.php migrations migrate`)
 - **File Uploads**: Public uploads go to `webroot/uploads/`, ensure `tmp/` is writable
-- **Gmail Worker**: Disabled by default. Enable in admin panel after OAuth setup. Uses exponential backoff on errors (max 10min)
+- **Gmail Worker**: Enabled by default (`WORKER_ENABLED=true`). Requires Gmail OAuth setup in admin panel (`/admin/settings`). Uses exponential backoff on errors (max 10min)

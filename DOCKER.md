@@ -4,19 +4,11 @@ This guide explains how to deploy Mesa de Ayuda using Docker containers.
 
 ## Architecture
 
-There are **two deployment modes**:
-
-### Multi-container (docker-compose)
-
 Three separate services communicating over a Docker network:
 
 1. **web** - PHP-FPM application container
 2. **nginx** - Nginx web server (reverse proxy to PHP-FPM)
 3. **worker** - Background worker for Gmail import automation
-
-### All-in-one (Dockerfile)
-
-A single container running Nginx + PHP-FPM + Worker via Supervisor. Suitable for platforms that only support one container per service.
 
 **External Dependencies** (not in Docker):
 - MySQL 8.0+ database
@@ -67,21 +59,15 @@ docker compose exec web php bin/cake.php migrations migrate
 
 ### 3. Start Containers
 
-**Development:**
 ```bash
 docker compose up -d --build
-```
-
-**Production:**
-```bash
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
 ### 4. Verify
 
 ```bash
 docker compose ps
-curl http://localhost:8765/health
+curl http://localhost/health
 ```
 
 ## Environment Variables
@@ -102,8 +88,8 @@ curl http://localhost:8765/health
 |----------|---------|-------------|
 | `APP_ENV` | `production` | Application environment |
 | `DEBUG` | `false` | Enable debug mode |
-| `APP_PORT` | `8765` (dev) / `80` (prod) | Host port for Nginx |
-| `TRUST_PROXY` | `false` (dev) / `true` (prod) | Detect HTTPS from `X-Forwarded-Proto` header |
+| `APP_PORT` | `80` | Host port for Nginx |
+| `TRUST_PROXY` | `true` | Detect HTTPS from `X-Forwarded-Proto` header |
 | `FULL_BASE_URL` | _(auto-detected)_ | Force specific base URL (e.g., `https://yourdomain.com`) |
 
 ### Worker
@@ -159,15 +145,6 @@ docker compose restart worker
 
 ## File Persistence
 
-### Development
-
-```yaml
-volumes:
-  - ./:/var/www/html  # Full source code (hot reload)
-```
-
-### Production
-
 ```yaml
 volumes:
   - ./logs:/var/www/html/logs
@@ -193,13 +170,13 @@ nano .env
 ### 2. Build & Start
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+docker compose up -d --build
 ```
 
 ### 3. Run Migrations
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.prod.yml exec web php bin/cake.php migrations migrate
+docker compose exec web php bin/cake.php migrations migrate
 ```
 
 ### 4. HTTPS
@@ -217,7 +194,7 @@ server {
     ssl_certificate_key /path/to/key.pem;
 
     location / {
-        proxy_pass http://localhost:8765;
+        proxy_pass http://localhost:80;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -225,27 +202,6 @@ server {
     }
 }
 ```
-
-## All-in-One Container
-
-The root `Dockerfile` builds a single container with Nginx, PHP-FPM, and the Gmail worker managed by Supervisor. Use this for platforms that don't support multi-container deployments.
-
-```bash
-docker build -t mesadeayuda .
-docker run -d \
-  -p 80:80 \
-  -e DB_HOST=your-db-host \
-  -e DB_DATABASE=mesadeayuda \
-  -e DB_USERNAME=your-user \
-  -e DB_PASSWORD=your-password \
-  -e SECURITY_SALT=your-salt \
-  -e TRUST_PROXY=true \
-  mesadeayuda
-```
-
-The worker is disabled by default (`autostart=false` in Supervisor). Enable it after configuring Gmail via the admin panel.
-
-Health check endpoint: `GET /health`
 
 ## Container Management
 

@@ -3,23 +3,25 @@ services:
   web:
     build:
       context: .
-      dockerfile: docker/web/Dockerfile
+      dockerfile: Dockerfile
     container_name: mesadeayuda_web
-    restart: unless-stopped
+    restart: always
     working_dir: /var/www/html
     volumes:
-      - ./:/var/www/html
+      - ./logs:/var/www/html/logs
+      - ./tmp:/var/www/html/tmp
+      - ./webroot/uploads:/var/www/html/webroot/uploads
       - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini
     environment:
-      - APP_ENV=${APP_ENV:-development}
-      - DEBUG=${DEBUG:-true}
+      - APP_ENV=${APP_ENV:-production}
+      - DEBUG=${DEBUG:-false}
       - DB_HOST=${DB_HOST}
       - DB_PORT=${DB_PORT:-3306}
       - DB_DATABASE=${DB_DATABASE:-mesadeayuda}
       - DB_USERNAME=${DB_USERNAME:-root}
       - DB_PASSWORD=${DB_PASSWORD}
       - SECURITY_SALT=${SECURITY_SALT}
-      - TRUST_PROXY=${TRUST_PROXY:-false}
+      - TRUST_PROXY=${TRUST_PROXY:-true}
       - FULL_BASE_URL=${FULL_BASE_URL:-}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
@@ -28,37 +30,49 @@ services:
       - AWS_S3_ENABLED=${AWS_S3_ENABLED:-false}
     networks:
       - mesadeayuda_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # Nginx Web Server
   nginx:
     image: nginx:alpine
     container_name: mesadeayuda_nginx
-    restart: unless-stopped
+    restart: always
     ports:
-      - "${APP_PORT:-8765}:80"
+      - "${APP_PORT:-80}:80"
     volumes:
-      - ./:/var/www/html
-      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./webroot:/var/www/html/webroot:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - ./logs:/var/log/nginx
     networks:
       - mesadeayuda_network
     depends_on:
       - web
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # Gmail Import Worker
   worker:
     build:
       context: .
-      dockerfile: docker/web/Dockerfile
+      dockerfile: Dockerfile
     container_name: mesadeayuda_worker
-    restart: unless-stopped
+    restart: always
     working_dir: /var/www/html
     command: php bin/cake.php gmail_worker
     volumes:
-      - ./:/var/www/html
+      - ./logs:/var/www/html/logs
+      - ./tmp:/var/www/html/tmp
+      - ./webroot/uploads:/var/www/html/webroot/uploads
       - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini
     environment:
-      - APP_ENV=${APP_ENV:-development}
+      - APP_ENV=${APP_ENV:-production}
       - DEBUG=${DEBUG:-false}
       - DB_HOST=${DB_HOST}
       - DB_PORT=${DB_PORT:-3306}
@@ -78,6 +92,11 @@ services:
       - mesadeayuda_network
     depends_on:
       - web
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
   mesadeayuda_network:

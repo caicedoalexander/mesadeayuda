@@ -638,9 +638,6 @@ php bin/cake migrations status
 # Levantar entorno
 docker compose up -d --build
 
-# Produccion
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-
 # Migraciones
 docker compose exec web php bin/cake.php migrations migrate
 

@@ -4,8 +4,6 @@
 .gitattributes
 
 # Documentation
-README.md
-CLAUDE.md
 *.md
 
 # IDE
@@ -21,22 +19,22 @@ config/app_local.php
 .env.local
 .env.*.local
 
-# Logs
+# Logs and temp
 logs/*.log
 tmp/cache/*
 tmp/sessions/*
 tmp/tests/*
 
-# Test files
+# Tests
 tests/
 phpunit.xml
 phpunit.xml.dist
 .phpunit.result.cache
 
-# Node modules (if any)
+# Node modules
 node_modules/
 
-# Composer
+# Composer dev tools
 vendor/bin/phpunit
 vendor/bin/phpcs
 vendor/bin/phpcbf
@@ -47,20 +45,14 @@ vendor/bin/phpstan
 Thumbs.db
 desktop.ini
 
-# Docker files (don't copy docker compose files into image)
+# Docker (don't copy into image)
 docker-compose.yml
-docker-compose.prod.yml
 docker-compose.*.yml
-docker/web/Dockerfile
-docker/scripts/*.ps1
-docker/scripts/*.sh
-!docker/scripts/start-worker.sh
 
-# Uploads (will be mounted as volume)
+# Uploads (mounted as volume)
 webroot/uploads/*
 
 # Temporary files
 *.tmp
 *.bak
-*.swp
 *.cache
