@@ -191,11 +191,10 @@ See `DOCKER.md` for comprehensive environment variable documentation.
 
 ```bash
 docker compose up -d --build
-# Services: web (PHP-FPM), nginx, worker (Gmail import)
-# Network: containers communicate via Docker network
+# Services: web (Nginx + PHP-FPM), worker (Gmail import)
 ```
 
-The `worker` container runs `php bin/cake.php gmail_worker` in a continuous loop. It waits for database connectivity on startup (10 attempts, 5s intervals). Gmail OAuth must be configured in admin panel (`/admin/settings`) before emails are imported. Set `WORKER_ENABLED=false` to disable.
+Single Dockerfile runs Nginx + PHP-FPM in one container (port 80). Compatible with Easypanel and single-container platforms. The `worker` container runs `php bin/cake.php gmail_worker` in a continuous loop. It waits for database connectivity on startup (10 attempts, 5s intervals). Gmail OAuth must be configured in admin panel (`/admin/settings`) before emails are imported. Set `WORKER_ENABLED=false` to disable.
 
 ## Troubleshooting
 

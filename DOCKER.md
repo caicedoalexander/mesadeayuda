@@ -4,11 +4,10 @@ This guide explains how to deploy Mesa de Ayuda using Docker containers.
 
 ## Architecture
 
-Three separate services communicating over a Docker network:
+Two services communicating over a Docker network:
 
-1. **web** - PHP-FPM application container
-2. **nginx** - Nginx web server (reverse proxy to PHP-FPM)
-3. **worker** - Background worker for Gmail import automation
+1. **web** - Application container (Nginx + PHP-FPM, port 80). Compatible with Easypanel and single-container platforms.
+2. **worker** - Background worker for Gmail import (`php bin/cake.php gmail_worker`)
 
 **External Dependencies** (not in Docker):
 - MySQL 8.0+ database
