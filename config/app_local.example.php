@@ -54,7 +54,7 @@ return [
             'port' => env('DB_PORT'),
             'username' => env('DB_USERNAME'),
             'password' => env('DB_PASSWORD'),
-            'database' => env('DB_DATABASE',),
+            'database' => env('DB_DATABASE'),
 
             /*
              * If not using the default 'public' schema with the PostgreSQL driver
