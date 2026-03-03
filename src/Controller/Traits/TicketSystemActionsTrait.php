@@ -210,7 +210,24 @@ trait TicketSystemActionsTrait
      */
     protected function downloadEntityAttachment(string $entityType, int $attachmentId): Response
     {
-        return $this->downloadAttachment($entityType, $attachmentId);
+        $tableMap = [
+            'ticket' => 'Attachments',
+            'compra' => 'ComprasAttachments',
+            'pqrs' => 'PqrsAttachments',
+        ];
+
+        $tableName = $tableMap[$entityType] ?? 'Attachments';
+        $attachmentsTable = $this->fetchTable($tableName);
+        $attachment = $attachmentsTable->get($attachmentId);
+        $filePath = $this->getFullPath($attachment);
+
+        if (!$filePath || !file_exists($filePath)) {
+            throw new \Cake\Http\Exception\NotFoundException('Archivo no encontrado.');
+        }
+
+        return $this->response
+            ->withFile($filePath, ['download' => true, 'name' => $attachment->original_filename])
+            ->withType($attachment->mime_type ?? 'application/octet-stream');
     }
 
     /**
