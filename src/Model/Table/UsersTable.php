@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
-use App\Service\ProfileImageService;
 use Cake\ORM\Query\SelectQuery;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
@@ -147,37 +146,4 @@ class UsersTable extends Table
         return $rules;
     }
 
-    /**
-     * Save profile image for a user (delegates to ProfileImageService)
-     *
-     * @param int $userId User ID
-     * @param \Psr\Http\Message\UploadedFileInterface $uploadedFile Uploaded file
-     * @return array Result with success status and filename or error message
-     */
-    public function saveProfileImage(int $userId, $uploadedFile): array
-    {
-        return (new ProfileImageService())->saveProfileImage($userId, $uploadedFile);
-    }
-
-    /**
-     * Delete a profile image file (delegates to ProfileImageService)
-     *
-     * @param string $filename Relative path to the profile image
-     * @return bool Success status
-     */
-    public function deleteProfileImage(string $filename): bool
-    {
-        return (new ProfileImageService())->deleteProfileImage($filename);
-    }
-
-    /**
-     * Get profile image URL (delegates to ProfileImageService)
-     *
-     * @param string|null $profileImage Profile image path
-     * @return string URL to profile image or default avatar
-     */
-    public function getProfileImageUrl(?string $profileImage): string
-    {
-        return (new ProfileImageService())->getProfileImageUrl($profileImage);
-    }
 }

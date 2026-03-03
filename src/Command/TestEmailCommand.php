@@ -32,7 +32,7 @@ class TestEmailCommand extends Command
 
             $io->out("Ticket found: " . $ticket->ticket_number);
 
-            $result = $emailService->sendNewTicketNotification($ticket);
+            $result = $emailService->sendNewEntityNotification('ticket', $ticket);
 
             if ($result) {
                 $io->success("Email sent successfully!");

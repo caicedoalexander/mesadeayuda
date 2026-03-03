@@ -194,27 +194,6 @@ class EmailService
         return $this->sendCommentBasedNotification($entityType, $templateKeys[$entityType], $entity, $comment, $oldStatus, $newStatus, $additionalTo, $additionalCc);
     }
 
-    // Legacy wrappers for backward compatibility (delegate to generic methods)
-
-    public function sendNewTicketNotification($ticket): bool
-    {
-        return $this->sendNewEntityNotification('ticket', $ticket);
-    }
-
-    public function sendStatusChangeNotification($ticket, string $oldStatus, string $newStatus): bool
-    {
-        return $this->sendEntityStatusChangeNotification('ticket', $ticket, $oldStatus, $newStatus);
-    }
-
-    public function sendNewCommentNotification($ticket, $comment, array $additionalTo = [], array $additionalCc = []): bool
-    {
-        return $this->sendEntityCommentNotification('ticket', $ticket, $comment, $additionalTo, $additionalCc);
-    }
-
-    public function sendTicketResponseNotification($ticket, $comment, string $oldStatus, string $newStatus, array $additionalTo = [], array $additionalCc = []): bool
-    {
-        return $this->sendEntityResponseNotification('ticket', $ticket, $comment, $oldStatus, $newStatus, $additionalTo, $additionalCc);
-    }
 
     /**
      * Get email template from database (delegates to EmailTemplateRenderer)
@@ -352,49 +331,6 @@ class EmailService
     }
 
 
-    // Legacy wrappers for PQRS (delegate to generic methods)
-
-    public function sendNewPqrsNotification($pqrs): bool
-    {
-        return $this->sendNewEntityNotification('pqrs', $pqrs);
-    }
-
-    public function sendPqrsStatusChangeNotification($pqrs, string $oldStatus, string $newStatus): bool
-    {
-        return $this->sendEntityStatusChangeNotification('pqrs', $pqrs, $oldStatus, $newStatus);
-    }
-
-    public function sendPqrsNewCommentNotification($pqrs, $comment, array $additionalTo = [], array $additionalCc = []): bool
-    {
-        return $this->sendEntityCommentNotification('pqrs', $pqrs, $comment, $additionalTo, $additionalCc);
-    }
-
-    public function sendPqrsResponseNotification($pqrs, $comment, string $oldStatus, string $newStatus, array $additionalTo = [], array $additionalCc = []): bool
-    {
-        return $this->sendEntityResponseNotification('pqrs', $pqrs, $comment, $oldStatus, $newStatus, $additionalTo, $additionalCc);
-    }
-
-    // Legacy wrappers for Compra (delegate to generic methods)
-
-    public function sendNewCompraNotification($compra): bool
-    {
-        return $this->sendNewEntityNotification('compra', $compra);
-    }
-
-    public function sendCompraStatusChangeNotification($compra, string $oldStatus, string $newStatus): bool
-    {
-        return $this->sendEntityStatusChangeNotification('compra', $compra, $oldStatus, $newStatus);
-    }
-
-    public function sendCompraCommentNotification($compra, $comment, array $additionalTo = [], array $additionalCc = []): bool
-    {
-        return $this->sendEntityCommentNotification('compra', $compra, $comment, $additionalTo, $additionalCc);
-    }
-
-    public function sendCompraResponseNotification($compra, $comment, string $oldStatus, string $newStatus, array $additionalTo = [], array $additionalCc = []): bool
-    {
-        return $this->sendEntityResponseNotification('compra', $compra, $comment, $oldStatus, $newStatus, $additionalTo, $additionalCc);
-    }
 
     /**
      * Send comment-based notification (comment or response) for any entity type

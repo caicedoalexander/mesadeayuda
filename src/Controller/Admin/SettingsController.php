@@ -232,7 +232,7 @@ class SettingsController extends AppController
             // Handle profile image upload
             $profileImageFile = $this->request->getUploadedFile('profile_image_upload');
             if ($profileImageFile && $profileImageFile->getError() === UPLOAD_ERR_OK) {
-                $result = $usersTable->saveProfileImage((int) $user->id, $profileImageFile);
+                $result = (new \App\Service\ProfileImageService())->saveProfileImage((int) $user->id, $profileImageFile);
 
                 if ($result['success']) {
                     $data['profile_image'] = $result['filename'];
