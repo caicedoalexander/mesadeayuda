@@ -5,7 +5,6 @@
     <nav class="top-navbar pqrs-navbar" style="max-height: 55px; z-index: 1000;">
         <div class="d-flex justify-content-between align-items-center px-3 w-100">
             <img src="<?= $this->Url->image('logos/servicioalcliente.svg') ?>">
-            <?= $this->element('ia') ?>
             <div class="nav-menu d-flex align-items-center gap-3 py-3">
                 <?= $this->Html->link(
                     '<i class="bi bi-bar-chart"></i> Estadísticas',
