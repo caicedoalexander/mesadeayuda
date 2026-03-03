@@ -127,20 +127,52 @@ trait EntityConversionTrait
         $targetTable = $this->fetchTable($targetAttachmentsTable);
         $copiedCount = 0;
 
+        $s3Service = new \App\Service\S3Service();
+
         foreach ($sourceAttachments as $attachment) {
             try {
-                // Copy physical file
-                $oldPath = WWW_ROOT . $attachment->file_path;
-                $newFilePath = $targetPath . $attachment->filename;
+                $isS3 = !str_starts_with($attachment->file_path, 'uploads/');
+                $newFilePath = null;
+                $newStoredPath = null;
 
-                if (file_exists($oldPath)) {
-                    copy($oldPath, $newFilePath);
+                if ($isS3 && $s3Service->isEnabled()) {
+                    // S3→S3: copy by downloading to temp then re-uploading
+                    $tempFile = sys_get_temp_dir() . DS . $attachment->filename;
+                    if (!$s3Service->downloadFile($attachment->file_path, $tempFile)) {
+                        Log::warning('Failed to download S3 attachment for copy', [
+                            's3_path' => $attachment->file_path,
+                            'attachment_id' => $attachment->id,
+                        ]);
+                        continue;
+                    }
+
+                    // Upload to target S3 path
+                    $targetS3Key = EntityType::from($targetType)->uploadBasePath()
+                        . '/' . $targetEntityNumber . '/' . $attachment->filename;
+                    if (!$s3Service->uploadFile($tempFile, $targetS3Key, $attachment->mime_type ?? 'application/octet-stream')) {
+                        Log::warning('Failed to upload S3 attachment for copy', [
+                            'target_key' => $targetS3Key,
+                        ]);
+                        @unlink($tempFile);
+                        continue;
+                    }
+                    @unlink($tempFile);
+                    $newStoredPath = $targetS3Key;
                 } else {
-                    Log::warning('Source attachment file not found', [
-                        'path' => $oldPath,
-                        'attachment_id' => $attachment->id,
-                    ]);
-                    continue; // Skip this attachment
+                    // Local→Local copy
+                    $oldPath = WWW_ROOT . $attachment->file_path;
+                    $newFilePath = $targetPath . $attachment->filename;
+
+                    if (file_exists($oldPath)) {
+                        copy($oldPath, $newFilePath);
+                    } else {
+                        Log::warning('Source attachment file not found', [
+                            'path' => $oldPath,
+                            'attachment_id' => $attachment->id,
+                        ]);
+                        continue;
+                    }
+                    $newStoredPath = $targetDir . $attachment->filename;
                 }
 
                 // Create database record
@@ -149,7 +181,7 @@ trait EntityConversionTrait
                     $this->getCommentForeignKey($targetType) => null,
                     'filename' => $attachment->filename,
                     'original_filename' => $attachment->original_filename,
-                    'file_path' => $targetDir . $attachment->filename,
+                    'file_path' => $newStoredPath,
                     'mime_type' => $attachment->mime_type,
                     'file_size' => $attachment->file_size,
                     'is_inline' => $attachment->is_inline,

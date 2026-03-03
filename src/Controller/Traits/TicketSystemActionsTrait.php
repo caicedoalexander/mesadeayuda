@@ -170,26 +170,21 @@ trait TicketSystemActionsTrait
         $this->request->allowMethod(['post']);
         $userId = $this->getCurrentUserId();
 
-        if ($entityType === 'ticket') {
-            $entity = $this->Tickets->get($entityId);
-            $entityName = 'Ticket';
-        } elseif ($entityType === 'compra') {
-            $entity = $this->Compras->get($entityId);
-            $entityName = 'Compra';
-        } else {
-            $entity = $this->Pqrs->get($entityId);
-            $entityName = 'PQRS';
-        }
+        $entityName = match ($entityType) {
+            'ticket' => 'Ticket',
+            'compra' => 'Compra',
+            default => 'PQRS',
+        };
 
         $data = $this->request->getData();
-        $attachments = $this->request->getUploadedFiles();
+        $files = $this->request->getUploadedFiles();
 
-        $result = $this->responseService->addResponse(
+        $result = $this->responseService->processResponse(
             $entityType,
-            $entity,
-            $data,
+            $entityId,
             $userId,
-            $attachments
+            $data,
+            $files
         );
 
         if ($result['success']) {
