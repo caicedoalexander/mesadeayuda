@@ -7,6 +7,7 @@ use Cake\ORM\Query\SelectQuery;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
+use App\Utility\ValidationConstants;
 
 /**
  * ComprasComments Model
@@ -57,7 +58,7 @@ class ComprasCommentsTable extends Table
             ->maxLength('comment_type', 20)
             ->requirePresence('comment_type', 'create')
             ->notEmptyString('comment_type')
-            ->inList('comment_type', ['public', 'internal']);
+            ->inList('comment_type', ValidationConstants::COMMENT_TYPES);
 
         $validator
             ->scalar('body')

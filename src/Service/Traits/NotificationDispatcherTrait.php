@@ -36,12 +36,10 @@ trait NotificationDispatcherTrait
         bool $sendEmail = true,
         bool $sendWhatsapp = true
     ): void {
-        $methods = $this->getNotificationMethods($entityType, 'creation');
-
         // Send Email
-        if ($sendEmail && !empty($methods['email'])) {
+        if ($sendEmail) {
             try {
-                $this->emailService->{$methods['email']}($entity);
+                $this->emailService->sendNewEntityNotification($entityType, $entity);
             } catch (\Exception $e) {
                 Log::error("Failed to send {$entityType} creation email", [
                     'error' => $e->getMessage(),
@@ -51,9 +49,9 @@ trait NotificationDispatcherTrait
         }
 
         // Send WhatsApp (ONLY for creation)
-        if ($sendWhatsapp && !empty($methods['whatsapp'])) {
+        if ($sendWhatsapp) {
             try {
-                $this->whatsappService->{$methods['whatsapp']}($entity);
+                $this->whatsappService->sendNewEntityNotification($entityType, $entity);
             } catch (\Exception $e) {
                 Log::error("Failed to send {$entityType} creation WhatsApp", [
                     'error' => $e->getMessage(),
@@ -65,6 +63,8 @@ trait NotificationDispatcherTrait
 
     /**
      * Dispatch update notifications (Email ONLY)
+     *
+     * Uses generic EmailService methods that accept entityType parameter.
      *
      * @param string $entityType 'ticket', 'pqrs', 'compra'
      * @param EntityInterface $entity Entity instance
@@ -78,18 +78,11 @@ trait NotificationDispatcherTrait
         string $notificationType,
         array $context = []
     ): void {
-        $methods = $this->getNotificationMethods($entityType, $notificationType);
-
-        // Email ONLY
-        if (empty($methods['email'])) {
-            Log::warning("No email method found for {$entityType} {$notificationType}");
-            return;
-        }
-
         try {
             switch ($notificationType) {
                 case 'status_change':
-                    $this->emailService->{$methods['email']}(
+                    $this->emailService->sendEntityStatusChangeNotification(
+                        $entityType,
                         $entity,
                         $context['old_status'] ?? '',
                         $context['new_status'] ?? ''
@@ -97,7 +90,8 @@ trait NotificationDispatcherTrait
                     break;
 
                 case 'comment':
-                    $this->emailService->{$methods['email']}(
+                    $this->emailService->sendEntityCommentNotification(
+                        $entityType,
                         $entity,
                         $context['comment'] ?? null,
                         $context['additional_to'] ?? [],
@@ -106,7 +100,8 @@ trait NotificationDispatcherTrait
                     break;
 
                 case 'response':
-                    $this->emailService->{$methods['email']}(
+                    $this->emailService->sendEntityResponseNotification(
+                        $entityType,
                         $entity,
                         $context['comment'] ?? null,
                         $context['old_status'] ?? '',
@@ -125,67 +120,5 @@ trait NotificationDispatcherTrait
                 'entity_id' => $entity->id,
             ]);
         }
-    }
-
-    /**
-     * Get notification method names for entity type and notification type
-     *
-     * @param string $entityType 'ticket', 'pqrs', 'compra'
-     * @param string $notificationType Notification type
-     * @return array Method names ['email' => '...', 'whatsapp' => '...']
-     */
-    private function getNotificationMethods(
-        string $entityType,
-        string $notificationType
-    ): array {
-        $methodMap = [
-            'ticket' => [
-                'creation' => [
-                    'email' => 'sendNewTicketNotification',
-                    'whatsapp' => 'sendNewTicketNotification',
-                ],
-                'status_change' => [
-                    'email' => 'sendStatusChangeNotification',
-                ],
-                'comment' => [
-                    'email' => 'sendNewCommentNotification',
-                ],
-                'response' => [
-                    'email' => 'sendTicketResponseNotification',
-                ],
-            ],
-            'pqrs' => [
-                'creation' => [
-                    'email' => 'sendNewPqrsNotification',
-                    'whatsapp' => 'sendNewPqrsNotification',
-                ],
-                'status_change' => [
-                    'email' => 'sendPqrsStatusChangeNotification',
-                ],
-                'comment' => [
-                    'email' => 'sendPqrsNewCommentNotification',
-                ],
-                'response' => [
-                    'email' => 'sendPqrsResponseNotification',
-                ],
-            ],
-            'compra' => [
-                'creation' => [
-                    'email' => 'sendNewCompraNotification',
-                    'whatsapp' => 'sendNewCompraNotification',
-                ],
-                'status_change' => [
-                    'email' => 'sendCompraStatusChangeNotification',
-                ],
-                'comment' => [
-                    'email' => 'sendCompraCommentNotification',
-                ],
-                'response' => [
-                    'email' => 'sendCompraResponseNotification',
-                ],
-            ],
-        ];
-
-        return $methodMap[$entityType][$notificationType] ?? [];
     }
 }

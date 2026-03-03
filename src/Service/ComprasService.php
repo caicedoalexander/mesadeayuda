@@ -206,17 +206,6 @@ class ComprasService
      */
 
     /**
-     * Alias for backward compatibility
-     *
-     * @param Compra $compra Compra entity
-     * @return bool
-     */
-    public function isSLABreached(Compra $compra): bool
-    {
-        return $this->isResolutionSLABreached($compra);
-    }
-
-    /**
      * Override to support legacy sla_due_date field in Compras
      *
      * @param \Cake\Datasource\EntityInterface $entity Compra entity

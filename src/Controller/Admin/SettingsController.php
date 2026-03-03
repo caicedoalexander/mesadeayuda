@@ -181,87 +181,21 @@ class SettingsController extends AppController
         return $this->redirect(['action' => 'index']);
     }
 
-    /**
-     * Email templates management
-     *
-     * @return \Cake\Http\Response|null|void Renders view
-     */
+    // Redirect legacy routes to new controllers
+
     public function emailTemplates()
     {
-        $templatesTable = $this->fetchTable('EmailTemplates');
-
-        if ($this->request->is('post')) {
-            $template = $templatesTable->newEntity($this->request->getData());
-
-            if ($templatesTable->save($template)) {
-                $this->Flash->success('Plantilla creada exitosamente.');
-                return $this->redirect(['action' => 'emailTemplates']);
-            } else {
-                $this->Flash->error('Error al crear la plantilla.');
-            }
-        }
-
-        $templates = $templatesTable->find()->all();
-        $this->set(compact('templates'));
+        return $this->redirect(['controller' => 'EmailTemplates', 'action' => 'index', 'prefix' => 'Admin']);
     }
 
-    /**
-     * Edit email template
-     *
-     * @param string|null $id Template id
-     * @return \Cake\Http\Response|null|void Renders view
-     */
     public function editTemplate($id = null)
     {
-        $templatesTable = $this->fetchTable('EmailTemplates');
-        $template = $templatesTable->get($id);
-
-        if ($this->request->is(['patch', 'post', 'put'])) {
-            $template = $templatesTable->patchEntity($template, $this->request->getData());
-
-            if ($templatesTable->save($template)) {
-                $this->Flash->success('Plantilla actualizada exitosamente.');
-                return $this->redirect(['action' => 'emailTemplates']);
-            } else {
-                $this->Flash->error('Error al actualizar la plantilla.');
-            }
-        }
-
-        $this->set(compact('template'));
+        return $this->redirect(['controller' => 'EmailTemplates', 'action' => 'edit', $id, 'prefix' => 'Admin']);
     }
 
-    /**
-     * Preview email template
-     *
-     * @param string|null $id Template id
-     * @return \Cake\Http\Response|null|void Renders view
-     */
     public function previewTemplate($id = null)
     {
-        $templatesTable = $this->fetchTable('EmailTemplates');
-        $template = $templatesTable->get($id);
-
-        // Sample data for preview
-        $sampleData = [
-            'ticket_number' => 'TKT-2025-00001',
-            'subject' => 'Ejemplo de asunto del ticket',
-            'requester_name' => 'Juan Pérez',
-            'assignee_name' => 'María González',
-            'created_date' => date('d/m/Y H:i'),
-            'updated_date' => date('d/m/Y H:i'),
-            'ticket_url' => 'http://localhost:8080/tickets/view/1',
-            'system_title' => 'Sistema de Soporte',
-        ];
-
-        // Replace variables in body
-        $previewBody = $template->body_html;
-        foreach ($sampleData as $key => $value) {
-            $previewBody = str_replace('{{' . $key . '}}', $value, $previewBody);
-        }
-
-        // Use a minimal layout for preview
-        $this->viewBuilder()->setLayout(null);
-        $this->set(compact('previewBody', 'template'));
+        return $this->redirect(['controller' => 'EmailTemplates', 'action' => 'preview', $id, 'prefix' => 'Admin']);
     }
 
     /**
@@ -344,113 +278,24 @@ class SettingsController extends AppController
         $this->set(compact('user', 'organizations'));
     }
 
-    /**
-     * Tags management
-     *
-     * @return \Cake\Http\Response|null|void Renders view
-     */
     public function tags()
     {
-        $tagsTable = $this->fetchTable('Tags');
-
-        if ($this->request->is('post')) {
-            $tag = $tagsTable->newEntity($this->request->getData());
-
-            if ($tagsTable->save($tag)) {
-                $this->Flash->success('Etiqueta creada exitosamente.');
-                return $this->redirect(['action' => 'tags']);
-            } else {
-                $this->Flash->error('Error al crear la etiqueta.');
-            }
-        }
-
-        // Load tags with ticket count
-        $tags = $tagsTable->find()
-            ->select([
-                'Tags.id',
-                'Tags.name',
-                'Tags.color',
-                'Tags.is_active',
-                'Tags.created',
-                'ticket_count' => $tagsTable->find()->func()->count('TicketTags.ticket_id')
-            ])
-            ->leftJoinWith('TicketTags')
-            ->group(['Tags.id'])
-            ->orderBy(['Tags.name' => 'ASC'])
-            ->all();
-
-        $this->set(compact('tags'));
+        return $this->redirect(['controller' => 'Tags', 'action' => 'index', 'prefix' => 'Admin']);
     }
 
-    /**
-     * Add tag
-     *
-     * @return \Cake\Http\Response|null|void Renders view
-     */
     public function addTag()
     {
-        $tagsTable = $this->fetchTable('Tags');
-        $tag = $tagsTable->newEmptyEntity();
-
-        if ($this->request->is('post')) {
-            $tag = $tagsTable->patchEntity($tag, $this->request->getData());
-
-            if ($tagsTable->save($tag)) {
-                $this->Flash->success('Etiqueta creada exitosamente.');
-                return $this->redirect(['action' => 'tags']);
-            } else {
-                $this->Flash->error('Error al crear la etiqueta.');
-            }
-        }
-
-        $this->set(compact('tag'));
+        return $this->redirect(['controller' => 'Tags', 'action' => 'add', 'prefix' => 'Admin']);
     }
 
-    /**
-     * Edit tag
-     *
-     * @param string|null $id Tag id
-     * @return \Cake\Http\Response|null|void Renders view
-     */
     public function editTag($id = null)
     {
-        $tagsTable = $this->fetchTable('Tags');
-        $tag = $tagsTable->get($id);
-
-        if ($this->request->is(['patch', 'post', 'put'])) {
-            $tag = $tagsTable->patchEntity($tag, $this->request->getData());
-
-            if ($tagsTable->save($tag)) {
-                $this->Flash->success('Etiqueta actualizada exitosamente.');
-                return $this->redirect(['action' => 'tags']);
-            } else {
-                $this->Flash->error('Error al actualizar la etiqueta.');
-            }
-        }
-
-        $this->set(compact('tag'));
+        return $this->redirect(['controller' => 'Tags', 'action' => 'edit', $id, 'prefix' => 'Admin']);
     }
 
-    /**
-     * Delete tag
-     *
-     * @param string|null $id Tag id
-     * @return \Cake\Http\Response|null|void Redirects back
-     */
     public function deleteTag($id = null)
     {
-        $this->request->allowMethod(['post', 'delete']);
-
-        $tagsTable = $this->fetchTable('Tags');
-        $tag = $tagsTable->get($id);
-
-        if ($tagsTable->delete($tag)) {
-            $this->Flash->success('Etiqueta eliminada.');
-        } else {
-            $this->Flash->error('Error al eliminar la etiqueta.');
-        }
-
-        return $this->redirect(['action' => 'tags']);
+        return $this->redirect(['controller' => 'Tags', 'action' => 'delete', $id, 'prefix' => 'Admin']);
     }
 
     /**
@@ -580,105 +425,23 @@ class SettingsController extends AppController
 
         return null;
     }
-    /**
-     * Organizations management
-     *
-     * @return \Cake\Http\Response|null|void Renders view
-     */
     public function organizations()
     {
-        $organizationsTable = $this->fetchTable('Organizations');
-
-        $organizations = $this->paginate($organizationsTable->find()
-            ->select([
-                'Organizations.id',
-                'Organizations.name',
-                'Organizations.created',
-                'Organizations.modified',
-                'user_count' => $organizationsTable->find()->func()->count('Users.id')
-            ])
-            ->leftJoinWith('Users')
-            ->group(['Organizations.id'])
-            ->orderBy(['Organizations.name' => 'ASC']));
-
-        $this->set(compact('organizations'));
+        return $this->redirect(['controller' => 'Organizations', 'action' => 'index', 'prefix' => 'Admin']);
     }
 
-    /**
-     * Add organization
-     *
-     * @return \Cake\Http\Response|null|void Renders view
-     */
     public function addOrganization()
     {
-        $organizationsTable = $this->fetchTable('Organizations');
-        $organization = $organizationsTable->newEmptyEntity();
-
-        if ($this->request->is('post')) {
-            $organization = $organizationsTable->patchEntity($organization, $this->request->getData());
-
-            if ($organizationsTable->save($organization)) {
-                $this->Flash->success('Organización creada exitosamente.');
-                return $this->redirect(['action' => 'organizations']);
-            } else {
-                $this->Flash->error('Error al crear la organización.');
-            }
-        }
-
-        $this->set(compact('organization'));
+        return $this->redirect(['controller' => 'Organizations', 'action' => 'add', 'prefix' => 'Admin']);
     }
 
-    /**
-     * Edit organization
-     *
-     * @param string|null $id Organization id
-     * @return \Cake\Http\Response|null|void Renders view
-     */
     public function editOrganization($id = null)
     {
-        $organizationsTable = $this->fetchTable('Organizations');
-        $organization = $organizationsTable->get($id);
-
-        if ($this->request->is(['patch', 'post', 'put'])) {
-            $organization = $organizationsTable->patchEntity($organization, $this->request->getData());
-
-            if ($organizationsTable->save($organization)) {
-                $this->Flash->success('Organización actualizada exitosamente.');
-                return $this->redirect(['action' => 'organizations']);
-            } else {
-                $this->Flash->error('Error al actualizar la organización.');
-            }
-        }
-
-        $this->set(compact('organization'));
+        return $this->redirect(['controller' => 'Organizations', 'action' => 'edit', $id, 'prefix' => 'Admin']);
     }
 
-    /**
-     * Delete organization
-     *
-     * @param string|null $id Organization id
-     * @return \Cake\Http\Response|null|void Redirects back
-     */
     public function deleteOrganization($id = null)
     {
-        $this->request->allowMethod(['post', 'delete']);
-
-        $organizationsTable = $this->fetchTable('Organizations');
-        $organization = $organizationsTable->get($id);
-
-        // Check if organization has users
-        $userCount = $this->fetchTable('Users')->find()->where(['organization_id' => $id])->count();
-        if ($userCount > 0) {
-            $this->Flash->error('No se puede eliminar la organización porque tiene usuarios asociados.');
-            return $this->redirect(['action' => 'organizations']);
-        }
-
-        if ($organizationsTable->delete($organization)) {
-            $this->Flash->success('Organización eliminada.');
-        } else {
-            $this->Flash->error('Error al eliminar la organización.');
-        }
-
-        return $this->redirect(['action' => 'organizations']);
+        return $this->redirect(['controller' => 'Organizations', 'action' => 'delete', $id, 'prefix' => 'Admin']);
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Service\Traits;
 
 use App\Service\S3Service;
+use App\Utility\EntityType;
 use Cake\Datasource\EntityInterface;
 use Cake\Log\Log;
 use Cake\Utility\Text;
@@ -251,12 +252,7 @@ trait GenericAttachmentTrait
      */
     private function getEntityNumber(string $entityType, EntityInterface $entity): string
     {
-        return match ($entityType) {
-            'ticket' => $entity->ticket_number,
-            'pqrs' => $entity->pqrs_number,
-            'compra' => $entity->compra_number,
-            default => throw new \InvalidArgumentException("Unknown entity type: {$entityType}"),
-        };
+        return EntityType::from($entityType)->getNumber($entity);
     }
 
     /**
@@ -269,12 +265,9 @@ trait GenericAttachmentTrait
      */
     private function buildS3Key(string $entityType, string $entityNumber, string $filename): string
     {
-        return match ($entityType) {
-            'ticket' => "tickets/{$entityNumber}/{$filename}",
-            'pqrs' => "pqrs/{$entityNumber}/{$filename}",
-            'compra' => "compras/{$entityNumber}/{$filename}",
-            default => throw new \InvalidArgumentException("Unknown entity type: {$entityType}"),
-        };
+        $prefix = EntityType::from($entityType)->s3Prefix();
+
+        return "{$prefix}/{$entityNumber}/{$filename}";
     }
 
     /**
@@ -287,14 +280,14 @@ trait GenericAttachmentTrait
      */
     private function buildLocalPath(string $entityType, string $entityNumber, string $filename): string
     {
-        $relativePath = match ($entityType) {
-            'ticket' => 'attachments/' . $entityNumber . '/' . $filename,
-            'pqrs' => 'pqrs/' . $entityNumber . '/' . $filename,
-            'compra' => 'compras/' . $entityNumber . '/' . $filename,
-            default => throw new \InvalidArgumentException("Unknown entity type: {$entityType}"),
+        $type = EntityType::from($entityType);
+        $basePath = match ($type) {
+            EntityType::TICKET => 'attachments',
+            EntityType::PQRS => 'pqrs',
+            EntityType::COMPRA => 'compras',
         };
 
-        return 'uploads/' . $relativePath;
+        return 'uploads/' . $basePath . '/' . $entityNumber . '/' . $filename;
     }
 
     /**
@@ -306,17 +299,9 @@ trait GenericAttachmentTrait
      */
     private function getUploadDirectory(string $entityType, string $entityNumber): string
     {
-        $basePaths = [
-            'ticket' => 'uploads' . DS . 'attachments' . DS,
-            'pqrs' => 'uploads' . DS . 'pqrs' . DS,
-            'compra' => 'uploads' . DS . 'compras' . DS,
-        ];
+        $basePath = EntityType::from($entityType)->uploadBasePath();
 
-        if (!isset($basePaths[$entityType])) {
-            throw new \InvalidArgumentException("Unknown entity type: {$entityType}");
-        }
-
-        return WWW_ROOT . $basePaths[$entityType] . $entityNumber;
+        return WWW_ROOT . $basePath . DS . $entityNumber;
     }
 
     /**
@@ -329,12 +314,7 @@ trait GenericAttachmentTrait
      */
     protected function getAttachmentTableName(string $entityType): string
     {
-        return match ($entityType) {
-            'ticket' => 'Attachments',
-            'pqrs' => 'PqrsAttachments',
-            'compra' => 'ComprasAttachments',
-            default => throw new \InvalidArgumentException("Unknown entity type: {$entityType}"),
-        };
+        return EntityType::from($entityType)->attachmentsTable();
     }
 
     /**

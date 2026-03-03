@@ -7,6 +7,7 @@ use Cake\ORM\Query\SelectQuery;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
+use App\Utility\ValidationConstants;
 
 class ComprasTable extends Table
 {
@@ -79,12 +80,12 @@ class ComprasTable extends Table
 
         $validator
             ->scalar('status')
-            ->inList('status', ['nuevo', 'en_revision', 'aprobado', 'en_proceso', 'completado', 'rechazado'])
+            ->inList('status', ValidationConstants::COMPRA_STATUSES)
             ->notEmptyString('status');
 
         $validator
             ->scalar('priority')
-            ->inList('priority', ['baja', 'media', 'alta', 'urgente'])
+            ->inList('priority', ValidationConstants::PRIORITIES)
             ->notEmptyString('priority');
 
         $validator
@@ -140,23 +141,7 @@ class ComprasTable extends Table
      */
     public function generateCompraNumber(): string
     {
-        $year = date('Y');
-        $prefix = "CPR-{$year}-";
-
-        $lastCompra = $this->find()
-            ->select(['compra_number'])
-            ->where(['compra_number LIKE' => $prefix . '%'])
-            ->order(['compra_number' => 'DESC'])
-            ->first();
-
-        if ($lastCompra) {
-            $lastNumber = (int)substr($lastCompra->compra_number, -5);
-            $newNumber = $lastNumber + 1;
-        } else {
-            $newNumber = 1;
-        }
-
-        return $prefix . str_pad((string)$newNumber, 5, '0', STR_PAD_LEFT);
+        return (new \App\Service\NumberGenerationService())->generate('compra');
     }
 
     /**

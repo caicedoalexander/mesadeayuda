@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Service\Traits;
 
+use App\Utility\EntityType;
 use Cake\Log\Log;
 use Cake\I18n\FrozenTime;
 
@@ -85,10 +86,8 @@ trait TicketSystemTrait
 
         // Send notifications ONLY if requested
         if ($sendNotifications) {
-            $method = $this->getStatusChangeNotificationMethod($entityType);
-
             try {
-                $this->emailService->$method($entity, $oldStatus, $newStatus);
+                $this->emailService->sendEntityStatusChangeNotification($entityType, $entity, $oldStatus, $newStatus);
             } catch (\Exception $e) {
                 Log::error('Failed to send status change email notification: ' . $e->getMessage());
             }
@@ -358,12 +357,7 @@ trait TicketSystemTrait
      */
     private function getEntityTypeFromSource(string $source): string
     {
-        return match ($source) {
-            'Tickets' => 'ticket',
-            'Pqrs' => 'pqrs',
-            'Compras' => 'compra',
-            default => throw new \InvalidArgumentException("Unknown source: {$source}"),
-        };
+        return EntityType::fromSource($source)->value;
     }
 
     /**
@@ -374,12 +368,7 @@ trait TicketSystemTrait
      */
     private function getEntityTableName(string $entityType): string
     {
-        return match ($entityType) {
-            'ticket' => 'Tickets',
-            'pqrs' => 'Pqrs',
-            'compra' => 'Compras',
-            default => throw new \InvalidArgumentException("Unknown entity type: {$entityType}"),
-        };
+        return EntityType::from($entityType)->tableName();
     }
 
     /**
@@ -392,12 +381,7 @@ trait TicketSystemTrait
      */
     protected function getCommentsTableName(string $entityType): string
     {
-        return match ($entityType) {
-            'ticket' => 'TicketComments',
-            'pqrs' => 'PqrsComments',
-            'compra' => 'ComprasComments',
-            default => throw new \InvalidArgumentException("Unknown entity type: {$entityType}"),
-        };
+        return EntityType::from($entityType)->commentsTable();
     }
 
     /**
@@ -408,12 +392,7 @@ trait TicketSystemTrait
      */
     private function getHistoryTableName(string $entityType): string
     {
-        return match ($entityType) {
-            'ticket' => 'TicketHistory',
-            'pqrs' => 'PqrsHistory',
-            'compra' => 'ComprasHistory',
-            default => throw new \InvalidArgumentException("Unknown entity type: {$entityType}"),
-        };
+        return EntityType::from($entityType)->historyTable();
     }
 
     /**
@@ -426,12 +405,7 @@ trait TicketSystemTrait
      */
     protected function getForeignKeyName(string $entityType): string
     {
-        return match ($entityType) {
-            'ticket' => 'ticket_id',
-            'pqrs' => 'pqrs_id',
-            'compra' => 'compra_id',
-            default => throw new \InvalidArgumentException("Unknown entity type: {$entityType}"),
-        };
+        return EntityType::from($entityType)->foreignKey();
     }
 
     /**
@@ -504,21 +478,5 @@ trait TicketSystemTrait
      * NOTE: getEntityNumber() method is provided by GenericAttachmentTrait
      * to avoid duplication.
      */
-
-    /**
-     * Get status change notification method name
-     *
-     * @param string $entityType Entity type (ticket, pqrs, compra)
-     * @return string Email service method name
-     */
-    private function getStatusChangeNotificationMethod(string $entityType): string
-    {
-        return match ($entityType) {
-            'ticket' => 'sendStatusChangeNotification',
-            'pqrs' => 'sendPqrsStatusChangeNotification',
-            'compra' => 'sendCompraStatusChangeNotification',
-            default => throw new \InvalidArgumentException("Unknown entity type: {$entityType}"),
-        };
-    }
 
 }

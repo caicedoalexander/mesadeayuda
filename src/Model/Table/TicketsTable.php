@@ -7,6 +7,7 @@ use Cake\ORM\Query\SelectQuery;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
+use App\Utility\ValidationConstants;
 
 /**
  * Tickets Model
@@ -127,13 +128,13 @@ class TicketsTable extends Table
             ->scalar('status')
             ->maxLength('status', 20)
             ->notEmptyString('status')
-            ->inList('status', ['nuevo', 'abierto', 'en_progreso', 'pendiente', 'resuelto', 'cerrado'], 'Estado no válido.');
+            ->inList('status', ValidationConstants::TICKET_STATUSES, 'Estado no válido.');
 
         $validator
             ->scalar('priority')
             ->maxLength('priority', 20)
             ->notEmptyString('priority')
-            ->inList('priority', ['baja', 'media', 'alta', 'urgente'], 'Prioridad no válida.');
+            ->inList('priority', ValidationConstants::PRIORITIES, 'Prioridad no válida.');
 
         $validator
             ->integer('requester_id')
@@ -196,24 +197,7 @@ class TicketsTable extends Table
      */
     public function generateTicketNumber(): string
     {
-        $year = date('Y');
-        $prefix = "TKT-{$year}-";
-
-        // Get last ticket number for this year
-        $lastTicket = $this->find()
-            ->where(['ticket_number LIKE' => $prefix . '%'])
-            ->orderBy(['id' => 'DESC'])
-            ->first();
-
-        if ($lastTicket) {
-            // Extract sequence number and increment
-            $parts = explode('-', $lastTicket->ticket_number);
-            $sequence = (int) $parts[2] + 1;
-        } else {
-            $sequence = 1;
-        }
-
-        return $prefix . str_pad((string) $sequence, 5, '0', STR_PAD_LEFT);
+        return (new \App\Service\NumberGenerationService())->generate('ticket');
     }
 
     /**

@@ -25,6 +25,7 @@ class EmailService
     use Traits\ConfigResolutionTrait;
 
     private \App\Service\Renderer\NotificationRenderer $renderer;
+    private EmailTemplateRenderer $templateRenderer;
     private ?array $systemConfig = null;
     private ?GmailService $gmailService = null;
 
@@ -36,6 +37,7 @@ class EmailService
     public function __construct(?array $systemConfig = null)
     {
         $this->renderer = new \App\Service\Renderer\NotificationRenderer();
+        $this->templateRenderer = new EmailTemplateRenderer($systemConfig);
         $this->systemConfig = $systemConfig;
     }
 
@@ -60,111 +62,173 @@ class EmailService
      */
     private function getSystemVariables(): array
     {
-        return [
-            'system_title' => $this->getSettingValue('system_title', 'Mesa de Ayuda'),
-            'current_year' => date('Y'),
-        ];
+        return $this->templateRenderer->getSystemVariables();
     }
 
     /**
-     * Send new ticket notification to requester
+     * Send new entity notification (generic for all entity types)
      *
-     * Also notifies recipients in email_to and email_cc if ticket was created from email.
-     * Excludes requester and system email to avoid duplicates and loops.
-     *
-     * @param \App\Model\Entity\Ticket $ticket Ticket entity
+     * @param string $entityType 'ticket', 'pqrs', 'compra'
+     * @param \Cake\Datasource\EntityInterface $entity Entity instance
      * @return bool Success status
      */
-    public function sendNewTicketNotification($ticket): bool
+    public function sendNewEntityNotification(string $entityType, \Cake\Datasource\EntityInterface $entity): bool
     {
-        // Load ticket with associations to get requester email
-        $ticketsTable = $this->fetchTable('Tickets');
-        $ticket = $ticketsTable->get($ticket->id, contain: ['Requesters']);
-
-        // Emails to exclude from notifications (requester + system email)
-        $excludeEmails = [
-            strtolower($ticket->requester->email),
-            strtolower($this->getSettingValue('gmail_user_email')),
+        $templateKeys = [
+            'ticket' => 'nuevo_ticket',
+            'pqrs' => 'nuevo_pqrs',
+            'compra' => 'nueva_compra',
         ];
 
-        // Extract additional recipients from ticket's email fields (if created from email)
-        $additionalTo = $this->filterEmailRecipients($ticket->email_to, $excludeEmails);
-        $additionalCc = $this->filterEmailRecipients($ticket->email_cc, $excludeEmails);
+        // Entity-specific pre-processing
+        if ($entityType === 'ticket') {
+            $ticketsTable = $this->fetchTable('Tickets');
+            $entity = $ticketsTable->get($entity->id, contain: ['Requesters']);
 
-        return $this->sendGenericTemplateEmail('ticket', 'nuevo_ticket', $ticket, [], [], $additionalTo, $additionalCc);
+            $excludeEmails = [
+                strtolower($entity->requester->email),
+                strtolower($this->getSettingValue('gmail_user_email')),
+            ];
+            $additionalTo = $this->filterEmailRecipients($entity->email_to, $excludeEmails);
+            $additionalCc = $this->filterEmailRecipients($entity->email_cc, $excludeEmails);
+
+            return $this->sendGenericTemplateEmail($entityType, $templateKeys[$entityType], $entity, [], [], $additionalTo, $additionalCc);
+        }
+
+        if ($entityType === 'compra') {
+            $comprasTable = $this->fetchTable('Compras');
+            $entity = $comprasTable->get($entity->id, contain: ['Assignees']);
+
+            if (!$entity->assignee || !$entity->assignee->email) {
+                Log::info('No assignee for compra, skipping email notification', ['compra_id' => $entity->id]);
+                return true;
+            }
+
+            $slaDue = $entity->resolution_sla_due ?? $entity->sla_due_date ?? null;
+            $extraVars = [
+                'assignee_name' => $entity->assignee->name,
+                'priority' => ucfirst($entity->priority),
+                'sla_due_date' => $slaDue ? $this->renderer->formatDate($slaDue) : 'No definido',
+            ];
+
+            return $this->sendGenericTemplateEmail($entityType, $templateKeys[$entityType], $entity, $extraVars);
+        }
+
+        return $this->sendGenericTemplateEmail($entityType, $templateKeys[$entityType], $entity);
     }
 
     /**
-     * Send status change notification
+     * Send status change notification (generic for all entity types)
      *
-     * @param \App\Model\Entity\Ticket $ticket Ticket entity
+     * @param string $entityType 'ticket', 'pqrs', 'compra'
+     * @param \Cake\Datasource\EntityInterface $entity Entity instance
      * @param string $oldStatus Old status
      * @param string $newStatus New status
      * @return bool Success status
      */
-    public function sendStatusChangeNotification($ticket, string $oldStatus, string $newStatus): bool
+    public function sendEntityStatusChangeNotification(string $entityType, \Cake\Datasource\EntityInterface $entity, string $oldStatus, string $newStatus): bool
     {
-        // Load ticket with associations to get assignee
-        $ticketsTable = $this->fetchTable('Tickets');
-        $ticket = $ticketsTable->get($ticket->id, contain: ['Requesters', 'Assignees']);
+        $templateKeys = [
+            'ticket' => 'ticket_estado',
+            'pqrs' => 'pqrs_estado',
+            'compra' => 'compra_estado',
+        ];
 
-        $assigneeName = $ticket->assignee ? $ticket->assignee->name : 'No asignado';
+        $config = $this->getCommentNotificationConfig($entityType);
+        $entityTable = $this->fetchTable($config['entityTable']);
+        $entity = $entityTable->get($entity->id, contain: $config['entityContain']);
 
-        return $this->sendGenericTemplateEmail('ticket', 'ticket_estado', $ticket, [
+        $assigneeName = (isset($entity->assignee) && $entity->assignee) ? $entity->assignee->name : 'No asignado';
+
+        return $this->sendGenericTemplateEmail($entityType, $templateKeys[$entityType], $entity, [
             'status_change_section' => $this->renderer->renderStatusChangeHtml($oldStatus, $newStatus, $assigneeName),
         ]);
     }
 
     /**
-     * Send new comment notification
+     * Send comment notification (generic for all entity types)
      *
-     * @param \App\Model\Entity\Ticket $ticket Ticket entity
-     * @param \App\Model\Entity\TicketComment $comment Comment entity
+     * @param string $entityType 'ticket', 'pqrs', 'compra'
+     * @param \Cake\Datasource\EntityInterface $entity Entity instance
+     * @param \Cake\Datasource\EntityInterface $comment Comment entity
      * @param array $additionalTo Additional To recipients
      * @param array $additionalCc Additional CC recipients
      * @return bool Success status
      */
-    public function sendNewCommentNotification($ticket, $comment, array $additionalTo = [], array $additionalCc = []): bool
+    public function sendEntityCommentNotification(string $entityType, \Cake\Datasource\EntityInterface $entity, \Cake\Datasource\EntityInterface $comment, array $additionalTo = [], array $additionalCc = []): bool
     {
-        return $this->sendCommentBasedNotification('ticket', 'nuevo_comentario', $ticket, $comment, null, null, $additionalTo, $additionalCc);
+        $templateKeys = [
+            'ticket' => 'nuevo_comentario',
+            'pqrs' => 'pqrs_comentario',
+            'compra' => 'compra_comentario',
+        ];
+
+        // For PQRS and Compra, only send for public comments
+        if ($entityType !== 'ticket' && $comment->comment_type !== 'public') {
+            return true;
+        }
+
+        return $this->sendCommentBasedNotification($entityType, $templateKeys[$entityType], $entity, $comment, null, null, $additionalTo, $additionalCc);
     }
 
     /**
-     * Send unified ticket response notification (comment + status change)
+     * Send response notification with comment + status change (generic)
      *
-     * @param \App\Model\Entity\Ticket $ticket Ticket entity
-     * @param \App\Model\Entity\TicketComment $comment Comment entity
+     * @param string $entityType 'ticket', 'pqrs', 'compra'
+     * @param \Cake\Datasource\EntityInterface $entity Entity instance
+     * @param \Cake\Datasource\EntityInterface $comment Comment entity
      * @param string $oldStatus Old status
      * @param string $newStatus New status
      * @param array $additionalTo Additional To recipients
      * @param array $additionalCc Additional CC recipients
      * @return bool Success status
      */
+    public function sendEntityResponseNotification(string $entityType, \Cake\Datasource\EntityInterface $entity, \Cake\Datasource\EntityInterface $comment, string $oldStatus, string $newStatus, array $additionalTo = [], array $additionalCc = []): bool
+    {
+        $templateKeys = [
+            'ticket' => 'ticket_respuesta',
+            'pqrs' => 'pqrs_respuesta',
+            'compra' => 'compra_respuesta',
+        ];
+
+        return $this->sendCommentBasedNotification($entityType, $templateKeys[$entityType], $entity, $comment, $oldStatus, $newStatus, $additionalTo, $additionalCc);
+    }
+
+    // Legacy wrappers for backward compatibility (delegate to generic methods)
+
+    public function sendNewTicketNotification($ticket): bool
+    {
+        return $this->sendNewEntityNotification('ticket', $ticket);
+    }
+
+    public function sendStatusChangeNotification($ticket, string $oldStatus, string $newStatus): bool
+    {
+        return $this->sendEntityStatusChangeNotification('ticket', $ticket, $oldStatus, $newStatus);
+    }
+
+    public function sendNewCommentNotification($ticket, $comment, array $additionalTo = [], array $additionalCc = []): bool
+    {
+        return $this->sendEntityCommentNotification('ticket', $ticket, $comment, $additionalTo, $additionalCc);
+    }
+
     public function sendTicketResponseNotification($ticket, $comment, string $oldStatus, string $newStatus, array $additionalTo = [], array $additionalCc = []): bool
     {
-        return $this->sendCommentBasedNotification('ticket', 'ticket_respuesta', $ticket, $comment, $oldStatus, $newStatus, $additionalTo, $additionalCc);
+        return $this->sendEntityResponseNotification('ticket', $ticket, $comment, $oldStatus, $newStatus, $additionalTo, $additionalCc);
     }
 
     /**
-     * Get email template from database
+     * Get email template from database (delegates to EmailTemplateRenderer)
      *
      * @param string $templateKey Template key
      * @return \App\Model\Entity\EmailTemplate|null
      */
     private function getTemplate(string $templateKey): ?\App\Model\Entity\EmailTemplate
     {
-        $templatesTable = $this->fetchTable('EmailTemplates');
-
-        return $templatesTable->find()
-            ->where([
-                'template_key' => $templateKey,
-                'is_active' => true,
-            ])
-            ->first();
+        return $this->templateRenderer->getTemplate($templateKey);
     }
 
     /**
-     * Replace variables in template string
+     * Replace variables in template string (delegates to EmailTemplateRenderer)
      *
      * @param string $template Template string with {{variables}}
      * @param array $variables Associative array of variable name => value
@@ -172,11 +236,7 @@ class EmailService
      */
     private function replaceVariables(string $template, array $variables): string
     {
-        foreach ($variables as $key => $value) {
-            $template = str_replace("{{" . $key . "}}", (string) $value, $template);
-        }
-
-        return $template;
+        return $this->templateRenderer->render($template, $variables);
     }
 
     /**
@@ -292,162 +352,48 @@ class EmailService
     }
 
 
-    /**
-     * Send new PQRS notification to requester
-     *
-     * @param \App\Model\Entity\Pqr $pqrs PQRS entity
-     * @return bool Success status
-     */
+    // Legacy wrappers for PQRS (delegate to generic methods)
+
     public function sendNewPqrsNotification($pqrs): bool
     {
-        return $this->sendGenericTemplateEmail('pqrs', 'nuevo_pqrs', $pqrs);
+        return $this->sendNewEntityNotification('pqrs', $pqrs);
     }
 
-    /**
-     * Send PQRS status change notification
-     *
-     * @param \App\Model\Entity\Pqr $pqrs PQRS entity
-     * @param string $oldStatus Old status
-     * @param string $newStatus New status
-     * @return bool Success status
-     */
     public function sendPqrsStatusChangeNotification($pqrs, string $oldStatus, string $newStatus): bool
     {
-        // Load PQRS with assignee association
-        $pqrsTable = $this->fetchTable('Pqrs');
-        $pqrs = $pqrsTable->get($pqrs->id, contain: ['Assignees']);
-
-        $assigneeName = $pqrs->assignee ? $pqrs->assignee->name : 'No asignado';
-
-        return $this->sendGenericTemplateEmail('pqrs', 'pqrs_estado', $pqrs, [
-            'status_change_section' => $this->renderer->renderStatusChangeHtml($oldStatus, $newStatus, $assigneeName),
-        ]);
+        return $this->sendEntityStatusChangeNotification('pqrs', $pqrs, $oldStatus, $newStatus);
     }
 
-    /**
-     * Send PQRS new comment notification
-     *
-     * @param \App\Model\Entity\Pqr $pqrs PQRS entity
-     * @param \App\Model\Entity\PqrsComment $comment Comment entity
-     * @param array $additionalTo Additional To recipients
-     * @param array $additionalCc Additional CC recipients
-     * @return bool Success status
-     */
     public function sendPqrsNewCommentNotification($pqrs, $comment, array $additionalTo = [], array $additionalCc = []): bool
     {
-        // Only send for public comments
-        if ($comment->comment_type !== 'public') {
-            return true;
-        }
-
-        return $this->sendCommentBasedNotification('pqrs', 'pqrs_comentario', $pqrs, $comment, null, null, $additionalTo, $additionalCc);
+        return $this->sendEntityCommentNotification('pqrs', $pqrs, $comment, $additionalTo, $additionalCc);
     }
 
-    /**
-     * Send unified PQRS response notification (comment + status change)
-     *
-     * @param \App\Model\Entity\Pqr $pqrs PQRS entity
-     * @param object $comment Comment entity
-     * @param string $oldStatus Old status
-     * @param string $newStatus New status
-     * @param array $additionalTo Additional To recipients
-     * @param array $additionalCc Additional CC recipients
-     * @return bool Success status
-     */
     public function sendPqrsResponseNotification($pqrs, $comment, string $oldStatus, string $newStatus, array $additionalTo = [], array $additionalCc = []): bool
     {
-        return $this->sendCommentBasedNotification('pqrs', 'pqrs_respuesta', $pqrs, $comment, $oldStatus, $newStatus, $additionalTo, $additionalCc);
+        return $this->sendEntityResponseNotification('pqrs', $pqrs, $comment, $oldStatus, $newStatus, $additionalTo, $additionalCc);
     }
 
-    /**
-     * Send new Compra notification to assigned agent
-     *
-     * @param \App\Model\Entity\Compra $compra Compra entity
-     * @return bool Success status
-     */
+    // Legacy wrappers for Compra (delegate to generic methods)
+
     public function sendNewCompraNotification($compra): bool
     {
-        // Load to check assignee
-        $comprasTable = $this->fetchTable('Compras');
-        $compra = $comprasTable->get($compra->id, contain: ['Assignees']);
-
-        // Skip if no assignee
-        if (!$compra->assignee || !$compra->assignee->email) {
-            Log::info('No assignee for compra, skipping email notification', [
-                'compra_id' => $compra->id,
-            ]);
-            return true;
-        }
-
-        // Build extra variables (prefer resolution_sla_due, fallback to legacy sla_due_date)
-        $slaDue = $compra->resolution_sla_due ?? $compra->sla_due_date ?? null;
-        $slaDate = $slaDue
-            ? $this->renderer->formatDate($slaDue)
-            : 'No definido';
-
-        $extraVars = [
-            'assignee_name' => $compra->assignee->name,
-            'priority' => ucfirst($compra->priority),
-            'sla_due_date' => $slaDate,
-        ];
-
-        return $this->sendGenericTemplateEmail('compra', 'nueva_compra', $compra, $extraVars);
+        return $this->sendNewEntityNotification('compra', $compra);
     }
 
-    /**
-     * Send Compra status change notification
-     *
-     * @param \App\Model\Entity\Compra $compra Compra entity
-     * @param string $oldStatus Old status
-     * @param string $newStatus New status
-     * @return bool Success status
-     */
     public function sendCompraStatusChangeNotification($compra, string $oldStatus, string $newStatus): bool
     {
-        // Load compra with associations to get assignee
-        $comprasTable = $this->fetchTable('Compras');
-        $compra = $comprasTable->get($compra->id, contain: ['Requesters', 'Assignees']);
-
-        $assigneeName = $compra->assignee ? $compra->assignee->name : 'No asignado';
-
-        return $this->sendGenericTemplateEmail('compra', 'compra_estado', $compra, [
-            'status_change_section' => $this->renderer->renderStatusChangeHtml($oldStatus, $newStatus, $assigneeName),
-        ]);
+        return $this->sendEntityStatusChangeNotification('compra', $compra, $oldStatus, $newStatus);
     }
 
-    /**
-     * Send Compra new comment notification
-     *
-     * @param \App\Model\Entity\Compra $compra Compra entity
-     * @param \App\Model\Entity\ComprasComment $comment Comment entity
-     * @param array $additionalTo Additional To recipients
-     * @param array $additionalCc Additional CC recipients
-     * @return bool Success status
-     */
     public function sendCompraCommentNotification($compra, $comment, array $additionalTo = [], array $additionalCc = []): bool
     {
-        // Only send for public comments
-        if ($comment->comment_type !== 'public') {
-            return true;
-        }
-
-        return $this->sendCommentBasedNotification('compra', 'compra_comentario', $compra, $comment, null, null, $additionalTo, $additionalCc);
+        return $this->sendEntityCommentNotification('compra', $compra, $comment, $additionalTo, $additionalCc);
     }
 
-    /**
-     * Send unified Compra response notification (comment + status change)
-     *
-     * @param \App\Model\Entity\Compra $compra Compra entity
-     * @param \App\Model\Entity\ComprasComment $comment Comment entity
-     * @param string $oldStatus Old status
-     * @param string $newStatus New status
-     * @param array $additionalTo Additional To recipients
-     * @param array $additionalCc Additional CC recipients
-     * @return bool Success status
-     */
     public function sendCompraResponseNotification($compra, $comment, string $oldStatus, string $newStatus, array $additionalTo = [], array $additionalCc = []): bool
     {
-        return $this->sendCommentBasedNotification('compra', 'compra_respuesta', $compra, $comment, $oldStatus, $newStatus, $additionalTo, $additionalCc);
+        return $this->sendEntityResponseNotification('compra', $compra, $comment, $oldStatus, $newStatus, $additionalTo, $additionalCc);
     }
 
     /**

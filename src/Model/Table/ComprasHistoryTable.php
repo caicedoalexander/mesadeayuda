@@ -25,6 +25,7 @@ class ComprasHistoryTable extends Table
         $this->setPrimaryKey('id');
 
         $this->addBehavior('Timestamp');
+        $this->addBehavior('Audit', ['foreignKey' => 'compra_id']);
 
         $this->belongsTo('Compras', [
             'foreignKey' => 'compra_id',
@@ -78,34 +79,4 @@ class ComprasHistoryTable extends Table
         return $rules;
     }
 
-    /**
-     * Log a change to a Compra record
-     *
-     * @param int $compraId Compra ID
-     * @param string $fieldName Field that changed
-     * @param string|null $oldValue Old value
-     * @param string|null $newValue New value
-     * @param int|null $userId User who made the change (NULL for system)
-     * @param string|null $description Human-readable description
-     * @return \App\Model\Entity\ComprasHistory|false
-     */
-    public function logChange(
-        int $compraId,
-        string $fieldName,
-        ?string $oldValue,
-        ?string $newValue,
-        ?int $userId,
-        ?string $description = null
-    ) {
-        $history = $this->newEntity([
-            'compra_id' => $compraId,
-            'changed_by' => $userId,
-            'field_name' => $fieldName,
-            'old_value' => $oldValue,
-            'new_value' => $newValue,
-            'description' => $description ?? "Campo '{$fieldName}' cambiado de '{$oldValue}' a '{$newValue}'",
-        ], ['accessibleFields' => ['changed_by' => true]]);
-
-        return $this->save($history);
-    }
 }

@@ -56,6 +56,8 @@ class TicketHistoryTable extends Table
             ]
         ]);
 
+        $this->addBehavior('Audit', ['foreignKey' => 'ticket_id']);
+
         $this->belongsTo('Tickets', [
             'foreignKey' => 'ticket_id',
             'joinType' => 'INNER',
@@ -121,28 +123,4 @@ class TicketHistoryTable extends Table
         return $rules;
     }
 
-    /**
-     * Log a change to a ticket
-     *
-     * @param int $ticketId Ticket ID
-     * @param string $fieldName Field that changed
-     * @param mixed $oldValue Old value
-     * @param mixed $newValue New value
-     * @param int|null $userId User who made the change (null for system changes)
-     * @param string|null $description Human-readable description
-     * @return \App\Model\Entity\TicketHistory|false
-     */
-    public function logChange(int $ticketId, string $fieldName, $oldValue, $newValue, ?int $userId = null, ?string $description = null)
-    {
-        $history = $this->newEntity([
-            'ticket_id' => $ticketId,
-            'changed_by' => $userId,
-            'field_name' => $fieldName,
-            'old_value' => (string) $oldValue,
-            'new_value' => (string) $newValue,
-            'description' => $description,
-        ], ['accessibleFields' => ['changed_by' => true]]);
-
-        return $this->save($history);
-    }
 }

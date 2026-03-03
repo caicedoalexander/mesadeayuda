@@ -7,6 +7,7 @@ use Cake\ORM\Query\SelectQuery;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
+use App\Utility\ValidationConstants;
 
 /**
  * Pqrs Model
@@ -93,7 +94,7 @@ class PqrsTable extends Table
             ->maxLength('type', 20)
             ->requirePresence('type', 'create')
             ->notEmptyString('type')
-            ->inList('type', ['peticion', 'queja', 'reclamo', 'sugerencia']);
+            ->inList('type', ValidationConstants::PQRS_TYPES);
 
         $validator
             ->scalar('subject')
@@ -111,14 +112,14 @@ class PqrsTable extends Table
             ->maxLength('status', 20)
             ->requirePresence('status', 'create')
             ->notEmptyString('status')
-            ->inList('status', ['nuevo', 'en_revision', 'en_proceso', 'resuelto', 'cerrado']);
+            ->inList('status', ValidationConstants::PQRS_STATUSES);
 
         $validator
             ->scalar('priority')
             ->maxLength('priority', 20)
             ->requirePresence('priority', 'create')
             ->notEmptyString('priority')
-            ->inList('priority', ['baja', 'media', 'alta', 'urgente']);
+            ->inList('priority', ValidationConstants::PRIORITIES);
 
         $validator
             ->scalar('requester_name')
@@ -301,22 +302,6 @@ class PqrsTable extends Table
      */
     public function generatePqrsNumber(): string
     {
-        $year = date('Y');
-        $prefix = "PQRS-{$year}-";
-
-        $lastPqrs = $this->find()
-            ->select(['pqrs_number'])
-            ->where(['pqrs_number LIKE' => "{$prefix}%"])
-            ->orderBy(['pqrs_number' => 'DESC'])
-            ->first();
-
-        if ($lastPqrs) {
-            $lastNumber = (int) substr($lastPqrs->pqrs_number, -5);
-            $newNumber = $lastNumber + 1;
-        } else {
-            $newNumber = 1;
-        }
-
-        return $prefix . str_pad((string) $newNumber, 5, '0', STR_PAD_LEFT);
+        return (new \App\Service\NumberGenerationService())->generate('pqrs');
     }
 }

@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\View\Cell;
 
-use Cake\I18n\DateTime;
+use App\Service\StatisticsService;
 use Cake\ORM\Locator\LocatorAwareTrait;
 use Cake\View\Cell;
 
@@ -15,6 +15,7 @@ use Cake\View\Cell;
 class PqrsSidebarCell extends Cell
 {
     use LocatorAwareTrait;
+
     /**
      * Display method
      *
@@ -25,28 +26,17 @@ class PqrsSidebarCell extends Cell
      */
     public function display(string $currentView = 'todos_sin_resolver', ?string $userRole = null, ?int $userId = null): void
     {
-        $pqrsTable = $this->fetchTable('Pqrs');
-        $usersTable = $this->fetchTable('Users');
-
-        // Get current user object for profile image
         $currentUser = null;
         if ($userId) {
-            $currentUser = $usersTable->get($userId);
+            $currentUser = $this->fetchTable('Users')->get($userId);
         }
 
-        // Optimize counts with a single query using GROUP BY
-        $statusCounts = $pqrsTable->find()
-            ->select(['status', 'count' => $pqrsTable->find()->func()->count('*')])
-            ->group(['status'])
-            ->all()
-            ->combine('status', 'count')
-            ->toArray();
+        $service = new StatisticsService();
+        $data = $service->getSidebarCounts('Pqrs', $userRole, $userId);
+        $statusCounts = $data['statusCounts'];
 
-        // Calculate counts from grouped results
         $counts = [
-            'sin_asignar' => $pqrsTable->find()
-                ->where(['assignee_id IS' => null, 'status NOT IN' => ['resuelto', 'cerrado']])
-                ->count(),
+            'sin_asignar' => $data['unassigned'],
             'todos_sin_resolver' => ($statusCounts['nuevo'] ?? 0) + ($statusCounts['en_revision'] ?? 0) + ($statusCounts['en_proceso'] ?? 0),
             'nuevas' => $statusCounts['nuevo'] ?? 0,
             'en_revision' => $statusCounts['en_revision'] ?? 0,
@@ -55,14 +45,12 @@ class PqrsSidebarCell extends Cell
             'cerradas' => $statusCounts['cerrado'] ?? 0,
         ];
 
-        // Add "mis_pqrs" count for agents, servicio_cliente, compras and admin
-        if (($userRole === 'agent' || $userRole === 'servicio_cliente' || $userRole === 'compras' || $userRole === 'admin') && $userId) {
-            $counts['mis_pqrs'] = $pqrsTable->find()
-                ->where(['assignee_id' => $userId, 'status NOT IN' => ['resuelto', 'cerrado']])
-                ->count();
+        if ($data['myItems'] !== null) {
+            $counts['mis_pqrs'] = $data['myItems'];
         }
 
-        // Get counts by type with GROUP BY
+        // Type counts (unresolved only)
+        $pqrsTable = $this->fetchTable('Pqrs');
         $typeCountsRaw = $pqrsTable->find()
             ->select(['type', 'count' => $pqrsTable->find()->func()->count('*')])
             ->where(['status NOT IN' => ['resuelto', 'cerrado']])

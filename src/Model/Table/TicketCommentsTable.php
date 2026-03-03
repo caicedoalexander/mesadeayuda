@@ -7,6 +7,7 @@ use Cake\ORM\Query\SelectQuery;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
+use App\Utility\ValidationConstants;
 
 /**
  * TicketComments Model
@@ -78,7 +79,7 @@ class TicketCommentsTable extends Table
             ->scalar('comment_type')
             ->maxLength('comment_type', 20)
             ->notEmptyString('comment_type')
-            ->inList('comment_type', ['public', 'internal', 'system'], 'Tipo de comentario no válido.');
+            ->inList('comment_type', ValidationConstants::TICKET_COMMENT_TYPES, 'Tipo de comentario no válido.');
 
         $validator
             ->scalar('body')

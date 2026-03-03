@@ -3,13 +3,14 @@ declare(strict_types=1);
 
 namespace App\View\Cell;
 
-use Cake\I18n\DateTime;
+use App\Service\StatisticsService;
 use Cake\ORM\Locator\LocatorAwareTrait;
 use Cake\View\Cell;
 
 class TicketsSidebarCell extends Cell
 {
     use LocatorAwareTrait;
+
     /**
      * Display method
      *
@@ -20,34 +21,21 @@ class TicketsSidebarCell extends Cell
      */
     public function display(string $currentView = 'todos_sin_resolver', ?string $userRole = null, ?int $userId = null): void
     {
-        $ticketsTable = $this->fetchTable('Tickets');
-        $usersTable = $this->fetchTable('Users');
-
-        // Get current user object for profile image
         $currentUser = null;
         if ($userId) {
-            $currentUser = $usersTable->get($userId);
+            $currentUser = $this->fetchTable('Users')->get($userId);
         }
 
-        // Optimize counts with a single query using GROUP BY
-        $baseQuery = $ticketsTable->find();
-        if ($userRole === 'requester' && $userId) {
-            $baseQuery->where(['requester_id' => $userId]);
-        }
-
-        // Get all status counts in a single query
-        $statusCounts = (clone $baseQuery)
-            ->select(['status', 'count' => $ticketsTable->find()->func()->count('*')])
-            ->group(['status'])
-            ->all()
-            ->combine('status', 'count')
-            ->toArray();
+        $service = new StatisticsService();
+        $data = $service->getSidebarCounts('Tickets', $userRole, $userId);
+        $statusCounts = $data['statusCounts'];
 
         $isAgent = $userRole === 'agent';
 
-        // For agents: count status-specific tickets that are assigned to them
+        // For agents: count status-specific tickets assigned to them
         $agentStatusCounts = [];
         if ($isAgent && $userId) {
+            $ticketsTable = $this->fetchTable('Tickets');
             $agentStatusCounts = $ticketsTable->find()
                 ->select(['status', 'count' => $ticketsTable->find()->func()->count('*')])
                 ->where(['assignee_id' => $userId, 'status IN' => ['nuevo', 'abierto', 'pendiente']])
@@ -57,12 +45,8 @@ class TicketsSidebarCell extends Cell
                 ->toArray();
         }
 
-        // Calculate counts from grouped results
-        // Must match findWithFilters conditions in TicketsTable
         $counts = [
-            'sin_asignar' => (clone $baseQuery)
-                ->where(['assignee_id IS' => null, 'status NOT IN' => ['resuelto', 'convertido']])
-                ->count(),
+            'sin_asignar' => $data['unassigned'],
             'todos_sin_resolver' => ($statusCounts['nuevo'] ?? 0) + ($statusCounts['abierto'] ?? 0) + ($statusCounts['pendiente'] ?? 0),
             'pendientes' => $isAgent ? ($agentStatusCounts['pendiente'] ?? 0) : ($statusCounts['pendiente'] ?? 0),
             'nuevos' => $isAgent ? ($agentStatusCounts['nuevo'] ?? 0) : ($statusCounts['nuevo'] ?? 0),
@@ -71,11 +55,8 @@ class TicketsSidebarCell extends Cell
             'convertidos' => $statusCounts['convertido'] ?? 0,
         ];
 
-        // Add "mis_tickets" count for agents
         if ($isAgent && $userId) {
-            $counts['mis_tickets'] = $ticketsTable->find()
-                ->where(['assignee_id' => $userId, 'status NOT IN' => ['resuelto', 'convertido']])
-                ->count();
+            $counts['mis_tickets'] = $data['myItems'];
         }
 
         $this->set('counts', $counts);

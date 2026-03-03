@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Service\Traits;
 
+use App\Utility\EntityType;
 use Cake\Datasource\EntityInterface;
 use Cake\Log\Log;
 
@@ -187,12 +188,7 @@ trait EntityConversionTrait
      */
     private function getCommentForeignKey(string $entityType): string
     {
-        return match ($entityType) {
-            'ticket' => 'comment_id',
-            'pqrs' => 'pqrs_comment_id',
-            'compra' => 'compras_comment_id',
-            default => throw new \InvalidArgumentException("Invalid entity type: {$entityType}"),
-        };
+        return EntityType::from($entityType)->commentForeignKey();
     }
 
     /**
@@ -203,12 +199,7 @@ trait EntityConversionTrait
      */
     private function getCommentsAssociationName(string $entityType): string
     {
-        return match ($entityType) {
-            'ticket' => 'ticket_comments',
-            'pqrs' => 'pqrs_comments',
-            'compra' => 'compras_comments',
-            default => throw new \InvalidArgumentException("Invalid entity type: {$entityType}"),
-        };
+        return EntityType::from($entityType)->commentsAssociation();
     }
 
     /**
@@ -219,12 +210,7 @@ trait EntityConversionTrait
      */
     private function getAttachmentsAssociationName(string $entityType): string
     {
-        return match ($entityType) {
-            'ticket' => 'attachments',
-            'pqrs' => 'pqrs_attachments',
-            'compra' => 'compras_attachments',
-            default => throw new \InvalidArgumentException("Invalid entity type: {$entityType}"),
-        };
+        return EntityType::from($entityType)->attachmentsAssociation();
     }
 
     /**
@@ -236,14 +222,7 @@ trait EntityConversionTrait
      */
     private function getAttachmentsDirectory(string $entityType, string $entityNumber): string
     {
-        $baseDir = match ($entityType) {
-            'ticket' => 'uploads' . DS . 'attachments',
-            'pqrs' => 'uploads' . DS . 'pqrs',
-            'compra' => 'uploads' . DS . 'compras',
-            default => throw new \InvalidArgumentException("Invalid entity type: {$entityType}"),
-        };
-
-        return $baseDir . DS . $entityNumber . DS;
+        return EntityType::from($entityType)->uploadBasePath() . DS . $entityNumber . DS;
     }
 
     /**

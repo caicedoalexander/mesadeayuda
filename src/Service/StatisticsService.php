@@ -665,75 +665,108 @@ class StatisticsService
     private function getTopRequestersCompras(int $limit = 5): array
     {
         $comprasTable = $this->fetchTable('Compras');
-        $usersTable = $this->fetchTable('Users');
 
-        // Define status categories
         $completedStatuses = ['completado'];
         $activeStatuses = ['nuevo', 'en_revision', 'aprobado', 'en_proceso'];
 
         $query = $comprasTable->find();
 
-        // CASE expressions for counting by status
         $completedCase = $query->newExpr()
             ->case()
-            ->when(['status IN' => $completedStatuses])
+            ->when(['Compras.status IN' => $completedStatuses])
             ->then(1)
             ->else(0);
 
         $activeCase = $query->newExpr()
             ->case()
-            ->when(['status IN' => $activeStatuses])
+            ->when(['Compras.status IN' => $activeStatuses])
             ->then(1)
             ->else(0);
 
+        // Single query with JOIN instead of N+1 pattern
         $topRequestersRaw = $query->select([
-                'requester_id',
+                'Compras.requester_id',
                 'total_count' => $query->func()->count('*'),
                 'resolved_count' => $query->func()->sum($completedCase),
                 'active_count' => $query->func()->sum($activeCase),
+                'requester_name' => $query->func()->concat([
+                    'Requesters.first_name' => 'identifier',
+                    ' ',
+                    'Requesters.last_name' => 'identifier',
+                ]),
+                'requester_email' => 'Requesters.email',
             ])
-            ->where(['requester_id IS NOT' => null])
-            ->group(['requester_id'])
+            ->innerJoinWith('Requesters')
+            ->where(['Compras.requester_id IS NOT' => null])
+            ->group(['Compras.requester_id', 'Requesters.first_name', 'Requesters.last_name', 'Requesters.email'])
             ->order(['total_count' => 'DESC'])
             ->limit($limit)
             ->all();
 
-        // Load full user objects for requesters
-        $userIds = [];
-        foreach ($topRequestersRaw as $requester) {
-            if ($requester->requester_id) {
-                $userIds[] = $requester->requester_id;
-            }
-        }
-
-        // Fetch all users at once
-        $users = [];
-        if (!empty($userIds)) {
-            $usersCollection = $usersTable->find()
-                ->where(['id IN' => $userIds])
-                ->all();
-            foreach ($usersCollection as $user) {
-                $users[$user->id] = $user;
-            }
-        }
-
-        // Process requesters data and attach user objects
         $topRequesters = [];
         foreach ($topRequestersRaw as $requester) {
             $requesterData = $requester->toArray();
-            $requesterData['count'] = $requesterData['total_count']; // Keep for backward compatibility
-
-            // Attach user info if available
-            if (isset($users[$requester->requester_id])) {
-                $user = $users[$requester->requester_id];
-                $requesterData['requester_name'] = $user->first_name . ' ' . $user->last_name;
-                $requesterData['requester_email'] = $user->email;
-                $requesterData['requester'] = $user; // Full user object for profile image
-            }
-
+            $requesterData['count'] = $requesterData['total_count'];
             $topRequesters[] = (object) $requesterData;
         }
 
         return $topRequesters;
+    }
+
+    /**
+     * Get sidebar counts for a given entity table
+     *
+     * Centralizes the GROUP BY status + role-based count queries
+     * used by all sidebar cells.
+     *
+     * @param string $tableName Table name ('Tickets', 'Compras', 'Pqrs')
+     * @param string|null $userRole Current user role
+     * @param int|null $userId Current user ID
+     * @return array{statusCounts: array, unassigned: int, myItems: int|null}
+     */
+    public function getSidebarCounts(string $tableName, ?string $userRole = null, ?int $userId = null): array
+    {
+        $table = $this->fetchTable($tableName);
+
+        $resolvedStatuses = match ($tableName) {
+            'Tickets' => ['resuelto', 'convertido'],
+            'Compras' => ['completado', 'rechazado', 'convertido'],
+            'Pqrs' => ['resuelto', 'cerrado'],
+            default => [],
+        };
+
+        // Status counts in a single GROUP BY query
+        $statusCounts = $table->find()
+            ->select(['status', 'count' => $table->find()->func()->count('*')])
+            ->group(['status'])
+            ->all()
+            ->combine('status', 'count')
+            ->toArray();
+
+        // Unassigned count
+        $unassigned = $table->find()
+            ->where(['assignee_id IS' => null, 'status NOT IN' => $resolvedStatuses])
+            ->count();
+
+        // "My items" count (role-dependent)
+        $myItems = null;
+        $canHaveMyItems = match ($tableName) {
+            'Tickets' => $userRole === 'agent',
+            'Compras' => in_array($userRole, ['compras', 'admin']),
+            'Pqrs' => in_array($userRole, ['agent', 'servicio_cliente', 'compras', 'admin']),
+            default => false,
+        };
+
+        if ($canHaveMyItems && $userId) {
+            $myItems = $table->find()
+                ->where(['assignee_id' => $userId, 'status NOT IN' => $resolvedStatuses])
+                ->count();
+        }
+
+        return [
+            'statusCounts' => $statusCounts,
+            'unassigned' => $unassigned,
+            'myItems' => $myItems,
+        ];
     }
 }

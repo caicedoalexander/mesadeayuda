@@ -71,10 +71,10 @@ class Pqr extends Entity
         'closed_at' => false,
         'first_response_sla_due' => false,
         'resolution_sla_due' => false,
-        'assignee' => true,
-        'pqrs_comments' => true,
-        'pqrs_attachments' => true,
-        'pqrs_history' => true,
+        'assignee' => false,
+        'pqrs_comments' => false,
+        'pqrs_attachments' => false,
+        'pqrs_history' => false,
     ];
 
     /**

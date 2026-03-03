@@ -166,58 +166,22 @@ class WhatsappService
     }
 
     /**
-     * Send new ticket notification via WhatsApp
-     *
-     * @param \App\Model\Entity\Ticket $ticket Ticket entity
-     * @return bool Success status
-     */
-    public function sendNewTicketNotification($ticket): bool
-    {
-        $ticketsTable = $this->fetchTable('Tickets');
-        $ticket = $ticketsTable->get($ticket->id, contain: ['Requesters']);
-
-        return $this->sendNewEntityNotification('ticket', $ticket);
-    }
-
-    /**
-     * Send new PQRS notification via WhatsApp
-     *
-     * @param \App\Model\Entity\Pqr $pqrs PQRS entity
-     * @return bool Success status
-     */
-    public function sendNewPqrsNotification($pqrs): bool
-    {
-        return $this->sendNewEntityNotification('pqrs', $pqrs);
-    }
-
-    /**
-     * Send new Compra notification via WhatsApp
-     *
-     * @param \App\Model\Entity\Compra $compra Compra entity
-     * @return bool Success status
-     */
-    public function sendNewCompraNotification($compra): bool
-    {
-        $comprasTable = $this->fetchTable('Compras');
-        $compra = $comprasTable->get($compra->id, contain: ['Requesters', 'Assignees']);
-
-        return $this->sendNewEntityNotification('compra', $compra);
-    }
-
-    /**
      * Send new entity notification via WhatsApp (generic)
+     *
+     * Loads entity with required associations and sends WhatsApp message
+     * to the configured number for the entity type.
      *
      * @param string $entityType 'ticket', 'pqrs', 'compra'
      * @param \Cake\Datasource\EntityInterface $entity Entity instance
      * @return bool Success status
      */
-    private function sendNewEntityNotification(string $entityType, \Cake\Datasource\EntityInterface $entity): bool
+    public function sendNewEntityNotification(string $entityType, \Cake\Datasource\EntityInterface $entity): bool
     {
         try {
             $configMap = [
-                'ticket' => ['numberKey' => 'whatsapp_tickets_number', 'renderer' => 'renderWhatsappNewTicket'],
-                'pqrs' => ['numberKey' => 'whatsapp_pqrs_number', 'renderer' => 'renderWhatsappNewPqrs'],
-                'compra' => ['numberKey' => 'whatsapp_compras_number', 'renderer' => 'renderWhatsappNewCompra'],
+                'ticket' => ['numberKey' => 'whatsapp_tickets_number', 'renderer' => 'renderWhatsappNewTicket', 'table' => 'Tickets', 'contain' => ['Requesters']],
+                'pqrs' => ['numberKey' => 'whatsapp_pqrs_number', 'renderer' => 'renderWhatsappNewPqrs', 'table' => null, 'contain' => []],
+                'compra' => ['numberKey' => 'whatsapp_compras_number', 'renderer' => 'renderWhatsappNewCompra', 'table' => 'Compras', 'contain' => ['Requesters', 'Assignees']],
             ];
 
             $map = $configMap[$entityType];
@@ -226,6 +190,12 @@ class WhatsappService
             if (!$config || empty($config[$map['numberKey']])) {
                 Log::info("WhatsApp {$entityType} number not configured, skipping notification");
                 return false;
+            }
+
+            // Load entity with required associations if needed
+            if ($map['table'] !== null) {
+                $table = $this->fetchTable($map['table']);
+                $entity = $table->get($entity->id, contain: $map['contain']);
             }
 
             $message = $this->renderer->{$map['renderer']}($entity);

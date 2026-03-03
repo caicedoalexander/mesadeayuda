@@ -41,6 +41,7 @@ class PqrsHistoryTable extends Table
         $this->setPrimaryKey('id');
 
         $this->addBehavior('Timestamp');
+        $this->addBehavior('Audit', ['foreignKey' => 'pqrs_id']);
 
         $this->belongsTo('Pqrs', [
             'foreignKey' => 'pqrs_id',
@@ -109,34 +110,4 @@ class PqrsHistoryTable extends Table
         return $rules;
     }
 
-    /**
-     * Log a change to a PQRS record
-     *
-     * @param int $pqrsId PQRS ID
-     * @param string $fieldName Field that changed
-     * @param string|null $oldValue Old value
-     * @param string|null $newValue New value
-     * @param int|null $userId User who made the change (NULL for system)
-     * @param string|null $description Human-readable description
-     * @return \App\Model\Entity\PqrsHistory|false
-     */
-    public function logChange(
-        int $pqrsId,
-        string $fieldName,
-        ?string $oldValue,
-        ?string $newValue,
-        int $userId,
-        ?string $description = null
-    ) {
-        $history = $this->newEntity([
-            'pqrs_id' => $pqrsId,
-            'changed_by' => $userId,
-            'field_name' => $fieldName,
-            'old_value' => $oldValue,
-            'new_value' => $newValue,
-            'description' => $description ?? "Campo '{$fieldName}' cambiado de '{$oldValue}' a '{$newValue}'",
-        ], ['accessibleFields' => ['changed_by' => true]]);
-
-        return $this->save($history);
-    }
 }

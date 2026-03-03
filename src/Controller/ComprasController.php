@@ -99,7 +99,7 @@ class ComprasController extends AppController
             'lazyLoadHistory' => true, // PERFORMANCE FIX: Load history via AJAX
             'beforeSet' => function($compra, $viewVars) {
                 // Check SLA status
-                $isSLABreached = $this->comprasService->isSLABreached($compra);
+                $isSLABreached = $this->comprasService->isResolutionSLABreached($compra);
 
                 // Get users for assignment with formatted names
                 $comprasUsers = $this->fetchTable('Users')->find()
