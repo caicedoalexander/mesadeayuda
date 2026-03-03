@@ -200,6 +200,11 @@ class GmailWorkerCommand extends Command
     {
         for ($i = 0; $i < $seconds && !$this->shouldStop; $i++) {
             sleep(1);
+            $triggerFile = TMP . 'gmail_worker_trigger';
+            if (file_exists($triggerFile)) {
+                @unlink($triggerFile);
+                break;
+            }
         }
     }
 

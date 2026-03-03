@@ -130,6 +130,7 @@ class SettingsController extends AppController
                     if ($this->settingsService->saveSetting('gmail_refresh_token', $tokens['refresh_token'])) {
                         $this->Flash->success('Gmail autorizado exitosamente.');
                         Log::info('Gmail OAuth completed successfully');
+                        @file_put_contents(TMP . 'gmail_worker_trigger', (string)time());
                     } else {
                         $this->Flash->error('Error al guardar el token de Gmail.');
                         Log::error('Failed to save Gmail refresh token');
