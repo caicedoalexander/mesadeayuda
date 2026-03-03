@@ -4,8 +4,10 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Service\Traits\ConfigResolutionTrait;
-use Cake\ORM\Locator\LocatorAwareTrait;
+use App\Utility\SettingKeys;
+use App\Utility\ValidationConstants;
 use Cake\Log\Log;
+use Cake\ORM\Locator\LocatorAwareTrait;
 
 /**
  * EmailTemplateRenderer
@@ -128,7 +130,7 @@ class EmailTemplateRenderer
     public function getSystemVariables(): array
     {
         return [
-            'system_title' => $this->resolveSettingValue('system_title', 'Mesa de Ayuda'),
+            'system_title' => $this->resolveSettingValue(SettingKeys::SYSTEM_TITLE, ValidationConstants::DEFAULT_SYSTEM_TITLE),
             'current_year' => date('Y'),
         ];
     }

@@ -7,6 +7,8 @@ use App\Controller\AppController;
 use App\Service\GmailService;
 use App\Service\SettingsService;
 use App\Service\WhatsappService;
+use App\Utility\SettingKeys;
+use App\Utility\ValidationConstants;
 use Cake\Log\Log;
 
 /**
@@ -43,7 +45,7 @@ class SettingsController extends AppController
         ]);
 
         $user = $this->Authentication->getIdentity();
-        if (!$user || $user->get('role') !== 'admin') {
+        if (!$user || $user->get('role') !== ValidationConstants::ROLE_ADMIN) {
             $this->Flash->error('Solo los administradores pueden acceder a esta sección.');
             return $this->redirect(['controller' => 'Tickets', 'action' => 'index', 'prefix' => false]);
         }
@@ -60,24 +62,24 @@ class SettingsController extends AppController
             $data = $this->request->getData();
 
             // Handle checkboxes (if not present, they're unchecked = '0')
-            if (!isset($data['whatsapp_enabled'])) {
-                $data['whatsapp_enabled'] = '0';
+            if (!isset($data[SettingKeys::WHATSAPP_ENABLED])) {
+                $data[SettingKeys::WHATSAPP_ENABLED] = '0';
             }
-            if (!isset($data['n8n_enabled'])) {
-                $data['n8n_enabled'] = '0';
+            if (!isset($data[SettingKeys::N8N_ENABLED])) {
+                $data[SettingKeys::N8N_ENABLED] = '0';
             }
-            if (!isset($data['n8n_send_tags_list'])) {
-                $data['n8n_send_tags_list'] = '0';
+            if (!isset($data[SettingKeys::N8N_SEND_TAGS_LIST])) {
+                $data[SettingKeys::N8N_SEND_TAGS_LIST] = '0';
             }
 
             // Allowlist of valid setting keys to prevent arbitrary setting injection
             $allowedKeys = [
-                'system_title', 'gmail_check_interval',
-                'whatsapp_enabled', 'whatsapp_api_url', 'whatsapp_api_key',
-                'whatsapp_instance_name', 'whatsapp_tickets_number',
-                'whatsapp_compras_number', 'whatsapp_pqrs_number',
-                'n8n_enabled', 'n8n_webhook_url', 'n8n_api_key',
-                'n8n_send_tags_list', 'n8n_timeout',
+                SettingKeys::SYSTEM_TITLE, SettingKeys::GMAIL_CHECK_INTERVAL,
+                SettingKeys::WHATSAPP_ENABLED, SettingKeys::WHATSAPP_API_URL, SettingKeys::WHATSAPP_API_KEY,
+                SettingKeys::WHATSAPP_INSTANCE_NAME, SettingKeys::WHATSAPP_TICKETS_NUMBER,
+                SettingKeys::WHATSAPP_COMPRAS_NUMBER, SettingKeys::WHATSAPP_PQRS_NUMBER,
+                SettingKeys::N8N_ENABLED, SettingKeys::N8N_WEBHOOK_URL, SettingKeys::N8N_API_KEY,
+                SettingKeys::N8N_SEND_TAGS_LIST, SettingKeys::N8N_TIMEOUT,
             ];
 
             foreach ($data as $key => $value) {
@@ -104,8 +106,8 @@ class SettingsController extends AppController
         $allSettings = $this->settingsService->loadAll();
 
         $config = [];
-        if (!empty($allSettings['gmail_client_secret_path'])) {
-            $config['client_secret_path'] = $allSettings['gmail_client_secret_path'];
+        if (!empty($allSettings[SettingKeys::GMAIL_CLIENT_SECRET_PATH])) {
+            $config['client_secret_path'] = $allSettings[SettingKeys::GMAIL_CLIENT_SECRET_PATH];
         }
 
         // Set redirect URI for OAuth2 flow (callback URL)
@@ -127,10 +129,10 @@ class SettingsController extends AppController
 
                 if (isset($tokens['refresh_token'])) {
                     // Save refresh token to settings using service
-                    if ($this->settingsService->saveSetting('gmail_refresh_token', $tokens['refresh_token'])) {
+                    if ($this->settingsService->saveSetting(SettingKeys::GMAIL_REFRESH_TOKEN, $tokens['refresh_token'])) {
                         $this->Flash->success('Gmail autorizado exitosamente.');
                         Log::info('Gmail OAuth completed successfully');
-                        @file_put_contents(TMP . 'gmail_worker_trigger', (string)time());
+                        @file_put_contents(TMP . \App\Command\GmailWorkerCommand::TRIGGER_FILE, (string)time());
                     } else {
                         $this->Flash->error('Error al guardar el token de Gmail.');
                         Log::error('Failed to save Gmail refresh token');
@@ -164,8 +166,8 @@ class SettingsController extends AppController
         $allSettings = $this->settingsService->loadAll();
 
         $config = [
-            'refresh_token' => $allSettings['gmail_refresh_token'] ?? '',
-            'client_secret_path' => $allSettings['gmail_client_secret_path'] ?? '',
+            'refresh_token' => $allSettings[SettingKeys::GMAIL_REFRESH_TOKEN] ?? '',
+            'client_secret_path' => $allSettings[SettingKeys::GMAIL_CLIENT_SECRET_PATH] ?? '',
         ];
 
         try {
@@ -210,7 +212,7 @@ class SettingsController extends AppController
 
         $users = $this->paginate($usersTable->find()
             ->contain(['Organizations'])
-            ->where(['Users.role IN' => ['admin', 'agent', 'servicio_cliente', 'compras']])
+            ->where(['Users.role IN' => ValidationConstants::STAFF_ROLES])
             ->orderBy(['Users.created' => 'DESC']));
 
         $this->set(compact('users'));

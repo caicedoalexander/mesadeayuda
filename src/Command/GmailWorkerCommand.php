@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Utility\SettingKeys;
 use App\Utility\SettingsEncryptionTrait;
 use Cake\Command\Command;
 use Cake\Console\Arguments;
@@ -28,6 +29,7 @@ class GmailWorkerCommand extends Command
 
     private bool $shouldStop = false;
 
+    public const TRIGGER_FILE = 'gmail_worker_trigger';
     private const MIN_RETRY_SECONDS = 60;
     private const MAX_RETRY_SECONDS = 600;
 
@@ -200,7 +202,7 @@ class GmailWorkerCommand extends Command
     {
         for ($i = 0; $i < $seconds && !$this->shouldStop; $i++) {
             sleep(1);
-            $triggerFile = TMP . 'gmail_worker_trigger';
+            $triggerFile = TMP . self::TRIGGER_FILE;
             if (file_exists($triggerFile)) {
                 @unlink($triggerFile);
                 break;
@@ -270,7 +272,7 @@ class GmailWorkerCommand extends Command
 
         // Check for refresh token (required for OAuth)
         $refreshTokenSetting = $settingsTable->find()
-            ->where(['setting_key' => 'gmail_refresh_token'])
+            ->where(['setting_key' => SettingKeys::GMAIL_REFRESH_TOKEN])
             ->first();
 
         if (!$refreshTokenSetting || empty($refreshTokenSetting->setting_value)) {
@@ -279,8 +281,8 @@ class GmailWorkerCommand extends Command
 
         // Decrypt the refresh token to verify it's valid
         try {
-            $decryptedToken = $this->shouldEncrypt('gmail_refresh_token')
-                ? $this->decryptSetting($refreshTokenSetting->setting_value, 'gmail_refresh_token')
+            $decryptedToken = $this->shouldEncrypt(SettingKeys::GMAIL_REFRESH_TOKEN)
+                ? $this->decryptSetting($refreshTokenSetting->setting_value, SettingKeys::GMAIL_REFRESH_TOKEN)
                 : $refreshTokenSetting->setting_value;
 
             if (empty($decryptedToken)) {
@@ -296,7 +298,7 @@ class GmailWorkerCommand extends Command
 
         // Check for client_secret.json file
         $clientSecretPath = $settingsTable->find()
-            ->where(['setting_key' => 'gmail_client_secret_path'])
+            ->where(['setting_key' => SettingKeys::GMAIL_CLIENT_SECRET_PATH])
             ->first();
 
         if (!$clientSecretPath || empty($clientSecretPath->setting_value)) {
@@ -320,7 +322,7 @@ class GmailWorkerCommand extends Command
         $settingsTable = $this->fetchTable('SystemSettings');
 
         $setting = $settingsTable->find()
-            ->where(['setting_key' => 'gmail_check_interval'])
+            ->where(['setting_key' => SettingKeys::GMAIL_CHECK_INTERVAL])
             ->first();
 
         if ($setting) {

@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Service\Traits;
 
+use App\Utility\ValidationConstants;
+
 /**
  * Statistics Service Trait
  *
@@ -208,10 +210,10 @@ trait StatisticsServiceTrait
         // Determine agent roles based on module if not specified
         if (empty($agentRoles)) {
             $agentRoles = match($tableName) {
-                'Tickets' => ['agent'],  // Tickets: only agents (not admin)
-                'Pqrs' => ['servicio_cliente'],  // PQRS: customer service agents
-                'Compras' => ['compras'],  // Compras: procurement agents
-                default => ['agent']
+                'Tickets' => [ValidationConstants::ROLE_AGENT],  // Tickets: only agents (not admin)
+                'Pqrs' => [ValidationConstants::ROLE_SERVICIO_CLIENTE],  // PQRS: customer service agents
+                'Compras' => [ValidationConstants::ROLE_COMPRAS],  // Compras: procurement agents
+                default => [ValidationConstants::ROLE_AGENT]
             };
         }
 

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Service\Traits;
 
+use App\Utility\ValidationConstants;
 use Cake\Cache\Cache;
 use Cake\Log\Log;
 
@@ -39,7 +40,7 @@ trait ConfigResolutionTrait
         }
 
         // 2. From main settings cache (populated by AppController::beforeFilter)
-        $cachedConfig = Cache::read('system_settings', '_cake_core_');
+        $cachedConfig = Cache::read(ValidationConstants::CACHE_SETTINGS, ValidationConstants::CACHE_CONFIG);
         if ($cachedConfig && isset($cachedConfig[$presenceKey])) {
             return $cachedConfig;
         }
@@ -53,7 +54,7 @@ trait ConfigResolutionTrait
                 ->all()
                 ->combine('setting_key', 'setting_value')
                 ->toArray();
-        }, '_cake_core_');
+        }, ValidationConstants::CACHE_CONFIG);
     }
 
     /**
@@ -72,7 +73,7 @@ trait ConfigResolutionTrait
 
         // 2. From main settings cache
         try {
-            $cachedConfig = Cache::read('system_settings', '_cake_core_');
+            $cachedConfig = Cache::read(ValidationConstants::CACHE_SETTINGS, ValidationConstants::CACHE_CONFIG);
             if ($cachedConfig && isset($cachedConfig[$key])) {
                 return $cachedConfig[$key];
             }

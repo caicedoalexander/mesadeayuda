@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Controller\Traits;
 
+use App\Utility\ValidationConstants;
+
 /**
  * TicketSystemListingTrait
  *
@@ -198,9 +200,9 @@ trait TicketSystemListingTrait
     private function getDefaultUsersRoleFilter(string $entityType): ?array
     {
         return match ($entityType) {
-            'ticket' => ['admin', 'agent'],
-            'pqrs' => ['servicio_cliente'],
-            'compra' => ['compras'],
+            'ticket' => [ValidationConstants::ROLE_ADMIN, ValidationConstants::ROLE_AGENT],
+            'pqrs' => [ValidationConstants::ROLE_SERVICIO_CLIENTE],
+            'compra' => [ValidationConstants::ROLE_COMPRAS],
             default => null,
         };
     }
@@ -336,10 +338,10 @@ trait TicketSystemListingTrait
     private function getDefaultAgentsRoleFilter(string $entityType): array
     {
         return match ($entityType) {
-            'ticket' => ['admin', 'agent'],
-            'pqrs' => ['servicio_cliente'],
-            'compra' => ['compras'],
-            default => ['admin', 'agent'],
+            'ticket' => [ValidationConstants::ROLE_ADMIN, ValidationConstants::ROLE_AGENT],
+            'pqrs' => [ValidationConstants::ROLE_SERVICIO_CLIENTE],
+            'compra' => [ValidationConstants::ROLE_COMPRAS],
+            default => [ValidationConstants::ROLE_ADMIN, ValidationConstants::ROLE_AGENT],
         };
     }
 

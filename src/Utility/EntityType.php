@@ -178,9 +178,9 @@ enum EntityType: string
     public function whatsappNumberKey(): string
     {
         return match ($this) {
-            self::TICKET => 'whatsapp_tickets_number',
-            self::PQRS => 'whatsapp_pqrs_number',
-            self::COMPRA => 'whatsapp_compras_number',
+            self::TICKET => SettingKeys::WHATSAPP_TICKETS_NUMBER,
+            self::PQRS => SettingKeys::WHATSAPP_PQRS_NUMBER,
+            self::COMPRA => SettingKeys::WHATSAPP_COMPRAS_NUMBER,
         };
     }
 

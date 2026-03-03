@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\View\Helper;
 
 use App\Service\S3Service;
+use App\Utility\ValidationConstants;
 use Cake\View\Helper;
 
 /**
@@ -176,7 +177,7 @@ class UserHelper extends Helper
         }
 
         // Only admin, agent, and compras can assign
-        $allowedRoles = ['admin', 'agent', 'compras'];
+        $allowedRoles = [ValidationConstants::ROLE_ADMIN, ValidationConstants::ROLE_AGENT, ValidationConstants::ROLE_COMPRAS];
         $userRole = is_object($user) ? $user->role : ($user['role'] ?? null);
 
         return !in_array($userRole, $allowedRoles);

@@ -3,8 +3,10 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use Cake\ORM\Locator\LocatorAwareTrait;
+use App\Utility\SettingKeys;
+use App\Utility\ValidationConstants;
 use Cake\Log\Log;
+use Cake\ORM\Locator\LocatorAwareTrait;
 
 /**
  * WhatsApp Service
@@ -68,16 +70,16 @@ class WhatsappService
             }
 
             // Validate: enabled check
-            if (empty($settings['whatsapp_enabled']) || $settings['whatsapp_enabled'] !== '1') {
+            if (empty($settings[SettingKeys::WHATSAPP_ENABLED]) || $settings[SettingKeys::WHATSAPP_ENABLED] !== '1') {
                 $this->config = false;
                 return null;
             }
 
             // Validate: required fields
             if (
-                empty($settings['whatsapp_api_url']) ||
-                empty($settings['whatsapp_api_key']) ||
-                empty($settings['whatsapp_instance_name'])
+                empty($settings[SettingKeys::WHATSAPP_API_URL]) ||
+                empty($settings[SettingKeys::WHATSAPP_API_KEY]) ||
+                empty($settings[SettingKeys::WHATSAPP_INSTANCE_NAME])
             ) {
                 Log::warning('WhatsApp configuration incomplete');
                 $this->config = false;
@@ -102,10 +104,10 @@ class WhatsappService
      */
     private function resolveSettings(): array
     {
-        return $this->resolveSettingsBatch('whatsapp_enabled', 'whatsapp_settings', [
-            'whatsapp_enabled', 'whatsapp_api_url', 'whatsapp_api_key',
-            'whatsapp_instance_name', 'whatsapp_tickets_number',
-            'whatsapp_pqrs_number', 'whatsapp_compras_number',
+        return $this->resolveSettingsBatch(SettingKeys::WHATSAPP_ENABLED, 'whatsapp_settings', [
+            SettingKeys::WHATSAPP_ENABLED, SettingKeys::WHATSAPP_API_URL, SettingKeys::WHATSAPP_API_KEY,
+            SettingKeys::WHATSAPP_INSTANCE_NAME, SettingKeys::WHATSAPP_TICKETS_NUMBER,
+            SettingKeys::WHATSAPP_PQRS_NUMBER, SettingKeys::WHATSAPP_COMPRAS_NUMBER,
         ]);
     }
 
@@ -126,9 +128,9 @@ class WhatsappService
         }
 
         try {
-            $url = rtrim($config['whatsapp_api_url'], '/') .
+            $url = rtrim($config[SettingKeys::WHATSAPP_API_URL], '/') .
                 '/message/sendText/' .
-                urlencode($config['whatsapp_instance_name']);
+                urlencode($config[SettingKeys::WHATSAPP_INSTANCE_NAME]);
 
             $data = [
                 'number' => $number,
@@ -137,7 +139,7 @@ class WhatsappService
 
             $headers = [
                 'Content-Type: application/json',
-                'apikey: ' . $config['whatsapp_api_key'],
+                'apikey: ' . $config[SettingKeys::WHATSAPP_API_KEY],
             ];
 
             $result = $this->secureCurlPost($url, json_encode($data), $headers, 10);
@@ -179,9 +181,9 @@ class WhatsappService
     {
         try {
             $configMap = [
-                'ticket' => ['numberKey' => 'whatsapp_tickets_number', 'renderer' => 'renderWhatsappNewTicket', 'table' => 'Tickets', 'contain' => ['Requesters']],
-                'pqrs' => ['numberKey' => 'whatsapp_pqrs_number', 'renderer' => 'renderWhatsappNewPqrs', 'table' => null, 'contain' => []],
-                'compra' => ['numberKey' => 'whatsapp_compras_number', 'renderer' => 'renderWhatsappNewCompra', 'table' => 'Compras', 'contain' => ['Requesters', 'Assignees']],
+                'ticket' => ['numberKey' => SettingKeys::WHATSAPP_TICKETS_NUMBER, 'renderer' => 'renderWhatsappNewTicket', 'table' => 'Tickets', 'contain' => ['Requesters']],
+                'pqrs' => ['numberKey' => SettingKeys::WHATSAPP_PQRS_NUMBER, 'renderer' => 'renderWhatsappNewPqrs', 'table' => null, 'contain' => []],
+                'compra' => ['numberKey' => SettingKeys::WHATSAPP_COMPRAS_NUMBER, 'renderer' => 'renderWhatsappNewCompra', 'table' => 'Compras', 'contain' => ['Requesters', 'Assignees']],
             ];
 
             $map = $configMap[$entityType];
@@ -246,7 +248,7 @@ class WhatsappService
         $testMessage = "✅ Prueba de conexión - Evolution API\n\n" .
             "Este es un mensaje de prueba del módulo de {$moduleLabel}.\n" .
             "Si recibes este mensaje, la integración está funcionando correctamente.\n\n" .
-            "_Sistema de Soporte - {$moduleLabel}_";
+            "_" . ValidationConstants::DEFAULT_SYSTEM_TITLE . " - {$moduleLabel}_";
 
         $result = $this->sendMessage($config[$numberKey], $testMessage);
 

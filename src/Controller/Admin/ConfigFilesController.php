@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Controller\AppController;
+use App\Utility\SettingKeys;
+use App\Utility\ValidationConstants;
 use Cake\Http\Exception\BadRequestException;
 use Cake\Http\Exception\NotFoundException;
 use Cake\Log\Log;
@@ -31,7 +33,7 @@ class ConfigFilesController extends AppController
         $this->FormProtection->setConfig('unlockedActions', ['upload']);
 
         $user = $this->Authentication->getIdentity();
-        if (!$user || $user->get('role') !== 'admin') {
+        if (!$user || $user->get('role') !== ValidationConstants::ROLE_ADMIN) {
             $this->Flash->error('Solo los administradores pueden acceder a esta sección.');
             return $this->redirect(['controller' => 'Tickets', 'action' => 'index', 'prefix' => false]);
         }
@@ -44,7 +46,7 @@ class ConfigFilesController extends AppController
         'gmail' => [
             'filename' => 'client_secret.json',
             'subdir' => 'google',
-            'setting_key' => 'gmail_client_secret_path',
+            'setting_key' => SettingKeys::GMAIL_CLIENT_SECRET_PATH,
             'success_message' => 'Gmail client_secret.json subido correctamente.',
         ],
     ];

@@ -7,6 +7,7 @@ use App\Controller\Traits\StatisticsControllerTrait;
 use App\Controller\Traits\TicketSystemControllerTrait;
 use App\Controller\Traits\ServiceInitializerTrait;
 use App\Service\PqrsService;
+use App\Utility\ValidationConstants;
 use App\Service\StatisticsService;
 use App\Service\ResponseService;
 use Cake\Event\EventInterface;
@@ -55,7 +56,7 @@ class PqrsController extends AppController
         ]);
 
         // Allow admin and servicio_cliente roles for PQRS module
-        return $this->redirectByRole(['admin', 'servicio_cliente'], 'PQRS');
+        return $this->redirectByRole([ValidationConstants::ROLE_ADMIN, ValidationConstants::ROLE_SERVICIO_CLIENTE], 'PQRS');
     }
 
     /**

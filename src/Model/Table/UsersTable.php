@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
+use App\Utility\ValidationConstants;
 use Cake\ORM\Query\SelectQuery;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
@@ -113,7 +114,7 @@ class UsersTable extends Table
             ->scalar('role')
             ->maxLength('role', 50)
             ->notEmptyString('role')
-            ->inList('role', ['admin', 'agent', 'compras', 'servicio_cliente', 'requester'], 'Rol no válido');
+            ->inList('role', ValidationConstants::ROLES, 'Rol no válido');
 
         $validator
             ->integer('organization_id')

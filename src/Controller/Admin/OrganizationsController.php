@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Controller\AppController;
+use App\Utility\ValidationConstants;
 
 /**
  * Organizations Controller (Admin)
@@ -18,7 +19,7 @@ class OrganizationsController extends AppController
         parent::beforeFilter($event);
 
         $user = $this->Authentication->getIdentity();
-        if (!$user || $user->get('role') !== 'admin') {
+        if (!$user || $user->get('role') !== ValidationConstants::ROLE_ADMIN) {
             $this->Flash->error('Solo los administradores pueden acceder a esta sección.');
             return $this->redirect(['controller' => 'Tickets', 'action' => 'index', 'prefix' => false]);
         }

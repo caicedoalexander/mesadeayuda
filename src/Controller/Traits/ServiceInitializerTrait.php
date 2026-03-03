@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Controller\Traits;
 
 use App\Service\ComprasService;
+use App\Utility\ValidationConstants;
 use App\Service\PqrsService;
 use App\Service\ResponseService;
 use App\Service\StatisticsService;
@@ -38,7 +39,7 @@ trait ServiceInitializerTrait
     protected function initializeServices(array $serviceMap): void
     {
         // Read full config from cache (view config excludes sensitive keys like api_key/tokens)
-        $systemConfig = \Cake\Cache\Cache::read('system_settings', '_cake_core_');
+        $systemConfig = \Cake\Cache\Cache::read(ValidationConstants::CACHE_SETTINGS, ValidationConstants::CACHE_CONFIG);
 
         // Services that don't need systemConfig
         $noConfigServices = [

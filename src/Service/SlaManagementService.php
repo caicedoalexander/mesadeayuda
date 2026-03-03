@@ -3,9 +3,10 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Utility\ValidationConstants;
+use Cake\Cache\Cache;
 use Cake\I18n\DateTime;
 use Cake\ORM\Locator\LocatorAwareTrait;
-use Cake\Cache\Cache;
 
 /**
  * SLA Management Service
@@ -26,7 +27,7 @@ class SlaManagementService
     use LocatorAwareTrait;
 
     private const CACHE_KEY = 'sla_settings';
-    private const CACHE_CONFIG = '_cake_core_';
+    private const CACHE_CONFIG = ValidationConstants::CACHE_CONFIG;
 
     /**
      * Get SLA settings for PQRS by type

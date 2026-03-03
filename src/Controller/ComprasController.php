@@ -7,6 +7,7 @@ use App\Controller\Traits\StatisticsControllerTrait;
 use App\Controller\Traits\TicketSystemControllerTrait;
 use App\Controller\Traits\ServiceInitializerTrait;
 use App\Service\ComprasService;
+use App\Utility\ValidationConstants;
 use App\Service\ResponseService;
 use App\Service\StatisticsService;
 use Cake\Event\EventInterface;
@@ -50,7 +51,7 @@ class ComprasController extends AppController
         ]);
 
         // Allow admin and compras roles for Compras module
-        return $this->redirectByRole(['admin', 'compras'], 'compras');
+        return $this->redirectByRole([ValidationConstants::ROLE_ADMIN, ValidationConstants::ROLE_COMPRAS], 'compras');
     }
 
     /**
@@ -103,7 +104,7 @@ class ComprasController extends AppController
 
                 // Get users for assignment with formatted names
                 $comprasUsers = $this->fetchTable('Users')->find()
-                    ->where(['role' => 'compras', 'is_active' => true])
+                    ->where(['role' => ValidationConstants::ROLE_COMPRAS, 'is_active' => true])
                     ->orderBy(['first_name' => 'ASC', 'last_name' => 'ASC'])
                     ->all()
                     ->combine('id', function ($user) {
@@ -246,7 +247,7 @@ class ComprasController extends AppController
         $user = $this->Authentication->getIdentity();
 
         // Allow admin and compras users to convert
-        $allowedRoles = ['admin', 'compras'];
+        $allowedRoles = [ValidationConstants::ROLE_ADMIN, ValidationConstants::ROLE_COMPRAS];
         if (!$user || !in_array($user->role, $allowedRoles)) {
             $this->Flash->error(__('No tienes permiso para esta acción.'));
             return $this->redirect(['action' => 'view', $id]);

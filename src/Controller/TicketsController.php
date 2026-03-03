@@ -7,6 +7,7 @@ use App\Controller\Traits\StatisticsControllerTrait;
 use App\Controller\Traits\TicketSystemControllerTrait;
 use App\Controller\Traits\ServiceInitializerTrait;
 use App\Service\TicketService;
+use App\Utility\ValidationConstants;
 use App\Service\StatisticsService;
 
 /**
@@ -46,7 +47,7 @@ class TicketsController extends AppController
         ]);
 
         // Allow admin, agent, and requester roles for Tickets module
-        return $this->redirectByRole(['admin', 'agent', 'requester'], 'tickets');
+        return $this->redirectByRole([ValidationConstants::ROLE_ADMIN, ValidationConstants::ROLE_AGENT, ValidationConstants::ROLE_REQUESTER], 'tickets');
     }
 
     /**
@@ -326,7 +327,7 @@ class TicketsController extends AppController
         $user = $this->Authentication->getIdentity();
 
         // Allow admin and agent to convert tickets
-        $allowedRoles = ['admin', 'agent'];
+        $allowedRoles = [ValidationConstants::ROLE_ADMIN, ValidationConstants::ROLE_AGENT];
         if (!$user || !in_array($user->role, $allowedRoles)) {
             $this->Flash->error(__('No tienes permiso para esta acción.'));
             return $this->redirect(['action' => 'view', $id]);

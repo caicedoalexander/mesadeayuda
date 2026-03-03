@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Utility\SettingsEncryptionTrait;
+use App\Utility\ValidationConstants;
 use Cake\Cache\Cache;
 use Cake\I18n\DateTime;
 use Cake\ORM\Locator\LocatorAwareTrait;
@@ -25,14 +26,14 @@ class SettingsService
      * Cache keys that must be invalidated when any setting changes
      */
     private const CACHE_KEYS = [
-        'system_settings',
+        ValidationConstants::CACHE_SETTINGS,
         'whatsapp_settings',
         'n8n_settings',
         'gmail_settings',
         'sla_settings',
     ];
 
-    private const CACHE_CONFIG = '_cake_core_';
+    private const CACHE_CONFIG = ValidationConstants::CACHE_CONFIG;
 
     /**
      * Save or update a system setting (with automatic encryption)
@@ -78,7 +79,7 @@ class SettingsService
      */
     public function loadAll(): array
     {
-        $settings = Cache::read('system_settings', self::CACHE_CONFIG);
+        $settings = Cache::read(ValidationConstants::CACHE_SETTINGS, self::CACHE_CONFIG);
 
         if ($settings === null) {
             $settingsTable = $this->fetchTable('SystemSettings');

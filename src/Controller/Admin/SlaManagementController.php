@@ -5,6 +5,7 @@ namespace App\Controller\Admin;
 
 use App\Controller\AppController;
 use App\Service\SlaManagementService;
+use App\Utility\ValidationConstants;
 use Cake\Log\Log;
 
 /**
@@ -45,7 +46,7 @@ class SlaManagementController extends AppController
 
         // Only admins can access SLA management
         $user = $this->Authentication->getIdentity();
-        if ($user && $user->get('role') !== 'admin') {
+        if ($user && $user->get('role') !== ValidationConstants::ROLE_ADMIN) {
             $this->Flash->error('Solo los administradores pueden acceder a la gestión de SLA.');
             return $this->redirect(['controller' => 'Tickets', 'action' => 'index']);
         }

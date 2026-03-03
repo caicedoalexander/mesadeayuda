@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\View\Helper;
 
+use App\Utility\ValidationConstants;
 use Cake\View\Helper;
 
 /**
@@ -28,7 +29,7 @@ class TicketHelper extends Helper
         $userRole = $user->get('role');
 
         // Admin and agents can assign
-        return in_array($userRole, ['admin', 'agent']);
+        return in_array($userRole, [ValidationConstants::ROLE_ADMIN, ValidationConstants::ROLE_AGENT]);
     }
 
     /**
@@ -57,6 +58,6 @@ class TicketHelper extends Helper
         $userRole = $user->get('role');
 
         // Only admin and agent can change assignments
-        return !in_array($userRole, ['admin', 'agent']);
+        return !in_array($userRole, [ValidationConstants::ROLE_ADMIN, ValidationConstants::ROLE_AGENT]);
     }
 }

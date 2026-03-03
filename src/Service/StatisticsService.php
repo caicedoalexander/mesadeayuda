@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Service\Traits\StatisticsServiceTrait;
+use App\Utility\ValidationConstants;
 use Cake\Cache\Cache;
 use Cake\ORM\Locator\LocatorAwareTrait;
 
@@ -19,7 +20,7 @@ class StatisticsService
     use StatisticsServiceTrait;
 
     private const CACHE_TTL = '+5 minutes';
-    private const CACHE_CONFIG = '_cake_core_';
+    private const CACHE_CONFIG = ValidationConstants::CACHE_CONFIG;
 
     /**
      * Build a cache key from method name and filters
@@ -751,9 +752,9 @@ class StatisticsService
         // "My items" count (role-dependent)
         $myItems = null;
         $canHaveMyItems = match ($tableName) {
-            'Tickets' => $userRole === 'agent',
-            'Compras' => in_array($userRole, ['compras', 'admin']),
-            'Pqrs' => in_array($userRole, ['agent', 'servicio_cliente', 'compras', 'admin']),
+            'Tickets' => $userRole === ValidationConstants::ROLE_AGENT,
+            'Compras' => in_array($userRole, [ValidationConstants::ROLE_COMPRAS, ValidationConstants::ROLE_ADMIN]),
+            'Pqrs' => in_array($userRole, ValidationConstants::STAFF_ROLES),
             default => false,
         };
 

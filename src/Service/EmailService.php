@@ -4,7 +4,9 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Service\Traits\GenericAttachmentTrait;
+use App\Utility\SettingKeys;
 use App\Utility\SettingsEncryptionTrait;
+use App\Utility\ValidationConstants;
 use Cake\Core\Configure;
 use Cake\ORM\Locator\LocatorAwareTrait;
 use Cake\Log\Log;
@@ -87,7 +89,7 @@ class EmailService
 
             $excludeEmails = [
                 strtolower($entity->requester->email),
-                strtolower($this->getSettingValue('gmail_user_email')),
+                strtolower($this->getSettingValue(SettingKeys::GMAIL_USER_EMAIL)),
             ];
             $additionalTo = $this->filterEmailRecipients($entity->email_to, $excludeEmails);
             $additionalCc = $this->filterEmailRecipients($entity->email_cc, $excludeEmails);
@@ -227,13 +229,13 @@ class EmailService
     {
         if ($this->gmailService === null) {
             // Resolve Gmail settings using centralized config resolution
-            $refreshToken = $this->getSettingValue('gmail_refresh_token');
+            $refreshToken = $this->getSettingValue(SettingKeys::GMAIL_REFRESH_TOKEN);
             if (!empty($refreshToken)) {
-                $refreshToken = $this->decryptSetting($refreshToken, 'gmail_refresh_token');
+                $refreshToken = $this->decryptSetting($refreshToken, SettingKeys::GMAIL_REFRESH_TOKEN);
             }
 
             $clientSecretPath = $this->getSettingValue(
-                'gmail_client_secret_path',
+                SettingKeys::GMAIL_CLIENT_SECRET_PATH,
                 CONFIG . 'google' . DS . 'client_secret.json'
             );
 
@@ -261,8 +263,8 @@ class EmailService
     {
         try {
             // Get system title and Gmail email using centralized config resolution
-            $systemTitle = $this->getSettingValue('system_title', 'Mesa de Ayuda');
-            $fromEmail = $this->getSettingValue('gmail_user_email', 'noreply@localhost');
+            $systemTitle = $this->getSettingValue(SettingKeys::SYSTEM_TITLE, ValidationConstants::DEFAULT_SYSTEM_TITLE);
+            $fromEmail = $this->getSettingValue(SettingKeys::GMAIL_USER_EMAIL, 'noreply@localhost');
 
             // Build recipients array for Gmail API
             $toRecipients = [$to => $to]; // Primary recipient

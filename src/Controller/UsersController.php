@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Utility\ValidationConstants;
 use Cake\Cache\Cache;
 use Cake\Event\EventInterface;
 
@@ -60,7 +61,7 @@ class UsersController extends AppController
         if ($result && $result->isValid()) {
             // Clear login attempts on successful login
             $ip = $this->request->clientIp();
-            Cache::delete('login_attempts_' . md5($ip), '_cake_core_');
+            Cache::delete('login_attempts_' . md5($ip), ValidationConstants::CACHE_CONFIG);
             $user = $this->Authentication->getIdentity();
             $target = $this->request->getQuery('redirect');
 
@@ -76,9 +77,9 @@ class UsersController extends AppController
         if ($this->request->is('post') && !$result->isValid()) {
             $ip = $this->request->clientIp();
             $cacheKey = 'login_attempts_' . md5($ip);
-            $attempts = (int) Cache::read($cacheKey, '_cake_core_');
+            $attempts = (int) Cache::read($cacheKey, ValidationConstants::CACHE_CONFIG);
             $attempts++;
-            Cache::write($cacheKey, $attempts, '_cake_core_');
+            Cache::write($cacheKey, $attempts, ValidationConstants::CACHE_CONFIG);
 
             if ($attempts >= self::MAX_LOGIN_ATTEMPTS) {
                 $this->Flash->error(
@@ -102,7 +103,7 @@ class UsersController extends AppController
     {
         $ip = $this->request->clientIp();
         $cacheKey = 'login_attempts_' . md5($ip);
-        $attempts = (int) Cache::read($cacheKey, '_cake_core_');
+        $attempts = (int) Cache::read($cacheKey, ValidationConstants::CACHE_CONFIG);
 
         return $attempts >= self::MAX_LOGIN_ATTEMPTS;
     }

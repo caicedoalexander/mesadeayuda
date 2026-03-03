@@ -16,7 +16,9 @@ declare(strict_types=1);
  */
 namespace App\Controller;
 
+use App\Utility\SettingKeys;
 use App\Utility\SettingsEncryptionTrait;
+use App\Utility\ValidationConstants;
 use Cake\Controller\Controller;
 
 /**
@@ -65,7 +67,7 @@ class AppController extends Controller
         $this->set('currentUser', $user);
 
         // Load system settings with cache (1 hour TTL)
-        $systemConfig = \Cake\Cache\Cache::remember('system_settings', function () {
+        $systemConfig = \Cake\Cache\Cache::remember(ValidationConstants::CACHE_SETTINGS, function () {
             $systemSettingsTable = $this->fetchTable('SystemSettings');
             $settings = $systemSettingsTable->find()
                 ->select(['setting_key', 'setting_value'])
@@ -78,28 +80,28 @@ class AppController extends Controller
 
             // Decrypt sensitive values automatically
             return $this->processSettings($config);
-        }, '_cake_core_');
+        }, ValidationConstants::CACHE_CONFIG);
 
         // Filter out sensitive settings before passing to views
         $sensitiveKeys = [
-            'gmail_refresh_token', 'gmail_client_secret_path',
-            'whatsapp_api_key',
-            'n8n_api_key', 'n8n_webhook_url',
+            SettingKeys::GMAIL_REFRESH_TOKEN, SettingKeys::GMAIL_CLIENT_SECRET_PATH,
+            SettingKeys::WHATSAPP_API_KEY,
+            SettingKeys::N8N_API_KEY, SettingKeys::N8N_WEBHOOK_URL,
         ];
         $safeConfig = array_diff_key($systemConfig, array_flip($sensitiveKeys));
         $this->set('systemConfig', $safeConfig);
-        $this->set('systemTitle', $systemConfig['system_title'] ?? 'Sistema de Soporte');
+        $this->set('systemTitle', $systemConfig[SettingKeys::SYSTEM_TITLE] ?? ValidationConstants::DEFAULT_SYSTEM_TITLE);
 
         // Set layout based on user role
         if ($user) {
             $role = $user->get('role');
-            if ($role === 'admin') {
+            if ($role === ValidationConstants::ROLE_ADMIN) {
                 $this->viewBuilder()->setLayout('admin');
-            } elseif ($role === 'agent') {
+            } elseif ($role === ValidationConstants::ROLE_AGENT) {
                 $this->viewBuilder()->setLayout('agent');
-            } elseif ($role === 'compras') {
+            } elseif ($role === ValidationConstants::ROLE_COMPRAS) {
                 $this->viewBuilder()->setLayout('compras');
-            } elseif ($role === 'servicio_cliente') {
+            } elseif ($role === ValidationConstants::ROLE_SERVICIO_CLIENTE) {
                 $this->viewBuilder()->setLayout('servicio_cliente');
             } else {
                 $this->viewBuilder()->setLayout('requester');
@@ -116,11 +118,11 @@ class AppController extends Controller
     protected function getDefaultRedirectForRole(string $role): array
     {
         $roleRedirects = [
-            'servicio_cliente' => ['controller' => 'Pqrs', 'action' => 'index', '?' => ['view' => 'mis_pqrs']],
-            'compras' => ['controller' => 'Compras', 'action' => 'index', '?' => ['view' => 'mis_compras']],
-            'agent' => ['controller' => 'Tickets', 'action' => 'index', '?' => ['view' => 'mis_tickets']],
-            'requester' => ['controller' => 'Tickets', 'action' => 'index', '?' => ['view' => 'mis_tickets']],
-            'admin' => ['controller' => 'Tickets', 'action' => 'index'],
+            ValidationConstants::ROLE_SERVICIO_CLIENTE => ['controller' => 'Pqrs', 'action' => 'index', '?' => ['view' => 'mis_pqrs']],
+            ValidationConstants::ROLE_COMPRAS => ['controller' => 'Compras', 'action' => 'index', '?' => ['view' => 'mis_compras']],
+            ValidationConstants::ROLE_AGENT => ['controller' => 'Tickets', 'action' => 'index', '?' => ['view' => 'mis_tickets']],
+            ValidationConstants::ROLE_REQUESTER => ['controller' => 'Tickets', 'action' => 'index', '?' => ['view' => 'mis_tickets']],
+            ValidationConstants::ROLE_ADMIN => ['controller' => 'Tickets', 'action' => 'index'],
         ];
 
         return $roleRedirects[$role] ?? ['controller' => 'Tickets', 'action' => 'index'];

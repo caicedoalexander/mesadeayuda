@@ -23,14 +23,9 @@ trait SettingsEncryptionTrait
      * @var array
      */
     private array $encryptedSettings = [
-        // Gmail API
-        'gmail_refresh_token',
-
-        // WhatsApp
-        'whatsapp_api_key',
-
-        // n8n
-        'n8n_api_key',
+        SettingKeys::GMAIL_REFRESH_TOKEN,
+        SettingKeys::WHATSAPP_API_KEY,
+        SettingKeys::N8N_API_KEY,
     ];
 
     /**

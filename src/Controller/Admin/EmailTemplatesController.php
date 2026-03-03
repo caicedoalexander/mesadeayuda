@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Controller\AppController;
+use App\Utility\ValidationConstants;
 
 /**
  * EmailTemplates Controller (Admin)
@@ -18,7 +19,7 @@ class EmailTemplatesController extends AppController
         parent::beforeFilter($event);
 
         $user = $this->Authentication->getIdentity();
-        if (!$user || $user->get('role') !== 'admin') {
+        if (!$user || $user->get('role') !== ValidationConstants::ROLE_ADMIN) {
             $this->Flash->error('Solo los administradores pueden acceder a esta sección.');
             return $this->redirect(['controller' => 'Tickets', 'action' => 'index', 'prefix' => false]);
         }
@@ -84,7 +85,7 @@ class EmailTemplatesController extends AppController
             'created_date' => date('d/m/Y H:i'),
             'updated_date' => date('d/m/Y H:i'),
             'ticket_url' => 'http://localhost:8080/tickets/view/1',
-            'system_title' => 'Sistema de Soporte',
+            'system_title' => ValidationConstants::DEFAULT_SYSTEM_TITLE,
         ];
 
         $previewBody = $template->body_html;

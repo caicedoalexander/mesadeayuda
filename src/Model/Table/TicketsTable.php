@@ -216,8 +216,8 @@ class TicketsTable extends Table
         $userId = $user ? $user->get('id') : null;
 
         // Determine if user is agent (filter by assigned tickets for certain views)
-        $isAgent = $userRole === 'agent';
-        $isAdmin = $userRole === 'admin';
+        $isAgent = $userRole === ValidationConstants::ROLE_AGENT;
+        $isAdmin = $userRole === ValidationConstants::ROLE_ADMIN;
 
         // Apply view-based filters (if no search is active)
         if (empty($filters['search'])) {

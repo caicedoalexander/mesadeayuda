@@ -6,10 +6,12 @@ namespace App\Service;
 use Google\Client as GoogleClient;
 use Google\Service\Gmail;
 use Google\Service\Gmail\Message;
+use App\Utility\SettingKeys;
+use App\Utility\SettingsEncryptionTrait;
+use App\Utility\ValidationConstants;
 use Cake\Cache\Cache;
 use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
-use App\Utility\SettingsEncryptionTrait;
 
 /**
  * Gmail Service
@@ -46,7 +48,7 @@ class GmailService
 
             $settingsTable = $instance->fetchTable('SystemSettings');
             $settings = $settingsTable->find()
-                ->where(['setting_key IN' => ['gmail_refresh_token', 'gmail_client_secret_path']])
+                ->where(['setting_key IN' => [SettingKeys::GMAIL_REFRESH_TOKEN, SettingKeys::GMAIL_CLIENT_SECRET_PATH]])
                 ->all();
 
             $config = [];
@@ -59,7 +61,7 @@ class GmailService
             }
 
             return $config;
-        }, '_cake_core_');
+        }, ValidationConstants::CACHE_CONFIG);
     }
 
     /**
@@ -454,7 +456,7 @@ class GmailService
         try {
             $settingsTable = $this->fetchTable('SystemSettings');
             $setting = $settingsTable->find()
-                ->where(['setting_key' => 'gmail_user_email'])
+                ->where(['setting_key' => SettingKeys::GMAIL_USER_EMAIL])
                 ->first();
 
             return $setting ? $setting->setting_value : '';

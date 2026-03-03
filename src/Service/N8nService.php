@@ -3,9 +3,10 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use Cake\ORM\Locator\LocatorAwareTrait;
-use Cake\Log\Log;
+use App\Utility\SettingKeys;
 use Cake\I18n\FrozenTime;
+use Cake\Log\Log;
+use Cake\ORM\Locator\LocatorAwareTrait;
 
 /**
  * N8n Service
@@ -29,12 +30,12 @@ class N8nService
     public function __construct(?array $systemConfig = null)
     {
         $this->systemConfig = $systemConfig;
-        $this->config = $this->resolveSettingsBatch('n8n_enabled', 'n8n_settings', [
-            'n8n_enabled',
-            'n8n_webhook_url',
-            'n8n_api_key',
-            'n8n_send_tags_list',
-            'n8n_timeout',
+        $this->config = $this->resolveSettingsBatch(SettingKeys::N8N_ENABLED, 'n8n_settings', [
+            SettingKeys::N8N_ENABLED,
+            SettingKeys::N8N_WEBHOOK_URL,
+            SettingKeys::N8N_API_KEY,
+            SettingKeys::N8N_SEND_TAGS_LIST,
+            SettingKeys::N8N_TIMEOUT,
         ]);
     }
 
@@ -47,13 +48,13 @@ class N8nService
     public function sendTicketCreatedWebhook(\App\Model\Entity\Ticket $ticket): bool
     {
         // Check if n8n is enabled
-        if (empty($this->config['n8n_enabled']) || $this->config['n8n_enabled'] !== '1') {
+        if (empty($this->config[SettingKeys::N8N_ENABLED]) || $this->config[SettingKeys::N8N_ENABLED] !== '1') {
             Log::debug('n8n integration is disabled');
             return false;
         }
 
         // Check webhook URL is configured
-        if (empty($this->config['n8n_webhook_url'])) {
+        if (empty($this->config[SettingKeys::N8N_WEBHOOK_URL])) {
             Log::warning('n8n webhook URL is not configured');
             return false;
         }
@@ -63,7 +64,7 @@ class N8nService
             $payload = $this->buildTicketPayload($ticket);
 
             // Send webhook
-            $response = $this->sendWebhook($this->config['n8n_webhook_url'], $payload);
+            $response = $this->sendWebhook($this->config[SettingKeys::N8N_WEBHOOK_URL], $payload);
 
             if ($response['success']) {
                 Log::info('n8n webhook sent successfully', [
@@ -143,7 +144,7 @@ class N8nService
         }
 
         // Add available tags if enabled
-        if (!empty($this->config['n8n_send_tags_list']) && $this->config['n8n_send_tags_list'] === '1') {
+        if (!empty($this->config[SettingKeys::N8N_SEND_TAGS_LIST]) && $this->config[SettingKeys::N8N_SEND_TAGS_LIST] === '1') {
             $tagsTable = $this->fetchTable('Tags');
             $tags = $tagsTable->find()
                 ->select(['id', 'name', 'color'])
@@ -182,15 +183,15 @@ class N8nService
      */
     private function sendWebhook(string $url, array $payload): array
     {
-        $timeout = (int) ($this->config['n8n_timeout'] ?? 10);
+        $timeout = (int) ($this->config[SettingKeys::N8N_TIMEOUT] ?? 10);
 
         $headers = [
             'Content-Type: application/json',
             'User-Agent: TicketSystem/1.0',
         ];
 
-        if (!empty($this->config['n8n_api_key'])) {
-            $headers[] = 'X-API-Key: ' . $this->config['n8n_api_key'];
+        if (!empty($this->config[SettingKeys::N8N_API_KEY])) {
+            $headers[] = 'X-API-Key: ' . $this->config[SettingKeys::N8N_API_KEY];
         }
 
         return $this->secureCurlPost($url, json_encode($payload), $headers, $timeout);
@@ -215,7 +216,7 @@ class N8nService
      */
     public function testConnection(): array
     {
-        if (empty($this->config['n8n_webhook_url'])) {
+        if (empty($this->config[SettingKeys::N8N_WEBHOOK_URL])) {
             return [
                 'success' => false,
                 'message' => 'URL del webhook de n8n no configurada',
@@ -229,7 +230,7 @@ class N8nService
                 'test' => true,
             ];
 
-            $response = $this->sendWebhook($this->config['n8n_webhook_url'], $testPayload);
+            $response = $this->sendWebhook($this->config[SettingKeys::N8N_WEBHOOK_URL], $testPayload);
 
             if ($response['success']) {
                 return [
