@@ -1,0 +1,97 @@
+#!/bin/bash
+# Start the Gmail worker as a background daemon process
+# Usage: bin/start-worker
+#        bin/start-worker stop
+#        bin/start-worker status
+
+APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+PID_FILE="$APP_DIR/tmp/gmail_worker.pid"
+LOG_FILE="$APP_DIR/logs/gmail_worker.log"
+
+start_worker() {
+    # Check if already running
+    if [ -f "$PID_FILE" ]; then
+        PID=$(cat "$PID_FILE")
+        if kill -0 "$PID" 2>/dev/null; then
+            echo "Worker already running (PID: $PID)"
+            echo "Use 'bin/start-worker stop' to stop it first."
+            exit 1
+        else
+            # Stale PID file
+            rm -f "$PID_FILE"
+        fi
+    fi
+
+    echo "Starting Gmail worker..."
+    nohup php "$APP_DIR/bin/cake.php" gmail_worker >> "$LOG_FILE" 2>&1 &
+    WORKER_PID=$!
+    echo "$WORKER_PID" > "$PID_FILE"
+    echo "Worker started (PID: $WORKER_PID)"
+    echo "Logs: $LOG_FILE"
+    echo "Stop:  bin/start-worker stop"
+}
+
+stop_worker() {
+    if [ ! -f "$PID_FILE" ]; then
+        echo "Worker not running (no PID file found)"
+        exit 0
+    fi
+
+    PID=$(cat "$PID_FILE")
+    if kill -0 "$PID" 2>/dev/null; then
+        echo "Stopping worker (PID: $PID)..."
+        kill "$PID"
+        # Wait up to 10 seconds for graceful shutdown
+        for i in $(seq 1 10); do
+            if ! kill -0 "$PID" 2>/dev/null; then
+                break
+            fi
+            sleep 1
+        done
+        # Force kill if still running
+        if kill -0 "$PID" 2>/dev/null; then
+            echo "Force stopping..."
+            kill -9 "$PID"
+        fi
+        echo "Worker stopped."
+    else
+        echo "Worker not running (stale PID: $PID)"
+    fi
+    rm -f "$PID_FILE"
+}
+
+status_worker() {
+    if [ ! -f "$PID_FILE" ]; then
+        echo "Worker not running"
+        exit 0
+    fi
+
+    PID=$(cat "$PID_FILE")
+    if kill -0 "$PID" 2>/dev/null; then
+        echo "Worker running (PID: $PID)"
+        echo "Logs: tail -f $LOG_FILE"
+    else
+        echo "Worker not running (stale PID file)"
+        rm -f "$PID_FILE"
+    fi
+}
+
+case "${1:-start}" in
+    start)
+        start_worker
+        ;;
+    stop)
+        stop_worker
+        ;;
+    status)
+        status_worker
+        ;;
+    restart)
+        stop_worker
+        start_worker
+        ;;
+    *)
+        echo "Usage: bin/start-worker [start|stop|status|restart]"
+        exit 1
+        ;;
+esac
