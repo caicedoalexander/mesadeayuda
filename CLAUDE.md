@@ -60,7 +60,7 @@ webroot/           # Public assets (CSS, JS, images)
 - **MySQL 8.0+** with utf8mb4 encoding
 - Timezone: America/Bogota (UTC-5)
 - Migrations managed via CakePHP Migrations plugin
-- Audit trail: HistoriesTable logs all changes (created_by, changed_by, created, modified)
+- Audit trail: History tables log all changes (changed_by, field_name, old_value, new_value, description, created)
 
 ## Development Commands
 
@@ -176,8 +176,8 @@ See `DOCKER.md` for comprehensive environment variable documentation.
 8. **Run checks** before pushing: `composer check`
 
 ### Database Auditing
-- All tables have `created_by` (user ID, not nullable), `created` (timestamp), `modified` (timestamp)
-- HistoriesTable logs changes: table_name, record_id, field_name, old_value, new_value, created_by, created
+- All tables have `created` (timestamp), `modified` (timestamp)
+- History tables log changes: field_name, old_value, new_value, changed_by (user ID), description, created
 - Use `HistoriesBehavior` on models to auto-log changes (enabled on Tickets, Compras, Pqrs tables)
 
 ### External Service Integration

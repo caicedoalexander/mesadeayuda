@@ -84,7 +84,7 @@ POST /tickets/change-status/{id}
 |---|---|---|---|
 | `status` | string | Si | Nuevo estado |
 
-**Estados validos**: `nuevo`, `abierto`, `en_progreso`, `pendiente`, `resuelto`, `cerrado`
+**Estados validos**: `nuevo`, `abierto`, `pendiente`, `resuelto`, `convertido`
 
 ---
 

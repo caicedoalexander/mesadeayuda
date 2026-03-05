@@ -14,6 +14,8 @@ Cuando se crea un ticket, el sistema envia un webhook POST a n8n (si esta habili
 
 ```json
 {
+  "event": "ticket.created",
+  "timestamp": "2026-02-13T10:30:00-05:00",
   "ticket": {
     "id": 42,
     "ticket_number": "TKT-2026-00042",
@@ -22,42 +24,52 @@ Cuando se crea un ticket, el sistema envia un webhook POST a n8n (si esta habili
     "description_plain": "Descripcion texto plano",
     "status": "nuevo",
     "priority": "media",
-    "created": "2026-02-13T10:30:00-05:00"
+    "created": "2026-02-13T10:30:00-05:00",
+    "gmail_message_id": "msg-id-123",
+    "requester": {
+      "id": 15,
+      "name": "Juan Perez",
+      "email": "juan@ejemplo.com",
+      "organization": "Departamento IT"
+    },
+    "attachments": [
+      {
+        "id": 1,
+        "filename": "foto.jpg",
+        "size": 204800,
+        "mime_type": "image/jpeg"
+      }
+    ],
+    "available_tags": [
+      {"id": 1, "name": "Hardware", "color": "#FF5733"},
+      {"id": 2, "name": "Software", "color": "#3498db"}
+    ]
   },
-  "requester": {
-    "id": 15,
-    "name": "Juan Perez",
-    "email": "juan@ejemplo.com",
-    "organization": "Departamento IT"
-  },
-  "attachments": [
-    {
-      "filename": "foto.jpg",
-      "size": 204800,
-      "mime_type": "image/jpeg"
-    }
-  ],
-  "available_tags": [
-    {"id": 1, "name": "Hardware"},
-    {"id": 2, "name": "Software"}
-  ],
-  "callback_url": "https://sistema.com/api/webhooks/n8n/tags"
+  "callback_url": "https://sistema.com/api/webhooks/n8n/tags",
+  "app_info": {
+    "version": "1.0",
+    "environment": "production"
+  }
 }
 ```
 
 **Notas**:
-- `available_tags` solo se incluye si `n8n_send_tags_list` esta habilitado
-- `callback_url` es la URL donde n8n debe enviar la respuesta con los tags asignados
-- Autenticacion via header con `n8n_api_key`
+- `requester`, `attachments` y `available_tags` estan anidados dentro de `ticket`
+- `available_tags` solo se incluye si `n8n_send_tags_list` esta habilitado (incluye campo `color`)
+- `callback_url` es la URL donde n8n debe enviar la respuesta con los tags asignados (actualmente placeholder, no implementado)
+- Autenticacion via header `X-API-Key` con `n8n_api_key`
 - El envio es asincrono (no bloquea la creacion del ticket)
+- Campos de nivel superior: `event`, `timestamp`, `ticket`, `callback_url`, `app_info`
 
-### Webhook de entrada: callback de tags
+### Webhook de entrada: callback de tags (pendiente de implementacion)
 
 n8n procesa el ticket (clasificacion AI) y responde al callback URL.
 
-**URL**: Definida por `N8nService::getCallbackUrl()`
+**URL**: Definida por `N8nService::getCallbackUrl()` (actualmente genera URL placeholder)
 **Metodo**: POST
 **Proposito**: Asignar tags automaticamente al ticket basado en clasificacion AI
+
+**Estado**: La ruta `/api/webhooks/n8n/tags` no tiene controlador implementado. El metodo `getCallbackUrl()` genera la URL pero no existe endpoint que procese la respuesta de n8n. Debe implementarse cuando se necesite el flujo completo de clasificacion automatica.
 
 ---
 

@@ -166,10 +166,9 @@ Integracion con n8n para clasificacion AI de tickets.
 | Metodo | Descripcion |
 |---|---|
 | `sendTicketCreatedWebhook(Ticket $ticket)` | Envia datos del ticket a n8n para clasificacion |
-| `buildTicketPayload(Ticket $ticket)` | Construye payload del webhook |
-| `sendWebhook(string $url, array $payload)` | Envia HTTP POST seguro |
 | `testConnection()` | Prueba conectividad con n8n |
-| `getCallbackUrl()` | Retorna URL de callback para respuestas de n8n |
+
+**Metodos privados**: `buildTicketPayload(Ticket $ticket)` (construye payload), `sendWebhook(string $url, array $payload)` (HTTP POST seguro), `getCallbackUrl()` (URL de callback, actualmente placeholder)
 
 **Configuracion** (SystemSettings): Todas las claves n8n estan centralizadas en `SettingKeys::N8N_*` — `N8N_ENABLED`, `N8N_WEBHOOK_URL`, `N8N_API_KEY` (cifrado), `N8N_SEND_TAGS_LIST`, `N8N_TIMEOUT`
 
@@ -279,6 +278,55 @@ Autorizacion centralizada basada en roles para acciones sobre entidades.
 
 ---
 
+### ProfileImageService
+
+Gestion de imagenes de perfil de usuario con soporte dual S3/local.
+
+**Ubicacion**: `src/Service/ProfileImageService.php`
+
+| Metodo | Descripcion |
+|---|---|
+| `saveProfileImage(int $userId, UploadedFileInterface $file)` | Sube imagen con validacion MIME, tamano (max 2MB) y verificacion finfo |
+| `deleteProfileImage(string $filename)` | Elimina imagen anterior (S3 o local) |
+| `getProfileImageUrl(?string $profileImage)` | Resuelve URL con fallback a avatar por defecto |
+
+**Validaciones**: Extensiones permitidas (JPG, PNG, GIF, WEBP), verificacion de MIME real via `finfo`, limite 2MB. Genera nombre unico con UUID.
+
+---
+
+### NumberGenerationService
+
+Generacion centralizada de numeros secuenciales para entidades.
+
+**Ubicacion**: `src/Service/NumberGenerationService.php`
+
+| Metodo | Descripcion |
+|---|---|
+| `generate(string $entityType)` | Genera siguiente numero secuencial (TKT-YYYY-NNNNN, CPR-YYYY-NNNNN, PQRS-YYYY-NNNNN) |
+
+**Tipos configurados**: `ticket` (prefijo TKT), `compra` (prefijo CPR), `pqrs` (prefijo PQRS). Consulta el ultimo numero del ano actual y genera el siguiente.
+
+---
+
+### EmailTemplateRenderer
+
+Carga y renderiza plantillas de email desde BD con sustitucion de variables `{{variable}}`.
+
+**Ubicacion**: `src/Service/EmailTemplateRenderer.php`
+
+| Metodo | Descripcion |
+|---|---|
+| `preloadTemplates()` | Pre-carga todas las plantillas activas en cache (evita N+1) |
+| `getTemplate(string $templateKey)` | Obtiene plantilla por clave (usa cache si preloaded) |
+| `render(string $templateString, array $variables)` | Reemplaza placeholders `{{key}}` por valores |
+| `renderTemplate(string $templateKey, array $variables)` | Carga plantilla y renderiza subject + body en una llamada |
+| `getSystemVariables()` | Variables globales: system_title, current_year |
+| `clearCache()` | Limpia cache en memoria |
+
+**Traits usados**: ConfigResolutionTrait
+
+---
+
 ## Traits Reutilizables
 
 Los traits (`src/Service/Traits/`) encapsulan comportamientos compartidos entre servicios.
@@ -382,6 +430,25 @@ Caracteristicas:
 - Espera a conectividad de BD en startup (10 intentos, 5s entre cada uno)
 - **Trigger file**: Detecta `tmp/gmail_worker_trigger` (constante `TRIGGER_FILE`) durante el sleep para ejecucion inmediata tras autorizacion OAuth
 - Intervalo configurable via `SettingKeys::GMAIL_CHECK_INTERVAL` (default: 5 min)
+
+### start-worker (script)
+
+Gestiona el worker de Gmail como proceso de fondo. Permite iniciar, detener y verificar el estado del worker sin depender de Docker.
+
+**Ubicacion**: `bin/start-worker`
+
+```bash
+bin/start-worker            # Inicia el worker en background
+bin/start-worker stop       # Detiene el worker
+bin/start-worker status     # Verifica si esta corriendo
+bin/start-worker restart    # Reinicia el worker
+```
+
+- Usa `nohup` para que el proceso sobreviva al cerrar la terminal
+- PID guardado en `tmp/gmail_worker.pid`
+- Logs en `logs/gmail_worker.log`
+- Detecta si ya hay un worker corriendo para evitar duplicados
+- Si falla por permisos: `chmod +x bin/start-worker` o ejecutar con `bash bin/start-worker`
 
 ### TestEmailCommand
 

@@ -41,12 +41,11 @@ Usuarios del sistema con roles diferenciados.
 | `id` | unsigned int (PK) | Identificador |
 | `email` | varchar(255), unique | Email (login) |
 | `password` | varchar(255), nullable | Hash de contrasena (nullable para usuarios auto-creados desde Gmail) |
-| `first_name` | varchar(255) | Nombre |
-| `last_name` | varchar(255) | Apellido |
-| `phone` | varchar(50) | Telefono |
+| `first_name` | varchar(100) | Nombre |
+| `last_name` | varchar(100) | Apellido |
 | `role` | enum | `admin`, `agent`, `compras`, `servicio_cliente`, `requester` |
 | `organization_id` | unsigned int, nullable | FK a organizations |
-| `profile_image` | varchar(500) | Ruta de imagen de perfil (S3 o local) |
+| `profile_image` | varchar(255), nullable | Ruta de imagen de perfil (S3 o local) |
 | `is_active` | boolean | Estado activo/inactivo |
 | `created` | datetime | Fecha de creacion |
 | `modified` | datetime | Ultima modificacion |
@@ -77,17 +76,15 @@ Tabla principal del modulo de mesa de ayuda. Formato de numeracion: `TKT-YYYY-NN
 | `channel` | varchar(20) | `email`, `web`, `api` |
 | `requester_id` | unsigned int (FK) | Usuario solicitante (requerido) |
 | `assignee_id` | unsigned int, nullable (FK) | Agente asignado |
-| `source_email` | varchar(255) | Email de origen |
-| `organization_id` | unsigned int, nullable (FK) | Organizacion |
 | `resolved_at` | datetime, nullable | Fecha de resolucion |
 | `first_response_at` | datetime, nullable | Fecha de primera respuesta |
 | `created` | datetime | Fecha de creacion |
 | `modified` | datetime | Ultima modificacion |
 
-**Estados**: `nuevo` → `abierto` → `en_progreso` → `pendiente` → `resuelto` → `cerrado` | `convertido`
+**Estados**: `nuevo` → `abierto` → `pendiente` → `resuelto` | `convertido`
 
 **Relaciones**:
-- belongsTo Requesters (Users), Assignees (Users), Organizations
+- belongsTo Requesters (Users), Assignees (Users)
 - hasMany TicketComments, TicketHistory, Attachments, TicketFollowers, TicketTags
 - belongsToMany Tags (via tickets_tags)
 
@@ -166,7 +163,9 @@ Etiquetas de categorizacion para tickets.
 | `id` | unsigned int (PK) | Identificador |
 | `name` | varchar(100), unique | Nombre de la etiqueta |
 | `color` | varchar(7) | Color hexadecimal (#FF5733) |
+| `is_active` | boolean | Estado activo/inactivo (inactivos ocultos de seleccion) |
 | `created` | datetime | Fecha |
+| `modified` | datetime | Ultima modificacion |
 
 ### tickets_tags
 
@@ -211,7 +210,7 @@ Tabla principal del modulo de compras. Formato de numeracion: `CPR-YYYY-NNNNN`.
 | `created` | datetime | Fecha de creacion |
 | `modified` | datetime | Ultima modificacion |
 
-**Estados**: `nuevo` → `en_revision` → `aprobado` → `en_proceso` → `completado` | `rechazado` | `convertido`
+**Estados**: `nuevo` → `en_revision` → `aprobado` → `en_proceso` → `completado` | `rechazado`
 
 **Relaciones**: belongsTo Requesters (Users), Assignees (Users). hasMany ComprasComments, ComprasAttachments, ComprasHistory.
 
@@ -280,10 +279,7 @@ Tabla principal del modulo PQRS. Formato de numeracion: `PQRS-YYYY-NNNNN`. A dif
 | `channel` | varchar(20) | `web`, `whatsapp` |
 | `requester_name` | varchar(255) | Nombre del solicitante |
 | `requester_email` | varchar(255) | Email del solicitante |
-| `requester_phone` | varchar(50) | Telefono |
-| `requester_id_number` | varchar(50) | Numero de identificacion |
-| `requester_address` | text | Direccion |
-| `requester_city` | varchar(100) | Ciudad |
+| `requester_phone` | varchar(20), nullable | Telefono |
 | `assignee_id` | unsigned int, nullable (FK) | Agente asignado |
 | `ip_address` | varchar(45) | IP del solicitante (oculta en JSON) |
 | `user_agent` | text | User-Agent del navegador (oculto en JSON) |
@@ -391,8 +387,7 @@ Plantillas de notificacion por email con variables sustituibles.
 ## Diagrama de Relaciones
 
 ```
-organizations ──┬── users (1:N)
-                └── tickets (1:N)
+organizations ── users (1:N)
 
 users ──┬── tickets (como requester, 1:N, CASCADE)
         ├── tickets (como assignee, 1:N, SET_NULL)

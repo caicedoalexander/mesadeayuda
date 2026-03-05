@@ -104,11 +104,10 @@ Sistema corporativo construido con **CakePHP 5.x** que unifica tres necesidades 
 | `id` | unsigned int (PK) | Identificador |
 | `email` | varchar(255), unique | Email (usado como login) |
 | `password` | varchar(255), nullable | Hash de contrasena (nullable para usuarios auto-creados por Gmail) |
-| `first_name`, `last_name` | varchar(255) | Nombre y apellido |
-| `phone` | varchar(50) | Telefono |
+| `first_name`, `last_name` | varchar(100) | Nombre y apellido |
 | `role` | enum | `admin`, `agent`, `compras`, `servicio_cliente`, `requester` |
 | `organization_id` | FK nullable | Organizacion del usuario |
-| `profile_image` | varchar(500) | Ruta de imagen (S3 o local) |
+| `profile_image` | varchar(255), nullable | Ruta de imagen (S3 o local) |
 | `is_active` | boolean | Activo/inactivo |
 
 ### Tabla: tickets
@@ -122,9 +121,9 @@ Sistema corporativo construido con **CakePHP 5.x** que unifica tres necesidades 
 | `email_to`, `email_cc` | text (JSON) | Destinatarios del email original |
 | `subject` | varchar(255) | Asunto |
 | `description` | text | Descripcion (HTML sanitizado) |
-| `status` | enum | `nuevo`, `abierto`, `pendiente`, `resuelto`, `cerrado`, `convertido` |
+| `status` | enum | `nuevo`, `abierto`, `pendiente`, `resuelto`, `convertido` |
 | `priority` | enum | `baja`, `media`, `alta`, `urgente` |
-| `channel` | varchar(20) | `email`, `whatsapp` |
+| `channel` | varchar(20) | `email`, `web`, `api` |
 | `requester_id` | FK (requerido) | Solicitante |
 | `assignee_id` | FK (nullable) | Agente asignado |
 | `resolved_at`, `first_response_at` | datetime | Tracking SLA |
@@ -139,7 +138,7 @@ Sistema corporativo construido con **CakePHP 5.x** que unifica tres necesidades 
 | `compra_number` | varchar(20), unique | `CPR-YYYY-NNNNN` auto-generado |
 | `original_ticket_number` | varchar(20), nullable | Ticket de origen (si fue convertido) |
 | `subject`, `description` | texto | Datos de la solicitud |
-| `status` | enum | `nuevo`, `en_revision`, `aprobado`, `en_proceso`, `completado`, `rechazado`, `convertido` |
+| `status` | enum | `nuevo`, `en_revision`, `aprobado`, `en_proceso`, `completado`, `rechazado` |
 | `priority` | enum | `baja`, `media`, `alta`, `urgente` |
 | `requester_id`, `assignee_id` | FK | Solicitante y responsable |
 | `first_response_sla_due`, `resolution_sla_due` | datetime | Plazos SLA calculados |
@@ -155,8 +154,8 @@ Diferencia clave: **no requiere usuario autenticado**. Los datos del solicitante
 | `type` | enum | `peticion`, `queja`, `reclamo`, `sugerencia` |
 | `subject`, `description` | texto | Datos de la solicitud |
 | `status` | enum | `nuevo`, `en_revision`, `en_proceso`, `resuelto`, `cerrado` |
-| `requester_name`, `requester_email`, `requester_phone` | varchar | Datos del ciudadano |
-| `requester_id_number`, `requester_address`, `requester_city` | varchar/text | Identificacion y ubicacion |
+| `requester_name`, `requester_email` | varchar(255) | Datos del ciudadano |
+| `requester_phone` | varchar(20), nullable | Telefono del ciudadano |
 | `assignee_id` | FK (nullable) | Agente asignado |
 | `ip_address`, `user_agent` | varchar/text | Metadata (ocultos en JSON) |
 | `first_response_sla_due`, `resolution_sla_due` | datetime | Plazos SLA |
@@ -219,7 +218,7 @@ pqrs ──┬── pqrs_comments ── pqrs_attachments
 ### 5.1 Ciclo de vida del Ticket
 
 ```
-nuevo → abierto → pendiente → resuelto → cerrado
+nuevo → abierto → pendiente → resuelto
                                  │
                                  └──→ convertido
                                   (conversion a compra)
@@ -230,20 +229,19 @@ nuevo → abierto → pendiente → resuelto → cerrado
 | `nuevo` | Recien creado (via email, web o API). Sin asignar. |
 | `abierto` | Asignado a un agente. Esperando accion. |
 | `pendiente` | Esperando respuesta del solicitante o tercero. |
-| `resuelto` | Solucion aplicada. Esperando confirmacion. |
-| `cerrado` | Cerrado definitivamente. |
+| `resuelto` | Solucion aplicada. |
 | `convertido` | Convertido a compra. Se crea una compra vinculada. |
 
 **Numeracion**: `TKT-YYYY-NNNNN`
 **Prioridades**: `baja`, `media`, `alta`, `urgente`
-**Canales**: `email` (Gmail), `whatsapp` (n8n)
+**Canales**: `email` (Gmail), `web` (manual), `api` (futuro)
 
 ### 5.2 Ciclo de vida de Compra
 
 ```
 nuevo → en_revision → aprobado → en_proceso → completado
-                  │                               │
-                  └──→ rechazado                   └──→ convertido
+                  │
+                  └──→ rechazado
 ```
 
 | Estado | Significado |
@@ -254,7 +252,6 @@ nuevo → en_revision → aprobado → en_proceso → completado
 | `en_proceso` | En proceso de adquisicion. |
 | `completado` | Finalizada exitosamente. |
 | `rechazado` | Rechazada. |
-| `convertido` | Convertido a ticket (flujo inverso). |
 
 **Numeracion**: `CPR-YYYY-NNNNN`
 
@@ -454,6 +451,9 @@ Todas las credenciales (`gmail_refresh_token`, `whatsapp_api_key`, `n8n_api_key`
 | `StatisticsService` | Queries para dashboards (por estado, prioridad, SLA, agente, tendencias) |
 | `SettingsService` | CRUD de configuracion del sistema con cifrado automatico |
 | `AuthorizationService` | Autorizacion centralizada basada en roles por tipo de entidad |
+| `ProfileImageService` | Gestion de imagenes de perfil (upload, delete, URL) con soporte S3/local |
+| `NumberGenerationService` | Generacion centralizada de numeros secuenciales (TKT/CPR/PQRS-YYYY-NNNNN) |
+| `EmailTemplateRenderer` | Carga y renderiza plantillas email con sustitucion de variables {{}} |
 
 ### Traits reutilizables
 
@@ -550,8 +550,8 @@ Todas las credenciales (`gmail_refresh_token`, `whatsapp_api_key`, `n8n_api_key`
 
 ### 9.4 Webhooks y Admin
 
-**n8n webhook saliente**: POST automatico a `n8n_webhook_url` al crear ticket.
-**n8n callback entrante**: POST al callback URL para asignar tags.
+**n8n webhook saliente**: POST automatico a `n8n_webhook_url` al crear ticket (payload anidado: `requester`, `attachments`, `available_tags` dentro de `ticket`).
+**n8n callback entrante**: Pendiente de implementacion. La URL se genera pero no existe endpoint receptor.
 
 **Rutas administrativas** (prefijo `/admin`, solo rol admin):
 
@@ -601,6 +601,12 @@ El sistema usa plantillas HTML almacenadas en BD con variables sustituibles:
 ```bash
 # Worker continuo de Gmail (Docker)
 php bin/cake gmail_worker [--once]
+
+# Worker como proceso de fondo (servidor sin Docker)
+bin/start-worker            # Iniciar
+bin/start-worker stop       # Detener
+bin/start-worker status     # Verificar estado
+bin/start-worker restart    # Reiniciar
 
 # Importacion manual de emails
 php bin/cake import_gmail [--max=50] [--query='is:unread'] [--delay=1000]

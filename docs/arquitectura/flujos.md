@@ -3,7 +3,7 @@
 ## Ciclo de Vida del Ticket
 
 ```
-nuevo → abierto → pendiente → resuelto → cerrado
+nuevo → abierto → pendiente → resuelto
                                  │
                                  └──→ convertido
                                   (conversion a compra)
@@ -14,15 +14,14 @@ nuevo → abierto → pendiente → resuelto → cerrado
 | `nuevo` | Recien creado (via email, web o API). Sin asignar. |
 | `abierto` | Asignado a un agente. Esperando accion del agente. |
 | `pendiente` | Esperando respuesta del solicitante o de un tercero. |
-| `resuelto` | Solucion aplicada. Esperando confirmacion del solicitante. |
-| `cerrado` | Cerrado definitivamente. |
+| `resuelto` | Solucion aplicada. |
 | `convertido` | Convertido a compra. El ticket se marca como convertido y se crea una compra vinculada. |
 
 **Numeracion**: `TKT-YYYY-NNNNN` (ejemplo: TKT-2026-00042)
 
 **Prioridades**: `baja`, `media`, `alta`, `urgente`
 
-**Canales de entrada**: `email` (Gmail), `whatsapp` (n8n)
+**Canales de entrada**: `email` (Gmail), `web` (manual), `api` (futuro)
 
 ---
 
@@ -30,9 +29,8 @@ nuevo → abierto → pendiente → resuelto → cerrado
 
 ```
 nuevo → en_revision → aprobado → en_proceso → completado
-                  │                               │
-                  └──→ rechazado                   └──→ convertido
-                                                  (conversion a ticket)
+                  │
+                  └──→ rechazado
 ```
 
 | Estado | Descripcion |
@@ -43,7 +41,8 @@ nuevo → en_revision → aprobado → en_proceso → completado
 | `en_proceso` | Compra en proceso de adquisicion. |
 | `completado` | Compra finalizada exitosamente. |
 | `rechazado` | Compra rechazada. |
-| `convertido` | Convertido a ticket (flujo inverso). |
+
+**Nota**: La conversion a ticket (`ComprasService::convertToTicket()`) no cambia el estado de la compra a `convertido` ya que ese valor no existe en el enum de la BD. La conversion crea un ticket vinculado y se registra en el historial.
 
 **Numeracion**: `CPR-YYYY-NNNNN` (ejemplo: CPR-2026-00015)
 
@@ -72,7 +71,7 @@ nuevo → en_revision → en_proceso → resuelto → cerrado
 
 **Tipos**: `peticion`, `queja`, `reclamo`, `sugerencia`
 
-**Caracteristica especial**: No requiere autenticacion. Los datos del solicitante se almacenan directamente en la tabla (nombre, email, telefono, identificacion, direccion, ciudad). Se registra IP y User-Agent para trazabilidad.
+**Caracteristica especial**: No requiere autenticacion. Los datos del solicitante se almacenan directamente en la tabla (nombre, email, telefono). Se registra IP y User-Agent para trazabilidad.
 
 ---
 
@@ -168,7 +167,7 @@ Usuario externo
   │
   ├── Completa formulario:
   │   ├── Tipo (peticion/queja/reclamo/sugerencia)
-  │   ├── Datos personales (nombre, email, telefono, identificacion, direccion, ciudad)
+  │   ├── Datos personales (nombre, email, telefono)
   │   ├── Asunto y descripcion
   │   └── Adjuntos opcionales
   │

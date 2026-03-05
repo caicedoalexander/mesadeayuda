@@ -78,6 +78,8 @@ Cuando se crea un ticket, `N8nService::sendTicketCreatedWebhook()` envia:
 
 ```json
 {
+  "event": "ticket.created",
+  "timestamp": "2026-02-13T10:30:00-05:00",
   "ticket": {
     "id": 42,
     "ticket_number": "TKT-2026-00042",
@@ -86,28 +88,36 @@ Cuando se crea un ticket, `N8nService::sendTicketCreatedWebhook()` envia:
     "description_plain": "Texto plano del ticket",
     "status": "nuevo",
     "priority": "media",
-    "created": "2026-02-13T10:30:00-05:00"
+    "created": "2026-02-13T10:30:00-05:00",
+    "gmail_message_id": "msg-id-123",
+    "requester": {
+      "id": 15,
+      "name": "Juan Perez",
+      "email": "juan@ejemplo.com",
+      "organization": "Departamento IT"
+    },
+    "attachments": [
+      {
+        "id": 1,
+        "filename": "foto.jpg",
+        "size": 204800,
+        "mime_type": "image/jpeg"
+      }
+    ],
+    "available_tags": [
+      {"id": 1, "name": "Hardware", "color": "#FF5733"},
+      {"id": 2, "name": "Software", "color": "#3498db"}
+    ]
   },
-  "requester": {
-    "id": 15,
-    "name": "Juan Perez",
-    "email": "juan@ejemplo.com",
-    "organization": "Departamento IT"
-  },
-  "attachments": [
-    {
-      "filename": "foto.jpg",
-      "size": 204800,
-      "mime_type": "image/jpeg"
-    }
-  ],
-  "available_tags": [
-    {"id": 1, "name": "Hardware"},
-    {"id": 2, "name": "Software"}
-  ],
-  "callback_url": "https://sistema.com/api/webhooks/n8n/tags"
+  "callback_url": "https://sistema.com/api/webhooks/n8n/tags",
+  "app_info": {
+    "version": "1.0",
+    "environment": "production"
+  }
 }
 ```
+
+**Nota**: `requester`, `attachments` y `available_tags` estan anidados dentro de `ticket`.
 
 ### Flujo callback: asignacion de tags
 
