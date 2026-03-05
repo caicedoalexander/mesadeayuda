@@ -18,7 +18,7 @@ start_worker() {
             exit 1
         else
             # Stale PID file
-            rm -f "$PID_FILE"
+            rm -f "$PID_FILE"   
         fi
     fi
 
