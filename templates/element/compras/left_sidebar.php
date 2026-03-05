@@ -51,7 +51,24 @@
 
             <div class="mb-3">
                 <label class="small text-muted fw-semibold mb-1">SLA:</label>
-                <div><?= $this->Compras->dualSlaIndicator($compra) ?></div>
+                <?php
+                $firstResponseSla = $this->Sla->getSlaDisplayStatus(
+                    $compra->first_response_sla_due,
+                    $compra->first_response_at,
+                    $compra->created,
+                    $compra->status,
+                    ['completado', 'rechazado', 'convertido'],
+                    'first_response'
+                );
+                $resolutionSla = $this->Sla->getSlaDisplayStatus(
+                    $compra->resolution_sla_due ?? $compra->sla_due_date,
+                    $compra->resolved_at,
+                    $compra->created,
+                    $compra->status,
+                    ['completado', 'rechazado', 'convertido']
+                );
+                ?>
+                <div><?= $this->Sla->dualSlaIndicator($firstResponseSla, $resolutionSla) ?></div>
             </div>
         </section>
 
@@ -63,7 +80,7 @@
                 'value' => $compra->assignee_id,
                 'class' => 'form-select form-select-sm',
                 'id' => 'agent-select',
-                'disabled' => $this->User->isAssignmentDisabled($user) || $isLocked,
+                'disabled' => $isAssignmentDisabled || $isLocked,
             ]) ?>
             <?= $this->Form->end() ?>
         </section>

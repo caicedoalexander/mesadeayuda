@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace App\View\Helper;
 
 use App\Service\S3Service;
-use App\Utility\ValidationConstants;
 use Cake\View\Helper;
 
 /**
@@ -164,22 +163,4 @@ class UserHelper extends Helper
         return strtoupper(substr($name, 0, 2));
     }
 
-    /**
-     * Check if assignment dropdown should be disabled for current user
-     *
-     * @param mixed $user Current user identity
-     * @return bool True if assignment should be disabled
-     */
-    public function isAssignmentDisabled($user): bool
-    {
-        if (!$user) {
-            return true;
-        }
-
-        // Only admin, agent, and compras can assign
-        $allowedRoles = [ValidationConstants::ROLE_ADMIN, ValidationConstants::ROLE_AGENT, ValidationConstants::ROLE_COMPRAS];
-        $userRole = is_object($user) ? $user->role : ($user['role'] ?? null);
-
-        return !in_array($userRole, $allowedRoles);
-    }
 }

@@ -9,7 +9,6 @@ use App\Controller\Traits\ServiceInitializerTrait;
 use App\Service\PqrsService;
 use App\Utility\ValidationConstants;
 use App\Service\StatisticsService;
-use App\Service\ResponseService;
 use Cake\Event\EventInterface;
 
 /**
@@ -28,7 +27,6 @@ class PqrsController extends AppController
     use ServiceInitializerTrait;
 
     private PqrsService $pqrsService;
-    private ResponseService $responseService;
     private StatisticsService $statisticsService;
 
     /**

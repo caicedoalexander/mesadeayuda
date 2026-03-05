@@ -8,7 +8,6 @@ use App\Controller\Traits\TicketSystemControllerTrait;
 use App\Controller\Traits\ServiceInitializerTrait;
 use App\Service\ComprasService;
 use App\Utility\ValidationConstants;
-use App\Service\ResponseService;
 use App\Service\StatisticsService;
 use Cake\Event\EventInterface;
 
@@ -27,7 +26,6 @@ class ComprasController extends AppController
     use ServiceInitializerTrait;
 
     private ComprasService $comprasService;
-    private ResponseService $responseService;
     private StatisticsService $statisticsService;
     private \App\Service\TicketService $ticketService;
 

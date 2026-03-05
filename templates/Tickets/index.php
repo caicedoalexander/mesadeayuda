@@ -122,7 +122,7 @@ $userId = $user ? $user->get('id') : null;
                                 <td class="py-1 align-middle" style="max-width: 150px;">
                                     <?php
                                     $isLocked = in_array($ticket->status, ['resuelto', 'convertido']);
-                                    $isDisabled = $this->Ticket->isAssignmentDisabled($user) || $isLocked;
+                                    $isDisabled = $isAssignmentDisabled || $isLocked;
                                     ?>
                                     <?= $this->Form->create(null, ['url' => ['action' => 'assign', $ticket->id], 'class' => 'table-assign-form']) ?>
                                     <?= $this->Form->select('assignee_id', $agents, [

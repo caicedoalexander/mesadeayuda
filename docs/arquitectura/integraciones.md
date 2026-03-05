@@ -16,12 +16,22 @@ Integracion bidireccional con Gmail para importacion automatica de emails como t
 5. Google redirige con codigo de autorizacion
 6. GmailService::authenticate(code) intercambia por tokens
 7. Refresh token se almacena cifrado en system_settings
-8. El sistema renueva tokens automaticamente
+8. Se crea archivo trigger (tmp/gmail_worker_trigger) para despertar al worker
+9. El worker detecta el trigger e inicia importacion inmediata
+10. El sistema renueva tokens automaticamente en ciclos subsecuentes
 ```
 
 ### Importacion de emails
 
-El `GmailWorkerCommand` ejecuta un loop continuo:
+El `GmailWorkerCommand` ejecuta un loop continuo con sleep interruptible:
+
+- Entre ciclos, el worker duerme en incrementos de 1 segundo
+- Durante el sleep, verifica dos condiciones de interrupcion:
+  - Senales del sistema (SIGTERM/SIGINT) para shutdown graceful
+  - Archivo trigger (`tmp/gmail_worker_trigger`) para ejecucion inmediata
+- Si detecta el trigger file, lo elimina y ejecuta importacion sin esperar
+
+Ciclo de importacion:
 
 1. Consulta mensajes no leidos: `GmailService::getMessages('is:unread')`
 2. Por cada mensaje, `parseMessage()` extrae:
@@ -52,7 +62,7 @@ El `GmailWorkerCommand` ejecuta un loop continuo:
 | `gmail_client_secret_path` | Ruta al archivo client_secret.json | No |
 | `gmail_refresh_token` | Token de refresco OAuth2 | Si |
 | `gmail_user_email` | Email del sistema (para deteccion de bucles) | No |
-| `gmail_import_interval_minutes` | Intervalo de polling (default: 5) | No |
+| `gmail_check_interval` | Intervalo de polling en minutos (default: 5) | No |
 
 ---
 
@@ -204,9 +214,68 @@ Variables de entorno (en `app.php` / `app_local.php`):
 |---|---|---|
 | `AWS_S3_ENABLED` | Habilitar S3 | `false` |
 | `AWS_S3_BUCKET` | Nombre del bucket | - |
-| `AWS_S3_REGION` | Region AWS | `us-east-1` |
+| `AWS_S3_REGION` | Region AWS | - |
 | `AWS_S3_KEY` | Access Key ID | - |
 | `AWS_S3_SECRET` | Secret Access Key | - |
+
+---
+
+## Trigger de Worker por Archivo
+
+Mecanismo de comunicacion inter-proceso entre el contenedor web y el worker de Gmail. Permite que el worker inicie importacion inmediatamente tras autorizacion OAuth sin esperar al proximo ciclo.
+
+### Funcionamiento
+
+```
+Contenedor web (SettingsController::gmailAuth)
+  └── OAuth exitoso → file_put_contents(TMP . GmailWorkerCommand::TRIGGER_FILE, time())
+                              │
+                              ▼
+                       tmp/gmail_worker_trigger  ← archivo trigger (volumen compartido)
+                              │
+                              ▼
+Contenedor worker (GmailWorkerCommand::interruptibleSleep)
+  └── Detecta archivo → unlink() → break del sleep → ejecuta importacion
+```
+
+### Detalles
+
+- El archivo trigger se verifica cada 1 segundo durante el sleep del worker
+- Latencia maxima: 1 segundo entre escritura y deteccion
+- El nombre del archivo esta definido como constante: `GmailWorkerCommand::TRIGGER_FILE`
+- Requiere que `tmp/` sea un volumen compartido entre contenedores web y worker (ya configurado en Docker)
+- El trigger se elimina automaticamente tras ser procesado
+- Si el worker no esta corriendo, el trigger se procesa en el siguiente inicio
+
+---
+
+## Constantes Centralizadas
+
+### SettingKeys (`src/Utility/SettingKeys.php`)
+
+Centraliza todas las claves de configuracion del sistema como constantes. Evita strings duplicados en 4-6 archivos por cada clave.
+
+| Grupo | Constantes |
+|---|---|
+| Sistema | `SYSTEM_TITLE` |
+| Gmail | `GMAIL_REFRESH_TOKEN`, `GMAIL_CLIENT_SECRET_PATH`, `GMAIL_CHECK_INTERVAL`, `GMAIL_USER_EMAIL` |
+| WhatsApp | `WHATSAPP_ENABLED`, `WHATSAPP_API_URL`, `WHATSAPP_API_KEY`, `WHATSAPP_INSTANCE_NAME`, `WHATSAPP_TICKETS_NUMBER`, `WHATSAPP_COMPRAS_NUMBER`, `WHATSAPP_PQRS_NUMBER` |
+| n8n | `N8N_ENABLED`, `N8N_WEBHOOK_URL`, `N8N_API_KEY`, `N8N_SEND_TAGS_LIST`, `N8N_TIMEOUT` |
+
+**Uso**: `SettingKeys::GMAIL_REFRESH_TOKEN` en lugar de `'gmail_refresh_token'`
+
+### ValidationConstants (`src/Utility/ValidationConstants.php`)
+
+Ademas de las constantes de validacion (statuses, priorities, types), incluye:
+
+| Grupo | Constantes |
+|---|---|
+| Roles | `ROLE_ADMIN`, `ROLE_AGENT`, `ROLE_COMPRAS`, `ROLE_SERVICIO_CLIENTE`, `ROLE_REQUESTER`, `ROLES`, `STAFF_ROLES` |
+| Cache | `CACHE_SETTINGS` ('system_settings'), `CACHE_CONFIG` ('_cake_core_') |
+| Defaults | `DEFAULT_SYSTEM_TITLE` ('Mesa de Ayuda') |
+| Status individuales | `STATUS_NUEVO`, `STATUS_ABIERTO`, `STATUS_RESUELTO`, `STATUS_CERRADO`, etc. |
+| Tipos PQRS | `PQRS_TYPE_PETICION`, `PQRS_TYPE_QUEJA`, `PQRS_TYPE_RECLAMO`, `PQRS_TYPE_SUGERENCIA` |
+| Comentarios | `COMMENT_PUBLIC`, `COMMENT_INTERNAL`, `COMMENT_SYSTEM` |
 
 ---
 
@@ -216,5 +285,5 @@ Todas las credenciales de integraciones externas se almacenan cifradas en la tab
 
 - Metodo: `Security::encrypt()` de CakePHP con `SECURITY_SALT`
 - Formato: prefijo `{encrypted}` + base64
-- Claves cifradas: `gmail_refresh_token`, `whatsapp_api_key`, `n8n_api_key`
+- Claves cifradas: `SettingKeys::GMAIL_REFRESH_TOKEN`, `SettingKeys::WHATSAPP_API_KEY`, `SettingKeys::N8N_API_KEY`
 - Descifrado automatico al cargar configuraciones via `SettingsService::loadAll()`

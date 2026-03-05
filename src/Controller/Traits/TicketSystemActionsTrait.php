@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Traits;
 
+use App\Utility\EntityType;
 use Cake\Http\Response;
 
 /**
@@ -32,19 +33,9 @@ trait TicketSystemActionsTrait
         $assigneeId = $this->normalizeAssigneeId($assigneeId);
         $userId = $this->getCurrentUserId();
 
-        if ($entityType === 'ticket') {
-            $entity = $this->Tickets->get($entityId);
-            $service = $this->ticketService;
-            $entityName = 'Ticket';
-        } elseif ($entityType === 'compra') {
-            $entity = $this->Compras->get($entityId);
-            $service = $this->comprasService;
-            $entityName = 'Compra';
-        } else {
-            $entity = $this->Pqrs->get($entityId);
-            $service = $this->pqrsService;
-            $entityName = 'PQRS';
-        }
+        $components = $this->getEntityComponents($entityType);
+        $entity = $components['table']->get($entityId);
+        $entityName = $components['displayName'];
 
         if ($this->isEntityLocked($entityType, $entity)) {
             $this->Flash->error(__("No se puede modificar una {$entityName} en estado final."));
@@ -52,7 +43,7 @@ trait TicketSystemActionsTrait
             return $this->redirect(['action' => $redirectAction]);
         }
 
-        $result = $service->assign($entity, $assigneeId, $userId);
+        $result = $components['service']->assign($entity, $assigneeId, $userId);
         if ($result) {
             $this->Flash->success(__("{$entityName} asignada correctamente."));
         } else {
@@ -80,19 +71,9 @@ trait TicketSystemActionsTrait
         $this->request->allowMethod(['post', 'put']);
         $userId = $this->getCurrentUserId();
 
-        if ($entityType === 'ticket') {
-            $entity = $this->Tickets->get($entityId);
-            $service = $this->ticketService;
-            $entityName = 'Ticket';
-        } elseif ($entityType === 'compra') {
-            $entity = $this->Compras->get($entityId);
-            $service = $this->comprasService;
-            $entityName = 'Compra';
-        } else {
-            $entity = $this->Pqrs->get($entityId);
-            $service = $this->pqrsService;
-            $entityName = 'PQRS';
-        }
+        $components = $this->getEntityComponents($entityType);
+        $entity = $components['table']->get($entityId);
+        $entityName = $components['displayName'];
 
         if ($this->isEntityLocked($entityType, $entity)) {
             $this->Flash->error(__("No se puede modificar una {$entityName} en estado final."));
@@ -100,7 +81,7 @@ trait TicketSystemActionsTrait
             return $this->redirect(['action' => $redirectAction]);
         }
 
-        $result = $service->changeStatus($entity, $newStatus, $userId);
+        $result = $components['service']->changeStatus($entity, $newStatus, $userId);
         if ($result['success']) {
             $this->Flash->success($result['message'] ?? __("Estado de {$entityName} actualizado."));
         } else {
@@ -128,19 +109,9 @@ trait TicketSystemActionsTrait
         $this->request->allowMethod(['post', 'put']);
         $userId = $this->getCurrentUserId();
 
-        if ($entityType === 'ticket') {
-            $entity = $this->Tickets->get($entityId);
-            $service = $this->ticketService;
-            $entityName = 'Ticket';
-        } elseif ($entityType === 'compra') {
-            $entity = $this->Compras->get($entityId);
-            $service = $this->comprasService;
-            $entityName = 'Compra';
-        } else {
-            $entity = $this->Pqrs->get($entityId);
-            $service = $this->pqrsService;
-            $entityName = 'PQRS';
-        }
+        $components = $this->getEntityComponents($entityType);
+        $entity = $components['table']->get($entityId);
+        $entityName = $components['displayName'];
 
         if ($this->isEntityLocked($entityType, $entity)) {
             $this->Flash->error(__("No se puede modificar una {$entityName} en estado final."));
@@ -148,7 +119,7 @@ trait TicketSystemActionsTrait
             return $this->redirect(['action' => $redirectAction]);
         }
 
-        $result = $service->changePriority($entity, $newPriority, $userId);
+        $result = $components['service']->changePriority($entity, $newPriority, $userId);
         if ($result) {
             $this->Flash->success(__("Prioridad de {$entityName} actualizada."));
         } else {
@@ -170,22 +141,14 @@ trait TicketSystemActionsTrait
         $this->request->allowMethod(['post']);
         $userId = $this->getCurrentUserId();
 
-        $entityName = match ($entityType) {
-            'ticket' => 'Ticket',
-            'compra' => 'Compra',
-            default => 'PQRS',
-        };
+        $components = $this->getEntityComponents($entityType);
+        $entityName = $components['displayName'];
+        $service = $components['service'];
 
         $data = $this->request->getData();
         $files = $this->request->getUploadedFiles();
 
-        $result = $this->responseService->processResponse(
-            $entityType,
-            $entityId,
-            $userId,
-            $data,
-            $files
-        );
+        $result = $service->handleResponse($entityId, $userId, $data, $files);
 
         if ($result['success']) {
             $this->Flash->success($result['message'] ?? __("Comentario agregado a {$entityName}."));
@@ -205,13 +168,7 @@ trait TicketSystemActionsTrait
      */
     protected function downloadEntityAttachment(string $entityType, int $attachmentId): Response
     {
-        $tableMap = [
-            'ticket' => 'Attachments',
-            'compra' => 'ComprasAttachments',
-            'pqrs' => 'PqrsAttachments',
-        ];
-
-        $tableName = $tableMap[$entityType] ?? 'Attachments';
+        $tableName = EntityType::from($entityType)->attachmentsTable();
         $attachmentsTable = $this->fetchTable($tableName);
         $attachment = $attachmentsTable->get($attachmentId);
         $filePath = $this->getFullPath($attachment);

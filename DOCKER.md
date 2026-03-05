@@ -104,7 +104,7 @@ curl http://localhost/health
 | `AWS_S3_ENABLED` | `false` | Enable S3 for file storage |
 | `AWS_ACCESS_KEY_ID` | - | AWS access key |
 | `AWS_SECRET_ACCESS_KEY` | - | AWS secret key |
-| `AWS_REGION` | `us-east-1` | AWS region |
+| `AWS_REGION` | - | AWS region |
 | `AWS_S3_BUCKET` | - | S3 bucket name |
 
 > **Important:** Without `SECURITY_SALT`, the worker cannot decrypt Gmail OAuth tokens and will fail silently. Both `web` and `worker` services must receive this variable.

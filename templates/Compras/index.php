@@ -96,7 +96,13 @@ $userId = $user ? $user->get('id') : null;
                         <?php foreach ($compras as $compra): ?>
                             <?php
                             // Get SLA status
-                            $slaStatus = $this->Compras->getSlaStatus($compra);
+                            $slaStatus = $this->Sla->getSlaDisplayStatus(
+                                $compra->resolution_sla_due ?? $compra->sla_due_date,
+                                $compra->resolved_at,
+                                $compra->created,
+                                $compra->status,
+                                ['completado', 'rechazado', 'convertido']
+                            );
                             $rowClass = $slaStatus['status'] === 'breached' ? 'table-danger' : '';
                             ?>
                             <tr class="<?= $rowClass ?>">
@@ -130,7 +136,7 @@ $userId = $user ? $user->get('id') : null;
                                 <td class="py-1 align-middle" style="max-width: 150px;">
                                     <?php
                                     $isLocked = in_array($compra->status, ['completado', 'rechazado', 'convertido']);
-                                    $isDisabled = !in_array($userRole, ['admin', 'compras']) || $isLocked;
+                                    $isDisabled = $isAssignmentDisabled || $isLocked;
                                     ?>
                                     <?= $this->Form->create(null, ['url' => ['action' => 'assign', $compra->id], 'class' => 'table-assign-form']) ?>
                                     <?= $this->Form->select('assignee_id', $comprasUsers, [
@@ -144,7 +150,7 @@ $userId = $user ? $user->get('id') : null;
                                 </td>
 
                                 <td class="py-0 align-middle text-center">
-                                    <?= $this->Compras->slaIcon($compra) ?>
+                                    <?= $this->Sla->slaIcon($slaStatus) ?>
                                 </td>
 
                                 <?php if ($view === 'completados'): ?>

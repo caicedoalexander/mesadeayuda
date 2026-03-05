@@ -132,15 +132,25 @@ class SettingsController extends AppController
                     if ($this->settingsService->saveSetting(SettingKeys::GMAIL_REFRESH_TOKEN, $tokens['refresh_token'])) {
                         $this->Flash->success('Gmail autorizado exitosamente.');
                         Log::info('Gmail OAuth completed successfully');
-                        @file_put_contents(TMP . \App\Command\GmailWorkerCommand::TRIGGER_FILE, (string)time());
                     } else {
                         $this->Flash->error('Error al guardar el token de Gmail.');
                         Log::error('Failed to save Gmail refresh token');
                     }
                 } else {
-                    $this->Flash->warning('No se recibió refresh token. Intenta nuevamente.');
-                    Log::warning('No refresh token in OAuth response', ['token_keys' => array_keys($tokens ?? [])]);
+                    // Google may not return refresh_token on re-authorization if consent was cached.
+                    // This is OK if we already have a stored refresh_token.
+                    $existingToken = $allSettings[SettingKeys::GMAIL_REFRESH_TOKEN] ?? null;
+                    if ($existingToken) {
+                        $this->Flash->success('Gmail reconectado exitosamente.');
+                        Log::info('Gmail OAuth re-authorized (using existing refresh token)');
+                    } else {
+                        $this->Flash->warning('No se recibió refresh token. Intenta nuevamente.');
+                        Log::warning('No refresh token in OAuth response', ['token_keys' => array_keys($tokens ?? [])]);
+                    }
                 }
+
+                // Always trigger the worker on successful authentication/re-authentication
+                @file_put_contents(TMP . \App\Command\GmailWorkerCommand::TRIGGER_FILE, (string)time());
 
                 return $this->redirect(['action' => 'index']);
             } catch (\Exception $e) {

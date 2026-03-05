@@ -71,7 +71,7 @@
                 'value' => $ticket->assignee_id,
                 'class' => 'form-select form-select-sm',
                 'id' => 'agent-select',
-                'disabled' => $this->Ticket->isAssignmentDisabled($user) || $isLocked,
+                'disabled' => $isAssignmentDisabled || $isLocked,
             ]) ?>
             <?= $this->Form->end() ?>
         </section>

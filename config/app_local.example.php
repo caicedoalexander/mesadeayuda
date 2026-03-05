@@ -118,7 +118,7 @@ return [
             'enabled' => filter_var(env('AWS_S3_ENABLED', false), FILTER_VALIDATE_BOOLEAN),
             'key' => env('AWS_ACCESS_KEY_ID', ''),
             'secret' => env('AWS_SECRET_ACCESS_KEY', ''),
-            'region' => env('AWS_REGION', 'us-east-1'),
+            'region' => env('AWS_REGION', ''),
             'bucket' => env('AWS_S3_BUCKET', ''),
         ],
     ],

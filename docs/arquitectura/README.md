@@ -45,7 +45,7 @@ Mesa de Ayuda es un sistema corporativo que integra tres modulos principales baj
 │  TicketService    │ ComprasService   │ PqrsService        │
 │  GmailService     │ EmailService     │ WhatsappService    │
 │  N8nService       │ S3Service        │ SlaManagementSvc   │
-│  StatisticsService│ SettingsService  │ ResponseService    │
+│  StatisticsService│ SettingsService  │ AuthorizationSvc   │
 └────────┬─────────────────────────────────────────────────┘
          │
          ▼
@@ -79,14 +79,21 @@ La logica de negocio reside en clases de servicio (`src/Service/`) inyectadas en
 
 ### Traits Reutilizables
 Comportamientos comunes entre servicios se extraen en traits (`src/Service/Traits/`):
-- `TicketSystemTrait` - Comentarios, cambios de estado, historial
+- `TicketSystemTrait` - Comentarios, cambios de estado, historial, manejo de respuestas
 - `NotificationDispatcherTrait` - Despacho de notificaciones (email + WhatsApp)
 - `GenericAttachmentTrait` - Gestion de archivos adjuntos
 - `EntityConversionTrait` - Conversion entre entidades (Ticket <-> Compra)
 - `SlaAwareTrait` - Verificacion de cumplimiento de SLA
 - `ConfigResolutionTrait` - Resolucion de configuracion en 3 niveles
 - `SecureHttpTrait` - Peticiones HTTP seguras (webhooks)
-- `StatisticsServiceTrait` - Queries base para estadisticas
+
+Traits de controlador (`src/Controller/Traits/`):
+- `TicketSystemControllerTrait` - Trait compuesto que agrupa los sub-traits de controlador
+- `TicketSystemActionsTrait` - Asignar, cambiar estado/prioridad, comentar, descargar
+- `TicketSystemBulkTrait` - Acciones masivas (asignar, prioridad, tags, eliminar)
+- `TicketSystemListingTrait` - Listado de entidades con filtros y paginacion
+- `TicketSystemViewTrait` - Vista individual de entidad con helpers de vista
+- `TicketSystemHistoryTrait` - Historial de entidad (API JSON)
 
 ### MVC (Model-View-Controller)
 Patron estandar de CakePHP con:

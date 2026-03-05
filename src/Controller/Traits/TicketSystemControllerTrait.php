@@ -15,7 +15,9 @@ use App\Controller\Traits\ViewDataNormalizerTrait;
  *
  * - TicketSystemActionsTrait: assign, changeStatus, changePriority, addComment, download
  * - TicketSystemBulkTrait: bulkAssign, bulkChangePriority, bulkAddTag, bulkDelete
- * - TicketSystemListingTrait: indexEntity, viewEntity, historyEntity + filter/pagination helpers
+ * - TicketSystemListingTrait: indexEntity + filter/pagination helpers
+ * - TicketSystemViewTrait: viewEntity + view-specific helpers
+ * - TicketSystemHistoryTrait: historyEntity (JSON API)
  *
  * Shared helpers (getEntityComponents, getHistoryTable) remain here
  * since they are used across all sub-traits.
@@ -29,6 +31,8 @@ trait TicketSystemControllerTrait
     use TicketSystemActionsTrait;
     use TicketSystemBulkTrait;
     use TicketSystemListingTrait;
+    use TicketSystemViewTrait;
+    use TicketSystemHistoryTrait;
 
     /**
      * Get entity components (table, service, display name) based on type

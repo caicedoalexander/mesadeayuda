@@ -3,13 +3,14 @@ declare(strict_types=1);
 
 namespace App\Controller\Traits;
 
+use App\Service\AuthorizationService;
 use App\Utility\ValidationConstants;
 
 /**
  * TicketSystemListingTrait
  *
- * Listing, viewing, and history methods for entity management.
- * Extracted from TicketSystemControllerTrait for SRP compliance.
+ * Entity listing (index) method and filter/pagination helpers.
+ * viewEntity and historyEntity moved to TicketSystemViewTrait and TicketSystemHistoryTrait.
  */
 trait TicketSystemListingTrait
 {
@@ -103,10 +104,14 @@ trait TicketSystemListingTrait
             $filterVarName = 'filter' . ucfirst($paramName);
             $filters[$filterVarName] = $this->request->getQuery($queryKey);
         }
+        $authService = new AuthorizationService();
+        $isAssignmentDisabled = $authService->isAssignmentDisabled($entityType, $user);
+
         $viewVars = [
             $entityVariable => $entities,
             'view' => $view,
             'filters' => $filters,
+            'isAssignmentDisabled' => $isAssignmentDisabled,
         ];
         $viewVars = array_merge($viewVars, $filterData);
         $viewVars = array_merge($viewVars, $config['additionalViewVars']);
@@ -152,16 +157,6 @@ trait TicketSystemListingTrait
             'pqrs' => 'pqrs',
             'compra' => 'compras',
             default => $entityType . 's',
-        };
-    }
-
-    private function getSingleEntityVariable(string $entityType): string
-    {
-        return match ($entityType) {
-            'ticket' => 'ticket',
-            'pqrs' => 'pqrs',
-            'compra' => 'compra',
-            default => $entityType,
         };
     }
 
@@ -244,177 +239,5 @@ trait TicketSystemListingTrait
             ],
             default => [],
         };
-    }
-
-    protected function viewEntity(string $entityType, int $id, array $config = []): ?\Cake\Http\Response
-    {
-        $components = $this->getEntityComponents($entityType);
-        $tableName = $components['tableName'];
-        $variableName = $this->getSingleEntityVariable($entityType);
-        $contain = $config['contain'] ?? $this->getDefaultViewContain($entityType, $config['lazyLoadHistory'] ?? false);
-        $entity = $this->fetchTable($tableName)->get($id, compact('contain'));
-        if (isset($config['permissionCheck']) && is_callable($config['permissionCheck'])) {
-            $permissionResult = $config['permissionCheck']($entity);
-            if ($permissionResult !== null) {
-                return $permissionResult;
-            }
-        }
-        $agentsRoleFilter = $config['agentsRoleFilter'] ?? $this->getDefaultAgentsRoleFilter($entityType);
-        $agents = $this->fetchTable('Users')
-            ->find('list')
-            ->where(['role IN' => $agentsRoleFilter, 'is_active' => true])
-            ->toArray();
-        $viewVars = [
-            $variableName => $entity,
-            'agents' => $agents,
-        ];
-        if (isset($config['additionalViewVars'])) {
-            $viewVars = array_merge($viewVars, $config['additionalViewVars']);
-        }
-        if (isset($config['beforeSet']) && is_callable($config['beforeSet'])) {
-            $viewVars = $config['beforeSet']($entity, $viewVars);
-        }
-        $allStatuses = $this->getStatusConfig($entityType);
-        $selectableStatuses = array_filter($allStatuses, function($key) {
-            return $key !== 'convertido';
-        }, ARRAY_FILTER_USE_KEY);
-        $viewVars = array_merge($viewVars, [
-            'entityType' => $entityType,
-            'entityMetadata' => $this->getEntityMetadata($entityType, $entity),
-            'statuses' => $selectableStatuses,
-            'priorities' => $this->getPriorityConfig($entityType),
-            'resolvedStatuses' => $this->getResolvedStatuses($entityType),
-            'isLocked' => $this->isEntityLocked($entityType, $entity),
-        ]);
-        $this->set($viewVars);
-        return null;
-    }
-
-    private function getDefaultViewContain(string $entityType, bool $lazyLoadHistory = false): array
-    {
-        $contain = match ($entityType) {
-            'ticket' => [
-                'Requesters' => ['Organizations'],
-                'Assignees',
-                'TicketComments' => ['Users'],
-                'Attachments',
-                'Tags',
-                'TicketFollowers' => ['Users'],
-            ],
-            'pqrs' => [
-                'Assignees',
-                'PqrsComments' => [
-                    'Users',
-                    'PqrsAttachments',
-                    'sort' => ['PqrsComments.created' => 'ASC']
-                ],
-                'PqrsAttachments',
-            ],
-            'compra' => [
-                'Requesters',
-                'Assignees',
-                'ComprasComments' => ['Users'],
-                'ComprasAttachments',
-            ],
-            default => [],
-        };
-        if (!$lazyLoadHistory) {
-            $historyAssoc = match ($entityType) {
-                'ticket' => 'TicketHistory',
-                'pqrs' => 'PqrsHistory',
-                'compra' => 'ComprasHistory',
-                default => null,
-            };
-            if ($historyAssoc) {
-                $contain[$historyAssoc] = [
-                    'Users',
-                    'sort' => [$historyAssoc . '.created' => 'DESC']
-                ];
-            }
-        }
-        return $contain;
-    }
-
-    private function getDefaultAgentsRoleFilter(string $entityType): array
-    {
-        return match ($entityType) {
-            'ticket' => [ValidationConstants::ROLE_ADMIN, ValidationConstants::ROLE_AGENT],
-            'pqrs' => [ValidationConstants::ROLE_SERVICIO_CLIENTE],
-            'compra' => [ValidationConstants::ROLE_COMPRAS],
-            default => [ValidationConstants::ROLE_ADMIN, ValidationConstants::ROLE_AGENT],
-        };
-    }
-
-    protected function historyEntity(string $entityType, int $id): void
-    {
-        $this->request->allowMethod(['get']);
-        $this->viewBuilder()->setClassName('Json');
-        try {
-            $user = $this->Authentication->getIdentity();
-            if (!$user) {
-                $this->set('error', 'No autenticado');
-                $this->viewBuilder()->setOption('serialize', ['error']);
-                $this->response = $this->response->withStatus(401);
-                return;
-            }
-            $components = $this->getEntityComponents($entityType);
-            $tableName = $components['tableName'];
-            $foreignKey = $components['foreignKey'];
-            $entity = $this->fetchTable($tableName)->get($id);
-            $userRole = $user->get('role');
-            $userId = $user->get('id');
-            if ($userRole === 'requester' && $entity->requester_id !== $userId) {
-                $this->set('error', 'No tienes permiso para ver este historial');
-                $this->viewBuilder()->setOption('serialize', ['error']);
-                $this->response = $this->response->withStatus(403);
-                return;
-            }
-            $historyTable = $this->getHistoryTable($entityType);
-            $history = $historyTable
-                ->find()
-                ->where([$foreignKey => $id])
-                ->contain(['Users'])
-                ->order([$historyTable->getAlias() . '.created' => 'DESC'])
-                ->all();
-            $formattedHistory = [];
-            foreach ($history as $entry) {
-                $userData = null;
-                if ($entry->user) {
-                    $userData = [
-                        'id' => $entry->user->id,
-                        'name' => $entry->user->name,
-                    ];
-                } else {
-                    $userData = [
-                        'id' => null,
-                        'name' => 'Sistema',
-                    ];
-                }
-                $formattedHistory[] = [
-                    'id' => $entry->id,
-                    'field_name' => $entry->field_name,
-                    'old_value' => $entry->old_value,
-                    'new_value' => $entry->new_value,
-                    'description' => $entry->description,
-                    'created' => $entry->created->format('Y-m-d H:i:s'),
-                    'user' => $userData,
-                ];
-            }
-            $this->set('history', $formattedHistory);
-            $this->viewBuilder()->setOption('serialize', ['history']);
-        } catch (\Cake\Datasource\Exception\RecordNotFoundException $e) {
-            \Cake\Log\Log::warning(ucfirst($entityType) . ' not found for history: ' . $id);
-            $this->set('error', ucfirst($entityType) . ' no encontrado');
-            $this->viewBuilder()->setOption('serialize', ['error']);
-            $this->response = $this->response->withStatus(404);
-        } catch (\Exception $e) {
-            \Cake\Log\Log::error('Error loading ' . $entityType . ' history: ' . $e->getMessage(), [
-                $entityType . '_id' => $id,
-                'exception' => $e,
-            ]);
-            $this->set('error', 'Error al cargar el historial');
-            $this->viewBuilder()->setOption('serialize', ['error']);
-            $this->response = $this->response->withStatus(500);
-        }
     }
 }

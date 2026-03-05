@@ -229,20 +229,23 @@ Al crear una entidad, `SlaManagementService` calcula:
 
 ---
 
-## Flujo de Respuesta (ResponseService)
+## Flujo de Respuesta (handleResponse)
 
-Cuando un agente responde a un ticket/compra/PQRS:
+Cuando un agente responde a un ticket/compra/PQRS, el controlador delega a `$service->handleResponse()` del servicio correspondiente:
 
 ```
-ResponseService::processResponse()
-  │
-  ├── 1. Crea comentario (via TicketSystemTrait::addComment)
-  ├── 2. Guarda adjuntos (si los hay)
-  ├── 3. Cambia estado (si se solicito cambio)
-  │   └── Registra en historial
-  └── 4. Despacha notificaciones:
-      ├── Comentario + estado → email tipo "respuesta" (unificado)
-      ├── Solo comentario → email tipo "comentario"
-      └── Solo estado → email tipo "estado"
-      (WhatsApp solo se envia en creacion, no en actualizaciones)
+Controller → TicketSystemActionsTrait::addEntityComment()
+  └── $service->handleResponse($entityId, $userId, $data, $files)
+      │
+      ├── 1. Crea comentario (via TicketSystemTrait::addComment)
+      ├── 2. Guarda adjuntos (si los hay)
+      ├── 3. Cambia estado (si se solicito cambio)
+      │   └── Registra en historial
+      └── 4. Despacha notificaciones (via TicketSystemTrait::sendResponseNotifications):
+          ├── Comentario + estado → email tipo "respuesta" (unificado)
+          ├── Solo comentario → email tipo "comentario"
+          └── Solo estado → email tipo "estado"
+          (WhatsApp solo se envia en creacion, no en actualizaciones)
 ```
+
+Cada servicio (TicketService, ComprasService, PqrsService) implementa su propio `handleResponse()` usando los metodos compartidos de `TicketSystemTrait`.

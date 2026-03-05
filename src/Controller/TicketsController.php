@@ -22,7 +22,6 @@ class TicketsController extends AppController
     use ServiceInitializerTrait;
 
     private TicketService $ticketService;
-    private \App\Service\ResponseService $responseService;
     private StatisticsService $statisticsService;
     private \App\Service\ComprasService $comprasService;
 

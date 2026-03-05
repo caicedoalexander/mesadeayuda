@@ -14,6 +14,7 @@ Logica central del modulo de tickets.
 
 | Metodo | Descripcion |
 |---|---|
+| `handleResponse(int $entityId, int $userId, array $data, array $files)` | Procesa respuesta completa (comentario + adjuntos + estado + notificaciones) |
 | `createFromEmail(array $emailData)` | Crea ticket desde email parseado por Gmail |
 | `createCommentFromEmail(Ticket $ticket, array $emailData)` | Agrega comentario a ticket existente desde email |
 | `findOrCreateUser(string $email, string $name)` | Busca o crea usuario por email (para importacion Gmail) |
@@ -43,6 +44,7 @@ Logica del modulo de compras con workflow de aprobacion.
 
 | Metodo | Descripcion |
 |---|---|
+| `handleResponse(int $entityId, int $userId, array $data, array $files)` | Procesa respuesta completa (comentario + adjuntos + estado + notificaciones) |
 | `convertToTicket(Compra $compra, int $userId, TicketService $service)` | Convierte compra a ticket |
 | `createFromTicket(Ticket $ticket, array $data)` | Crea compra desde ticket con calculo de SLA |
 | `copyTicketData(Ticket $ticket, Compra $compra)` | Copia comentarios/adjuntos de ticket a compra |
@@ -67,6 +69,7 @@ Logica del modulo PQRS, incluyendo creacion desde formulario publico.
 
 | Metodo | Descripcion |
 |---|---|
+| `handleResponse(int $entityId, int $userId, array $data, array $files)` | Procesa respuesta completa (comentario + adjuntos + estado + notificaciones) |
 | `createFromForm(array $formData, array $files)` | Crea PQRS desde formulario publico (sin auth) con SLA |
 | `saveUploadedFile(Pqr $pqrs, UploadedFileInterface $file, ?int $commentId, ?int $userId)` | Guarda archivo adjunto |
 | `getBreachedSLAPqrs()` | Consulta PQRS con SLA vencido |
@@ -100,7 +103,7 @@ Integracion completa con Gmail API para importacion y envio de emails.
 | `extractEmailAddress(string $emailString)` | Extrae email de "Nombre <email@example.com>" |
 | `parseRecipients(string $recipientsHeader)` | Parsea headers To/Cc |
 
-**Configuracion** (SystemSettings): `gmail_client_secret_path`, `gmail_refresh_token` (cifrado), `gmail_user_email`
+**Configuracion** (SystemSettings): `SettingKeys::GMAIL_CLIENT_SECRET_PATH`, `SettingKeys::GMAIL_REFRESH_TOKEN` (cifrado), `SettingKeys::GMAIL_USER_EMAIL`
 
 ---
 
@@ -143,7 +146,7 @@ Notificaciones por WhatsApp via Evolution API.
 | `sendNewCompraNotification(Compra $compra)` | Notifica grupo compras |
 | `testConnection(string $module)` | Prueba conectividad por modulo |
 
-**Configuracion** (SystemSettings): `whatsapp_enabled`, `whatsapp_api_url`, `whatsapp_api_key` (cifrado), `whatsapp_instance_name`, `whatsapp_tickets_number`, `whatsapp_pqrs_number`, `whatsapp_compras_number`
+**Configuracion** (SystemSettings): Todas las claves WhatsApp estan centralizadas en `SettingKeys::WHATSAPP_*` — `WHATSAPP_ENABLED`, `WHATSAPP_API_URL`, `WHATSAPP_API_KEY` (cifrado), `WHATSAPP_INSTANCE_NAME`, `WHATSAPP_TICKETS_NUMBER`, `WHATSAPP_PQRS_NUMBER`, `WHATSAPP_COMPRAS_NUMBER`
 
 **Resolucion de configuracion en 3 niveles**:
 1. systemConfig del constructor (mas rapido)
@@ -168,7 +171,7 @@ Integracion con n8n para clasificacion AI de tickets.
 | `testConnection()` | Prueba conectividad con n8n |
 | `getCallbackUrl()` | Retorna URL de callback para respuestas de n8n |
 
-**Configuracion** (SystemSettings): `n8n_enabled`, `n8n_webhook_url`, `n8n_api_key` (cifrado), `n8n_send_tags_list`, `n8n_timeout`
+**Configuracion** (SystemSettings): Todas las claves n8n estan centralizadas en `SettingKeys::N8N_*` — `N8N_ENABLED`, `N8N_WEBHOOK_URL`, `N8N_API_KEY` (cifrado), `N8N_SEND_TAGS_LIST`, `N8N_TIMEOUT`
 
 ---
 
@@ -217,7 +220,7 @@ Queries de analytics para dashboards de cada modulo.
 
 **Filtros soportados**: `date_range` ('all', '30days', '7days', 'today', 'custom'), `start_date`, `end_date`
 
-**Cache**: 5 minutos via StatisticsServiceTrait
+**Cache**: 5 minutos via metodos privados internos (parseDateFilters, buildBaseQuery, etc.)
 
 ---
 
@@ -253,28 +256,26 @@ Gestion de configuracion del sistema con cifrado automatico.
 | `saveSetting(string $key, string $value)` | Guarda con cifrado automatico para claves sensibles |
 | `loadAll()` | Carga todas las configuraciones con descifrado y cache |
 
-**Claves cifradas automaticamente**: `gmail_refresh_token`, `whatsapp_api_key`, `n8n_api_key`
+**Claves cifradas automaticamente**: `SettingKeys::GMAIL_REFRESH_TOKEN`, `SettingKeys::WHATSAPP_API_KEY`, `SettingKeys::N8N_API_KEY`
 
 Al guardar cualquier configuracion, limpia los caches: `system_settings`, `whatsapp_settings`, `n8n_settings`, `gmail_settings`, `sla_settings`
 
 ---
 
-### ResponseService
+### AuthorizationService
 
-Orquestacion de respuestas (comentario + estado + adjuntos + notificaciones).
+Autorizacion centralizada basada en roles para acciones sobre entidades.
 
-**Ubicacion**: `src/Service/ResponseService.php`
+**Ubicacion**: `src/Service/AuthorizationService.php`
 
 | Metodo | Descripcion |
 |---|---|
-| `processResponse(string $type, int $entityId, int $userId, array $data, array $files)` | Procesa respuesta completa |
-| `sendNotifications(...)` | Decide tipo de notificacion segun accion realizada |
+| `isAssignmentDisabled(string $entityType, $user)` | Determina si el usuario puede asignar entidades del tipo dado |
 
-**Logica de notificacion**:
-- Comentario + cambio de estado → email tipo "respuesta" (unificado)
-- Solo comentario → email tipo "comentario"
-- Solo cambio de estado → email tipo "estado"
-- WhatsApp solo se envia en creacion de entidad, no en actualizaciones
+**Roles por tipo de entidad**:
+- ticket → admin, agent
+- compra → admin, compras
+- pqrs → admin, servicio_cliente
 
 ---
 
@@ -284,13 +285,16 @@ Los traits (`src/Service/Traits/`) encapsulan comportamientos compartidos entre 
 
 ### TicketSystemTrait
 
-Operaciones comunes: agregar comentarios, cambiar estado, registrar historial.
+Operaciones comunes: agregar comentarios, cambiar estado, registrar historial, manejo de respuestas.
 
 | Metodo | Descripcion |
 |---|---|
 | `addComment(...)` | Crea comentario en cualquier entidad (ticket/compra/pqrs) |
 | `changeStatus(...)` | Cambia estado con validacion y registro en historial |
 | `logHistory(...)` | Registra cambio en tabla de historial correspondiente |
+| `sendResponseNotifications(...)` | Despacha notificaciones segun tipo de accion (comentario, estado, o ambos) |
+| `buildResponseResult(...)` | Construye array de resultado estandar para handleResponse |
+| `decodeEmailRecipients(...)` | Decodifica destinatarios email (To/Cc) del formulario de respuesta |
 
 ### NotificationDispatcherTrait
 
@@ -351,15 +355,6 @@ Peticiones HTTP seguras para webhooks.
 |---|---|
 | `secureCurlPost(...)` | POST seguro con timeout, verificacion SSL, headers |
 
-### StatisticsServiceTrait
-
-Base para queries de estadisticas.
-
-| Metodo | Descripcion |
-|---|---|
-| `buildBaseQuery(...)` | Construye query base con filtros |
-| `parseDateFilters(...)` | Parsea filtros de rango de fechas |
-
 ---
 
 ## Comandos de Consola
@@ -380,7 +375,13 @@ Worker continuo para polling de Gmail (Docker).
 php bin/cake gmail_worker [--once]
 ```
 
-Caracteristicas: loop infinito, backoff exponencial en errores (60s-600s), shutdown graceful (SIGTERM/SIGINT), espera a BD en startup.
+Caracteristicas:
+- Loop infinito con sleep interruptible (incrementos de 1 segundo)
+- Backoff exponencial en errores (60s-600s)
+- Shutdown graceful via senales (SIGTERM/SIGINT)
+- Espera a conectividad de BD en startup (10 intentos, 5s entre cada uno)
+- **Trigger file**: Detecta `tmp/gmail_worker_trigger` (constante `TRIGGER_FILE`) durante el sleep para ejecucion inmediata tras autorizacion OAuth
+- Intervalo configurable via `SettingKeys::GMAIL_CHECK_INTERVAL` (default: 5 min)
 
 ### TestEmailCommand
 
@@ -389,3 +390,65 @@ Prueba del sistema de notificaciones.
 ```bash
 php bin/cake test_email <ticket_id>
 ```
+
+---
+
+## Clases de Utilidad
+
+### SettingKeys (`src/Utility/SettingKeys.php`)
+
+Centraliza las claves de configuracion del sistema como constantes tipadas. Elimina strings duplicados que antes aparecian en 4-6 archivos por cada clave.
+
+**Grupos de constantes**: `SYSTEM_*`, `GMAIL_*`, `WHATSAPP_*`, `N8N_*`
+
+**Uso tipico**:
+
+```php
+use App\Utility\SettingKeys;
+
+// Antes: $this->getSettingValue('gmail_refresh_token')
+// Ahora:
+$this->getSettingValue(SettingKeys::GMAIL_REFRESH_TOKEN)
+
+// Antes: ->where(['setting_key' => 'n8n_webhook_url'])
+// Ahora:
+->where(['setting_key' => SettingKeys::N8N_WEBHOOK_URL])
+```
+
+### ValidationConstants (`src/Utility/ValidationConstants.php`)
+
+Constantes de validacion para entidades, ademas de roles, cache keys y defaults del sistema.
+
+**Constantes de roles**:
+
+| Constante | Valor | Uso |
+|---|---|---|
+| `ROLE_ADMIN` | 'admin' | Comparaciones de rol en controllers y views |
+| `ROLE_AGENT` | 'agent' | Comparaciones de rol |
+| `ROLE_COMPRAS` | 'compras' | Comparaciones de rol |
+| `ROLE_SERVICIO_CLIENTE` | 'servicio_cliente' | Comparaciones de rol |
+| `ROLE_REQUESTER` | 'requester' | Comparaciones de rol |
+| `ROLES` | array de todos | Validacion en UsersTable |
+| `STAFF_ROLES` | admin + agent + compras + servicio_cliente | Filtros de usuarios internos |
+
+**Constantes de cache y defaults**:
+
+| Constante | Valor | Uso |
+|---|---|---|
+| `CACHE_SETTINGS` | 'system_settings' | Clave de cache principal |
+| `CACHE_CONFIG` | '_cake_core_' | Configuracion de cache de CakePHP |
+| `DEFAULT_SYSTEM_TITLE` | 'Mesa de Ayuda' | Titulo por defecto del sistema |
+
+**Constantes de status individuales**: `STATUS_NUEVO`, `STATUS_ABIERTO`, `STATUS_EN_PROGRESO`, `STATUS_PENDIENTE`, `STATUS_RESUELTO`, `STATUS_CERRADO`, `STATUS_EN_REVISION`, `STATUS_APROBADO`, `STATUS_EN_PROCESO`, `STATUS_COMPLETADO`, `STATUS_RECHAZADO`
+
+### EntityType (`src/Utility/EntityType.php`)
+
+Enum PHP 8.1 que centraliza mapeos de tipo de entidad. Elimina match/switch duplicados en 15+ archivos.
+
+| Caso | Valor | Metodos |
+|---|---|---|
+| `TICKET` | 'ticket' | tableName(), foreignKey(), commentsTable(), etc. |
+| `PQRS` | 'pqrs' | Mismos metodos con valores correspondientes |
+| `COMPRA` | 'compra' | Mismos metodos con valores correspondientes |
+
+Metodos: `fromSource()`, `tableName()`, `commentsTable()`, `historyTable()`, `attachmentsTable()`, `tagsTable()`, `foreignKey()`, `commentForeignKey()`, `numberField()`, `commentsAssociation()`, `attachmentsAssociation()`, `s3Prefix()`, `uploadBasePath()`, `uploadedByField()`, `whatsappNumberKey()`, `label()`, `getNumber()`

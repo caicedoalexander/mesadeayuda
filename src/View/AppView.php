@@ -42,5 +42,6 @@ class AppView extends View
         $this->addHelper('Compras');
         $this->addHelper('User');
         $this->addHelper('Sanitize');
+        $this->addHelper('Sla');
     }
 }

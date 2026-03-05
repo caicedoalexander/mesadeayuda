@@ -6,7 +6,6 @@ namespace App\Controller\Traits;
 use App\Service\ComprasService;
 use App\Utility\ValidationConstants;
 use App\Service\PqrsService;
-use App\Service\ResponseService;
 use App\Service\StatisticsService;
 use App\Service\TicketService;
 
@@ -68,7 +67,6 @@ trait ServiceInitializerTrait
     {
         $this->initializeServices([
             'ticketService' => TicketService::class,
-            'responseService' => ResponseService::class,
             'statisticsService' => StatisticsService::class,
             'comprasService' => ComprasService::class,
         ]);
@@ -85,7 +83,6 @@ trait ServiceInitializerTrait
     {
         $this->initializeServices([
             'pqrsService' => PqrsService::class,
-            'responseService' => ResponseService::class,
             'statisticsService' => StatisticsService::class,
         ]);
     }
@@ -101,7 +98,6 @@ trait ServiceInitializerTrait
     {
         $this->initializeServices([
             'comprasService' => ComprasService::class,
-            'responseService' => ResponseService::class,
             'statisticsService' => StatisticsService::class,
             'ticketService' => TicketService::class,
         ]);

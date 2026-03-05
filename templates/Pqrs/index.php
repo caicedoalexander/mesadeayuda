@@ -130,7 +130,16 @@ $userId = $user ? $user->get('id') : null;
                                 </td>
 
                                 <td class="py-0 align-middle text-center">
-                                    <?= $this->Pqrs->slaIcon($item) ?>
+                                    <?php
+                                    $slaStatus = $this->Sla->getSlaDisplayStatus(
+                                        $item->resolution_sla_due,
+                                        $item->resolved_at,
+                                        $item->created,
+                                        $item->status,
+                                        ['completado', 'cerrado', 'resuelto']
+                                    );
+                                    ?>
+                                    <?= $this->Sla->slaIcon($slaStatus) ?>
                                 </td>
 
                                 <?php if ($view === 'resueltas'): ?>

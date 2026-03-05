@@ -52,7 +52,24 @@
 
             <div class="mb-3">
                 <label class="small text-muted fw-semibold mb-1">SLA:</label>
-                <div><?= $this->Pqrs->dualSlaIndicator($pqrs) ?></div>
+                <?php
+                $firstResponseSla = $this->Sla->getSlaDisplayStatus(
+                    $pqrs->first_response_sla_due,
+                    $pqrs->first_response_at,
+                    $pqrs->created,
+                    $pqrs->status,
+                    ['completado', 'cerrado', 'resuelto'],
+                    'first_response'
+                );
+                $resolutionSla = $this->Sla->getSlaDisplayStatus(
+                    $pqrs->resolution_sla_due,
+                    $pqrs->resolved_at,
+                    $pqrs->created,
+                    $pqrs->status,
+                    ['completado', 'cerrado', 'resuelto']
+                );
+                ?>
+                <div><?= $this->Sla->dualSlaIndicator($firstResponseSla, $resolutionSla) ?></div>
             </div>
         </section>
 

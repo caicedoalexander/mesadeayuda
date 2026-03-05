@@ -102,8 +102,8 @@ trait TicketSystemTrait
      * REFACTORED: Now supports all 3 entity types using string instead of bool
      *
      * NOTE: This method does NOT send notifications. Notifications are handled
-     * by ResponseService via NotificationDispatcherTrait for proper coordination
-     * of comment + status change + file uploads.
+     * by each service's handleResponse() via sendResponseNotifications() for proper
+     * coordination of comment + status change + file uploads.
      *
      * @param int $entityId Entity ID
      * @param int|null $userId User ID (null for public/anonymous comments)
@@ -479,4 +479,113 @@ trait TicketSystemTrait
      * to avoid duplication.
      */
 
+    /**
+     * Send notifications based on response changes (comment + status + files)
+     *
+     * Requires NotificationDispatcherTrait to be used by the implementing class.
+     *
+     * @param string $type Entity type ('ticket', 'pqrs', 'compra')
+     * @param \Cake\Datasource\EntityInterface $entity Entity
+     * @param \Cake\Datasource\EntityInterface|null $comment Comment entity
+     * @param string $oldStatus Old status
+     * @param string|null $newStatus New status
+     * @param bool $hasComment Whether a comment was added
+     * @param string $commentType Comment type (public/internal)
+     * @param bool $hasStatusChange Whether status changed
+     * @param array $emailTo Additional TO recipients
+     * @param array $emailCc Additional CC recipients
+     * @return void
+     */
+    protected function sendResponseNotifications(
+        string $type,
+        $entity,
+        $comment,
+        string $oldStatus,
+        ?string $newStatus,
+        bool $hasComment,
+        string $commentType,
+        bool $hasStatusChange,
+        array $emailTo = [],
+        array $emailCc = []
+    ): void {
+        $hasPublicComment = $hasComment && $commentType === 'public';
+
+        if ($hasPublicComment && $hasStatusChange && $comment) {
+            $this->dispatchUpdateNotifications($type, $entity, 'response', [
+                'comment' => $comment,
+                'old_status' => $oldStatus,
+                'new_status' => $newStatus,
+                'additional_to' => $emailTo,
+                'additional_cc' => $emailCc,
+            ]);
+        } elseif ($hasPublicComment && $comment) {
+            $this->dispatchUpdateNotifications($type, $entity, 'comment', [
+                'comment' => $comment,
+                'additional_to' => $emailTo,
+                'additional_cc' => $emailCc,
+            ]);
+        } elseif ($hasStatusChange) {
+            $this->dispatchUpdateNotifications($type, $entity, 'status_change', [
+                'old_status' => $oldStatus,
+                'new_status' => $newStatus,
+            ]);
+        }
+    }
+
+    /**
+     * Build success message for response operations
+     *
+     * @param bool $hasComment Whether a comment was added
+     * @param bool $hasStatusChange Whether status changed
+     * @param int $uploadedCount Number of files uploaded
+     * @param \Cake\Datasource\EntityInterface $entity Entity
+     * @return array{success: bool, message: string, entity: \Cake\Datasource\EntityInterface}
+     */
+    protected function buildResponseResult(bool $hasComment, bool $hasStatusChange, int $uploadedCount, $entity): array
+    {
+        $successMessage = '';
+        if ($hasComment && $hasStatusChange) {
+            $successMessage = 'Comentario agregado y estado actualizado exitosamente.';
+        } elseif ($hasComment) {
+            $successMessage = 'Comentario agregado exitosamente.';
+        } elseif ($hasStatusChange) {
+            $successMessage = 'Estado actualizado exitosamente.';
+        }
+
+        if ($uploadedCount > 0) {
+            $successMessage .= " ({$uploadedCount} archivo(s) adjunto(s))";
+        }
+
+        return [
+            'success' => true,
+            'message' => $successMessage,
+            'entity' => $entity,
+        ];
+    }
+
+    /**
+     * Decode email recipients from JSON string or array
+     *
+     * @param mixed $data Email recipients as JSON string or array
+     * @return array Decoded recipients array
+     */
+    protected function decodeEmailRecipients($data): array
+    {
+        if (empty($data)) {
+            return [];
+        }
+
+        if (is_string($data)) {
+            $decoded = json_decode($data, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return $decoded;
+            }
+        }
+
+        if (is_array($data)) {
+            return $data;
+        }
+
+        return [];
+    }
 }

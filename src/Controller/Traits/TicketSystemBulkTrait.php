@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Traits;
 
+use App\Utility\EntityType;
 use Cake\Http\Response;
 
 /**
@@ -165,11 +166,6 @@ trait TicketSystemBulkTrait
 
     private function getTagsTableName(string $entityType): string
     {
-        return match ($entityType) {
-            'ticket' => 'TicketTags',
-            'pqrs' => 'PqrsTags',
-            'compra' => 'ComprasTags',
-            default => throw new \InvalidArgumentException("Invalid entity type: {$entityType}"),
-        };
+        return EntityType::from($entityType)->tagsTable();
     }
 }

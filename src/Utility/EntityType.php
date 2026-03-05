@@ -185,6 +185,18 @@ enum EntityType: string
     }
 
     /**
+     * Tags table name (e.g., 'TicketTags')
+     */
+    public function tagsTable(): string
+    {
+        return match ($this) {
+            self::TICKET => 'TicketTags',
+            self::PQRS => 'PqrsTags',
+            self::COMPRA => 'ComprasTags',
+        };
+    }
+
+    /**
      * Human-readable label in Spanish
      */
     public function label(): string

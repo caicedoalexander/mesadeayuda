@@ -25,7 +25,7 @@ services:
       - FULL_BASE_URL=${FULL_BASE_URL:-}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
-      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_REGION=${AWS_REGION:-}
       - AWS_S3_BUCKET=${AWS_S3_BUCKET:-}
       - AWS_S3_ENABLED=${AWS_S3_ENABLED:-false}
     networks:
@@ -62,7 +62,7 @@ services:
       - WORKER_ENABLED=${WORKER_ENABLED:-true}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
-      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_REGION=${AWS_REGION:-}
       - AWS_S3_BUCKET=${AWS_S3_BUCKET:-}
       - AWS_S3_ENABLED=${AWS_S3_ENABLED:-false}
     networks:

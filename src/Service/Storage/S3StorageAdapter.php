@@ -29,7 +29,7 @@ class S3StorageAdapter implements FileStorageInterface
     {
         $this->enabled = (bool)($config['enabled'] ?? Configure::read('AWS.S3.enabled', false));
         $this->bucket = (string)($config['bucket'] ?? Configure::read('AWS.S3.bucket', ''));
-        $this->region = (string)($config['region'] ?? Configure::read('AWS.S3.region', 'us-east-1'));
+        $this->region = (string)($config['region'] ?? Configure::read('AWS.S3.region', ''));
 
         if ($this->enabled) {
             $this->initializeClient($config);

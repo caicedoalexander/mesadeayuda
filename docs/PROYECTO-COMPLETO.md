@@ -61,7 +61,7 @@ Sistema corporativo construido con **CakePHP 5.x** que unifica tres necesidades 
 │  TicketService    │ ComprasService   │ PqrsService        │
 │  GmailService     │ EmailService     │ WhatsappService    │
 │  N8nService       │ S3Service        │ SlaManagementSvc   │
-│  StatisticsService│ SettingsService  │ ResponseService    │
+│  StatisticsService│ SettingsService  │ AuthorizationSvc   │
 └────────┬─────────────────────────────────────────────────┘
          │
          ▼
@@ -80,7 +80,7 @@ Sistema corporativo construido con **CakePHP 5.x** que unifica tres necesidades 
 ### Patrones clave
 
 - **Service Layer**: Controladores delegan toda la logica a servicios. Un controlador nunca accede a BD directamente.
-- **Traits reutilizables**: 8 traits que encapsulan comportamientos comunes (notificaciones, adjuntos, SLA, conversion de entidades).
+- **Traits reutilizables**: 7 traits de servicio (notificaciones, adjuntos, SLA, conversion) + 5 traits de controlador (acciones, listado, vista, historial, bulk).
 - **Auditoria completa**: Cada cambio en tickets, compras y PQRS se registra en tablas de historial (quien, que, cuando, valor anterior/nuevo).
 
 ---
@@ -332,16 +332,19 @@ Redirige a /pqrs/success/{numero} → muestra radicado
 Cuando un agente responde a cualquier entidad (ticket/compra/PQRS):
 
 ```
-ResponseService::processResponse()
-  ├── 1. Crea comentario
-  ├── 2. Guarda adjuntos
-  ├── 3. Cambia estado (opcional)
-  └── 4. Notifica por email segun caso:
-      ├── Comentario + estado → email "respuesta" unificado
-      ├── Solo comentario → email "comentario"
-      └── Solo estado → email "cambio de estado"
-      (WhatsApp solo en creacion de entidad)
+Controller → TicketSystemActionsTrait::addEntityComment()
+  └── $service->handleResponse($entityId, $userId, $data, $files)
+      ├── 1. Crea comentario (via TicketSystemTrait::addComment)
+      ├── 2. Guarda adjuntos (via saveUploadedFile)
+      ├── 3. Cambia estado (opcional, via changeStatus)
+      └── 4. Notifica por email (via sendResponseNotifications):
+          ├── Comentario + estado → email "respuesta" unificado
+          ├── Solo comentario → email "comentario"
+          └── Solo estado → email "cambio de estado"
+          (WhatsApp solo en creacion de entidad)
 ```
+
+Cada servicio (TicketService, ComprasService, PqrsService) implementa `handleResponse()` usando los metodos compartidos de `TicketSystemTrait`.
 
 ---
 
@@ -450,7 +453,7 @@ Todas las credenciales (`gmail_refresh_token`, `whatsapp_api_key`, `n8n_api_key`
 | `SlaManagementService` | Calcular deadlines, verificar breaches, configurar plazos |
 | `StatisticsService` | Queries para dashboards (por estado, prioridad, SLA, agente, tendencias) |
 | `SettingsService` | CRUD de configuracion del sistema con cifrado automatico |
-| `ResponseService` | Orquestar respuestas: comentario + estado + adjuntos + notificaciones |
+| `AuthorizationService` | Autorizacion centralizada basada en roles por tipo de entidad |
 
 ### Traits reutilizables
 
@@ -463,7 +466,6 @@ Todas las credenciales (`gmail_refresh_token`, `whatsapp_api_key`, `n8n_api_key`
 | `SlaAwareTrait` | Verificar SLA breaches | Compras, Pqrs Services |
 | `ConfigResolutionTrait` | Resolver config en 3 niveles (constructor → cache → BD) | Email, WhatsApp Services |
 | `SecureHttpTrait` | POST HTTP seguro para webhooks | N8n Service |
-| `StatisticsServiceTrait` | Queries base con filtros de fecha y cache | Statistics Service |
 
 ---
 

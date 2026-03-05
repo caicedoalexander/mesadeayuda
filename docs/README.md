@@ -9,8 +9,8 @@ Sistema corporativo de gestion CakePHP 5.x que integra mesa de ayuda (tickets de
 - [Vision General](arquitectura/README.md) - Descripcion del sistema, stack tecnologico, roles y patrones
 - [Modelo de Datos](arquitectura/modelo-datos.md) - Esquema de base de datos, tablas y relaciones
 - [Flujos de Negocio](arquitectura/flujos.md) - Ciclos de vida, conversiones y procesos automatizados
-- [Servicios](arquitectura/servicios.md) - Capa de servicios, traits y logica de negocio
-- [Integraciones](arquitectura/integraciones.md) - Gmail, n8n, WhatsApp y AWS S3
+- [Servicios](arquitectura/servicios.md) - Capa de servicios, traits, clases de utilidad y logica de negocio
+- [Integraciones](arquitectura/integraciones.md) - Gmail, n8n, WhatsApp, AWS S3, trigger de worker y constantes centralizadas
 
 ### API
 

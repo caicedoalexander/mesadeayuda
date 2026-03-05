@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Model\Entity\Ticket;
 use Cake\ORM\Locator\LocatorAwareTrait;
 use Cake\Log\Log;
 use App\Service\Traits\EntityConversionTrait;
@@ -421,6 +422,83 @@ class TicketService
         $result = $this->saveGenericUploadedFile('ticket', $ticket, $file, $commentId, $userId);
         assert($result instanceof \App\Model\Entity\Attachment || $result === null);
         return $result;
+    }
+
+    /**
+     * Handle a complete response (comment + status change + files + notifications)
+     *
+     * @param int $entityId The ticket ID
+     * @param int $userId The ID of the user making the response
+     * @param array $data Request data (comment_body, comment_type, status, email_to, email_cc)
+     * @param array $files Uploaded files
+     * @return array Result with 'success' (bool), 'message' (string), and 'entity' (mixed)
+     */
+    public function handleResponse(int $entityId, int $userId, array $data, array $files): array
+    {
+        $commentBody = $data['comment_body'] ?? $data['body'] ?? '';
+        $commentType = $data['comment_type'] ?? 'public';
+        $newStatus = $data['status'] ?? null;
+
+        $emailTo = $this->decodeEmailRecipients($data['email_to'] ?? null);
+        $emailCc = $this->decodeEmailRecipients($data['email_cc'] ?? null);
+
+        Log::debug('Response email recipients', [
+            'raw_email_to' => $data['email_to'] ?? null,
+            'raw_email_cc' => $data['email_cc'] ?? null,
+            'decoded_email_to' => $emailTo,
+            'decoded_email_cc' => $emailCc,
+        ]);
+
+        $hasComment = !empty(trim($commentBody));
+
+        $entity = $this->fetchTable('Tickets')->get($entityId);
+        assert($entity instanceof Ticket);
+
+        $oldStatus = $entity->status;
+        $hasStatusChange = $newStatus && $newStatus !== $oldStatus;
+
+        if (!$hasComment && !$hasStatusChange) {
+            return [
+                'success' => false,
+                'message' => 'Debes escribir un comentario o cambiar el estado.',
+                'entity' => $entity,
+            ];
+        }
+
+        $comment = null;
+        $uploadedCount = 0;
+
+        if ($hasComment) {
+            $comment = $this->addComment($entityId, $userId, $commentBody, 'ticket', $commentType, false, $emailTo, $emailCc);
+
+            if (!$comment) {
+                return [
+                    'success' => false,
+                    'message' => 'Error al agregar el comentario.',
+                    'entity' => $entity,
+                ];
+            }
+
+            if (!empty($files['attachments'])) {
+                foreach ($files['attachments'] as $file) {
+                    if ($file->getError() === UPLOAD_ERR_OK) {
+                        $result = $this->saveUploadedFile($entity, $file, $comment->id, $userId);
+                        if ($result) {
+                            $uploadedCount++;
+                        }
+                    }
+                }
+            }
+        }
+
+        if ($hasStatusChange) {
+            $this->changeStatus($entity, $newStatus, $userId, null, false);
+            $entity->status = $newStatus;
+        }
+
+        $this->sendResponseNotifications('ticket', $entity, $comment, $oldStatus, $newStatus, $hasComment, $commentType, $hasStatusChange, $emailTo, $emailCc);
+
+        return $this->buildResponseResult($hasComment, $hasStatusChange, $uploadedCount, $entity);
     }
 
     /**
