@@ -44,7 +44,7 @@ Sistema corporativo construido con **CakePHP 5.x** que unifica tres necesidades 
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                    CLIENTES                               │
+│                    CLIENTES                              │
 │  Navegador Web  │  Email (Gmail)  │  Formulario Publico  │
 └────────┬────────────────┬──────────────────┬─────────────┘
          │                │                  │
@@ -61,7 +61,7 @@ Sistema corporativo construido con **CakePHP 5.x** que unifica tres necesidades 
 │  TicketService    │ ComprasService   │ PqrsService        │
 │  GmailService     │ EmailService     │ WhatsappService    │
 │  N8nService       │ S3Service        │ SlaManagementSvc   │
-│  StatisticsService│ SettingsService  │ AuthorizationSvc   │
+│  StatisticsService│ SettingsService  │ AuthorizationSvc  │
 └────────┬─────────────────────────────────────────────────┘
          │
          ▼
