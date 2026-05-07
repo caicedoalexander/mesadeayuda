@@ -3,17 +3,16 @@ declare(strict_types=1);
 
 namespace App\Service\Traits;
 
-use App\Service\S3Service;
 use Cake\Datasource\EntityInterface;
 use Cake\Log\Log;
 use Cake\Utility\Text;
+use Exception;
 use Psr\Http\Message\UploadedFileInterface;
 
 /**
  * GenericAttachmentTrait
  *
- * Ticket attachment handling with security validation.
- * Supports local storage and AWS S3 (toggled by AWS_S3_ENABLED).
+ * Ticket attachment handling with security validation (local filesystem only).
  *
  * Requires using class to have:
  * - fetchTable() method (from LocatorAwareTrait)
@@ -21,7 +20,6 @@ use Psr\Http\Message\UploadedFileInterface;
 trait GenericAttachmentTrait
 {
     private const ATTACHMENTS_TABLE = 'Attachments';
-    private const S3_PREFIX = 'tickets';
     private const LOCAL_BASE = 'attachments';
     private const UPLOAD_BASE_DIR = 'uploads' . DS . 'attachments';
 
@@ -29,28 +27,33 @@ trait GenericAttachmentTrait
      * Allowed file extensions with their valid MIME types
      */
     private const ALLOWED_TYPES = [
-        // Images
         'jpg' => ['image/jpeg', 'image/pjpeg'],
         'jpeg' => ['image/jpeg', 'image/pjpeg'],
         'png' => ['image/png'],
         'gif' => ['image/gif'],
         'bmp' => ['image/bmp', 'image/x-ms-bmp'],
         'webp' => ['image/webp'],
-
-        // Documents
         'pdf' => ['application/pdf', 'application/octet-stream'],
         'doc' => ['application/msword', 'application/octet-stream'],
-        'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/zip', 'application/octet-stream'],
+        'docx' => [
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/zip',
+            'application/octet-stream',
+        ],
         'xls' => ['application/vnd.ms-excel', 'application/octet-stream'],
-        'xlsx' => ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/zip', 'application/octet-stream'],
+        'xlsx' => [
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/zip',
+            'application/octet-stream',
+        ],
         'ppt' => ['application/vnd.ms-powerpoint', 'application/octet-stream'],
-        'pptx' => ['application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/zip', 'application/octet-stream'],
-
-        // Text
+        'pptx' => [
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'application/zip',
+            'application/octet-stream',
+        ],
         'txt' => ['text/plain'],
         'csv' => ['text/csv', 'text/plain', 'application/csv'],
-
-        // Archives
         'zip' => ['application/zip', 'application/x-zip-compressed'],
         'rar' => ['application/x-rar-compressed', 'application/octet-stream'],
         '7z' => ['application/x-7z-compressed'],
@@ -70,28 +73,24 @@ trait GenericAttachmentTrait
     private const MAX_FILE_SIZE = 10485760;
     private const MAX_IMAGE_SIZE = 5242880;
 
-    private ?S3Service $s3Service = null;
-
-    private function getS3Service(): S3Service
-    {
-        if ($this->s3Service === null) {
-            $this->s3Service = new S3Service();
-        }
-
-        return $this->s3Service;
-    }
-
     /**
      * Save uploaded file with robust security validation.
+     *
+     * @param \Cake\Datasource\EntityInterface $entity Owning entity (ticket)
+     * @param \Psr\Http\Message\UploadedFileInterface $file Uploaded file
+     * @param int|null $commentId Optional comment ID
+     * @param int|null $userId Optional uploader user ID
+     * @return \Cake\Datasource\EntityInterface|null Saved attachment or null on failure
      */
     public function saveGenericUploadedFile(
         EntityInterface $entity,
         UploadedFileInterface $file,
         ?int $commentId = null,
-        ?int $userId = null
+        ?int $userId = null,
     ): ?EntityInterface {
         if ($file->getError() !== UPLOAD_ERR_OK) {
             Log::error('Ticket file upload error', ['error' => $file->getError()]);
+
             return null;
         }
 
@@ -105,6 +104,7 @@ trait GenericAttachmentTrait
                 'filename' => $originalFilename,
                 'reason' => $validation,
             ]);
+
             return null;
         }
 
@@ -114,6 +114,7 @@ trait GenericAttachmentTrait
                 'filename' => $originalFilename,
                 'claimed_mime' => $mimeType,
             ]);
+
             return null;
         }
 
@@ -121,50 +122,25 @@ trait GenericAttachmentTrait
         $filename = Text::uuid() . '.' . $extension;
         $entityNumber = (string)$entity->ticket_number;
 
-        $s3Service = $this->getS3Service();
-        $useS3 = $s3Service->isEnabled();
+        $uploadDir = $this->getUploadDirectory($entityNumber);
+        if (!file_exists($uploadDir)) {
+            if (!mkdir($uploadDir, 0755, true)) {
+                Log::error('Failed to create ticket upload directory', ['dir' => $uploadDir]);
 
-        $filePath = null;
-        $s3Key = null;
-
-        if ($useS3) {
-            $s3Key = $this->buildS3Key($entityNumber, $filename);
-            $tempPath = sys_get_temp_dir() . DS . $filename;
-            try {
-                $file->moveTo($tempPath);
-
-                if (!$s3Service->uploadFile($tempPath, $s3Key, $mimeType)) {
-                    Log::error('Failed to upload ticket file to S3', ['s3_key' => $s3Key]);
-                    @unlink($tempPath);
-                    return null;
-                }
-
-                @unlink($tempPath);
-                $filePath = $s3Key;
-            } catch (\Exception $e) {
-                Log::error('Failed to process ticket S3 upload', ['error' => $e->getMessage()]);
-                @unlink($tempPath);
                 return null;
             }
-        } else {
-            $uploadDir = $this->getUploadDirectory($entityNumber);
-            if (!file_exists($uploadDir)) {
-                if (!mkdir($uploadDir, 0755, true)) {
-                    Log::error('Failed to create ticket upload directory', ['dir' => $uploadDir]);
-                    return null;
-                }
-            }
-
-            $fullPath = $uploadDir . DS . $filename;
-            try {
-                $file->moveTo($fullPath);
-            } catch (\Exception $e) {
-                Log::error('Failed to move ticket file', ['error' => $e->getMessage()]);
-                return null;
-            }
-
-            $filePath = $this->buildLocalPath($entityNumber, $filename);
         }
+
+        $fullPath = $uploadDir . DS . $filename;
+        try {
+            $file->moveTo($fullPath);
+        } catch (Exception $e) {
+            Log::error('Failed to move ticket file', ['error' => $e->getMessage()]);
+
+            return null;
+        }
+
+        $filePath = $this->buildLocalPath($entityNumber, $filename);
 
         $attachmentsTable = $this->fetchTable(self::ATTACHMENTS_TABLE);
 
@@ -176,7 +152,7 @@ trait GenericAttachmentTrait
             $filename,
             $mimeType,
             $size,
-            $filePath
+            $filePath,
         );
 
         $attachment = $attachmentsTable->newEntity($data, ['accessibleFields' => [
@@ -188,37 +164,56 @@ trait GenericAttachmentTrait
             Log::error('Failed to save ticket attachment to database', [
                 'errors' => $attachment->getErrors(),
             ]);
-            if ($useS3 && $s3Key) {
-                $s3Service->deleteFile($s3Key);
-            } elseif (!$useS3 && isset($fullPath) && file_exists($fullPath)) {
-                unlink($fullPath);
+            if (file_exists($fullPath)) {
+                @unlink($fullPath);
             }
+
             return null;
         }
 
         return $attachment;
     }
 
-    private function buildS3Key(string $entityNumber, string $filename): string
-    {
-        return self::S3_PREFIX . "/{$entityNumber}/{$filename}";
-    }
-
+    /**
+     * @param string $entityNumber Ticket number
+     * @param string $filename Stored filename
+     * @return string Relative path stored in DB
+     */
     private function buildLocalPath(string $entityNumber, string $filename): string
     {
         return 'uploads/' . self::LOCAL_BASE . '/' . $entityNumber . '/' . $filename;
     }
 
+    /**
+     * @param string $entityNumber Ticket number
+     * @return string Absolute upload directory
+     */
     private function getUploadDirectory(string $entityNumber): string
     {
         return WWW_ROOT . self::UPLOAD_BASE_DIR . DS . $entityNumber;
     }
 
+    /**
+     * @return string Attachment table name
+     */
     protected function getAttachmentTableName(): string
     {
         return self::ATTACHMENTS_TABLE;
     }
 
+    /**
+     * Build attachment data array.
+     *
+     * @param int $entityId Ticket ID
+     * @param int|null $commentId Comment ID
+     * @param int|null $userId User ID
+     * @param string $originalFilename Original filename
+     * @param string $filename Stored filename
+     * @param string $mimeType MIME type
+     * @param int $size File size
+     * @param string $filePath Stored relative path
+     * @return array
+     */
     private function buildAttachmentData(
         int $entityId,
         ?int $commentId,
@@ -227,7 +222,7 @@ trait GenericAttachmentTrait
         string $filename,
         string $mimeType,
         int $size,
-        string $filePath
+        string $filePath,
     ): array {
         return [
             'ticket_id' => $entityId,
@@ -244,6 +239,14 @@ trait GenericAttachmentTrait
 
     /**
      * Save attachment from binary content (for email attachments).
+     *
+     * @param \Cake\Datasource\EntityInterface $entity Owning entity (ticket)
+     * @param string $filename Original filename
+     * @param string $binaryContent Binary content
+     * @param string $mimeType MIME type
+     * @param int|null $commentId Optional comment ID
+     * @param int $userId Uploader user ID
+     * @return \Cake\Datasource\EntityInterface|null Saved attachment or null on failure
      */
     public function saveAttachmentFromBinary(
         EntityInterface $entity,
@@ -251,7 +254,7 @@ trait GenericAttachmentTrait
         string $binaryContent,
         string $mimeType,
         ?int $commentId,
-        int $userId
+        int $userId,
     ): ?EntityInterface {
         $filename = $this->sanitizeFilename($filename);
         $size = strlen($binaryContent);
@@ -262,6 +265,7 @@ trait GenericAttachmentTrait
                 'filename' => $filename,
                 'reason' => $validation,
             ]);
+
             return null;
         }
 
@@ -269,45 +273,23 @@ trait GenericAttachmentTrait
         $uniqueFilename = Text::uuid() . '.' . $extension;
         $entityNumber = (string)$entity->ticket_number;
 
-        $s3Service = $this->getS3Service();
-        $useS3 = $s3Service->isEnabled();
+        $uploadDir = $this->getUploadDirectory($entityNumber);
+        if (!file_exists($uploadDir)) {
+            if (!mkdir($uploadDir, 0755, true)) {
+                Log::error('Failed to create ticket upload directory', ['dir' => $uploadDir]);
 
-        $filePath = null;
-
-        if ($useS3) {
-            $s3Key = $this->buildS3Key($entityNumber, $uniqueFilename);
-            $tempPath = sys_get_temp_dir() . DS . $uniqueFilename;
-            if (file_put_contents($tempPath, $binaryContent) === false) {
-                Log::error('Failed to write ticket temp file', ['path' => $tempPath]);
                 return null;
             }
-
-            if (!$s3Service->uploadFile($tempPath, $s3Key, $mimeType)) {
-                Log::error('Failed to upload ticket file to S3', ['s3_key' => $s3Key]);
-                @unlink($tempPath);
-                return null;
-            }
-
-            @unlink($tempPath);
-            $filePath = $s3Key;
-        } else {
-            $uploadDir = $this->getUploadDirectory($entityNumber);
-
-            if (!file_exists($uploadDir)) {
-                if (!mkdir($uploadDir, 0755, true)) {
-                    Log::error('Failed to create ticket upload directory', ['dir' => $uploadDir]);
-                    return null;
-                }
-            }
-
-            $fullPath = $uploadDir . DS . $uniqueFilename;
-            if (file_put_contents($fullPath, $binaryContent) === false) {
-                Log::error('Failed to write ticket file', ['path' => $fullPath]);
-                return null;
-            }
-
-            $filePath = $this->buildLocalPath($entityNumber, $uniqueFilename);
         }
+
+        $fullPath = $uploadDir . DS . $uniqueFilename;
+        if (file_put_contents($fullPath, $binaryContent) === false) {
+            Log::error('Failed to write ticket file', ['path' => $fullPath]);
+
+            return null;
+        }
+
+        $filePath = $this->buildLocalPath($entityNumber, $uniqueFilename);
 
         $data = $this->buildAttachmentData(
             $entity->id,
@@ -317,7 +299,7 @@ trait GenericAttachmentTrait
             $uniqueFilename,
             $mimeType,
             $size,
-            $filePath
+            $filePath,
         );
 
         $attachmentsTable = $this->fetchTable(self::ATTACHMENTS_TABLE);
@@ -331,22 +313,24 @@ trait GenericAttachmentTrait
                 'entity_id' => $entity->id,
                 'filename' => $filename,
             ]);
+
             return $attachment;
         }
 
-        if ($useS3) {
-            $s3Service->deleteFile($filePath);
-        } elseif (isset($fullPath)) {
-            @unlink($fullPath);
-        }
+        @unlink($fullPath);
+
         Log::error('Failed to save ticket attachment to database', [
             'errors' => $attachment->getErrors(),
         ]);
+
         return null;
     }
 
     /**
      * Delete attachment file and database record.
+     *
+     * @param int $attachmentId Attachment ID
+     * @return bool True on success
      */
     public function deleteGenericAttachment(int $attachmentId): bool
     {
@@ -354,34 +338,31 @@ trait GenericAttachmentTrait
             $attachmentsTable = $this->fetchTable(self::ATTACHMENTS_TABLE);
             $attachment = $attachmentsTable->get($attachmentId);
 
-            $isLocal = str_starts_with($attachment->file_path, 'uploads/');
-
-            if ($isLocal) {
-                $fullPath = WWW_ROOT . $attachment->file_path;
-                if (file_exists($fullPath)) {
-                    @unlink($fullPath);
-                }
-            } else {
-                $s3Service = $this->getS3Service();
-                if ($s3Service->isEnabled()) {
-                    $s3Service->deleteFile($attachment->file_path);
-                }
+            $fullPath = WWW_ROOT . $attachment->file_path;
+            if (file_exists($fullPath)) {
+                @unlink($fullPath);
             }
 
             return $attachmentsTable->delete($attachment);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to delete ticket attachment', [
                 'attachment_id' => $attachmentId,
                 'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
 
     /**
      * Validate file for security threats.
+     *
+     * @param string $filename Filename
+     * @param int $size File size
+     * @param string|null $mimeType Claimed MIME type
+     * @return string|bool True if valid, error string otherwise
      */
-    private function validateFile(string $filename, int $size, ?string $mimeType = null)
+    private function validateFile(string $filename, int $size, ?string $mimeType = null): string|bool
     {
         $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
 
@@ -399,6 +380,7 @@ trait GenericAttachmentTrait
 
         if ($size > $maxSize) {
             $maxMB = round($maxSize / 1048576, 1);
+
             return "File too large. Maximum size: {$maxMB}MB";
         }
 
@@ -426,6 +408,12 @@ trait GenericAttachmentTrait
         return true;
     }
 
+    /**
+     * @param string $filePath Temp file path
+     * @param string $claimedMime Claimed MIME type
+     * @param string $originalFilename Original filename
+     * @return bool True if MIME matches extension
+     */
     private function verifyMimeTypeFromContent(string $filePath, string $claimedMime, string $originalFilename): bool
     {
         if (!file_exists($filePath)) {
@@ -435,6 +423,7 @@ trait GenericAttachmentTrait
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
         if ($finfo === false) {
             Log::warning('finfo not available for MIME verification, rejecting file');
+
             return false;
         }
 
@@ -467,6 +456,10 @@ trait GenericAttachmentTrait
         return false;
     }
 
+    /**
+     * @param string $filename Filename to sanitize
+     * @return string Sanitized filename
+     */
     private function sanitizeFilename(string $filename): string
     {
         $filename = basename($filename);
@@ -485,40 +478,27 @@ trait GenericAttachmentTrait
     }
 
     /**
-     * Get full filesystem path for an attachment (downloads from S3 to temp if needed).
+     * Get full filesystem path for an attachment.
+     *
+     * @param \Cake\Datasource\EntityInterface $attachment Attachment entity
+     * @return string|null Absolute path or null if file missing
      */
     public function getFullPath(EntityInterface $attachment): ?string
     {
-        $isLocal = str_starts_with($attachment->file_path, 'uploads/');
+        $fullPath = WWW_ROOT . $attachment->file_path;
 
-        if (!$isLocal) {
-            $s3Service = $this->getS3Service();
-            if ($s3Service->isEnabled()) {
-                $tempPath = sys_get_temp_dir() . DS . $attachment->filename;
-                if ($s3Service->downloadFile($attachment->file_path, $tempPath)) {
-                    return $tempPath;
-                }
-            }
-
-            return null;
-        }
-
-        return WWW_ROOT . $attachment->file_path;
+        return file_exists($fullPath) ? $fullPath : null;
     }
 
     /**
-     * Get web URL for an attachment (presigned for S3, relative for local).
+     * Get web URL for an attachment (always relative, local filesystem).
+     *
+     * @param \Cake\Datasource\EntityInterface $attachment Attachment entity
+     * @return string|null Web URL
      */
     public function getWebUrl(EntityInterface $attachment): ?string
     {
-        $isLocal = str_starts_with($attachment->file_path, 'uploads/');
-
-        if (!$isLocal) {
-            $s3Service = $this->getS3Service();
-            if ($s3Service->isEnabled()) {
-                return $s3Service->getPresignedUrl($attachment->file_path, 60);
-            }
-
+        if (!str_starts_with((string)$attachment->file_path, 'uploads/')) {
             return null;
         }
 
@@ -527,20 +507,12 @@ trait GenericAttachmentTrait
 
     /**
      * Stream file content directly (for downloads).
+     *
+     * @param \Cake\Datasource\EntityInterface $attachment Attachment entity
+     * @return resource|null
      */
     public function getFileStream(EntityInterface $attachment)
     {
-        $isLocal = str_starts_with($attachment->file_path, 'uploads/');
-
-        if (!$isLocal) {
-            $s3Service = $this->getS3Service();
-            if ($s3Service->isEnabled()) {
-                return $s3Service->getFileStream($attachment->file_path);
-            }
-
-            return null;
-        }
-
         $fullPath = WWW_ROOT . $attachment->file_path;
         if (file_exists($fullPath)) {
             return fopen($fullPath, 'rb');
