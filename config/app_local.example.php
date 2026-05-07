@@ -99,27 +99,4 @@ return [
             'url' => env('EMAIL_TRANSPORT_DEFAULT_URL', null),
         ],
     ],
-
-    /*
-     * AWS S3 Configuration
-     *
-     * Configuration for AWS S3 file storage integration.
-     * Set AWS_S3_ENABLED=true to enable S3 storage.
-     *
-     * Environment variables:
-     * - AWS_ACCESS_KEY_ID: AWS IAM user access key
-     * - AWS_SECRET_ACCESS_KEY: AWS IAM user secret key
-     * - AWS_REGION: AWS region (e.g., us-east-1)
-     * - AWS_S3_BUCKET: S3 bucket name
-     * - AWS_S3_ENABLED: Enable/disable S3 storage (true/false)
-     */
-    'AWS' => [
-        'S3' => [
-            'enabled' => filter_var(env('AWS_S3_ENABLED', false), FILTER_VALIDATE_BOOLEAN),
-            'key' => env('AWS_ACCESS_KEY_ID', ''),
-            'secret' => env('AWS_SECRET_ACCESS_KEY', ''),
-            'region' => env('AWS_REGION', ''),
-            'bucket' => env('AWS_S3_BUCKET', ''),
-        ],
-    ],
 ];
