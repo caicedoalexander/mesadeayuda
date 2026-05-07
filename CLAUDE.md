@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**Mesa de Ayuda** — CakePHP 5.x corporate helpdesk platform built around the **Tickets** module. Backend in PHP 8.1+, MySQL/MariaDB, server-rendered Bootstrap 5 templates. Integrates Gmail (email-to-ticket), n8n (webhooks), WhatsApp via Evolution API, and AWS S3.
+**Mesa de Ayuda** — CakePHP 5.x corporate helpdesk platform built around the **Tickets** module. Backend in PHP 8.1+, MySQL/MariaDB, server-rendered Bootstrap 5 templates. Integrates Gmail (email-to-ticket), n8n (webhooks), and WhatsApp via Evolution API.
 
 > Note: the older Estadísticas (Statistics), Organizaciones (Organizations), PQRS, SLA management and **Compras** modules have been removed from the codebase. Don't reintroduce references to them.
 
@@ -38,7 +38,7 @@ The codebase follows a fat-service / thin-controller pattern on top of CakePHP:
 
 - **`src/Controller/`** — HTTP edge. Controllers stay slim and delegate to services. `TicketsController` composes behavior from controller traits in `src/Controller/Traits/` (`TicketSystemControllerTrait`, `TicketSystemListingTrait`, `TicketSystemViewTrait`, `TicketSystemActionsTrait`, `TicketSystemBulkTrait`, `TicketSystemHistoryTrait`, `ServiceInitializerTrait`, `ViewDataNormalizerTrait`). These traits still expose an `$entityType` parameter from when a second module existed; today only `'ticket'` is supported.
 - **`src/Controller/Admin/`** — `Admin` route prefix (Settings, EmailTemplates, Tags). Las credenciales OAuth de Gmail (`client_secret.json`) se pegan como texto en `/admin/settings` y se guardan cifradas en `system_settings.gmail_client_secret_json` — no se sube ningún archivo.
-- **`src/Service/`** — Business logic. Domain service `TicketService`, integrations (`GmailService`, `EmailService`, `WhatsappService`, `N8nService`, `S3Service`), cross-cutting helpers (`SidebarCountsService`, `NumberGenerationService`, `EmailTemplateRenderer`, `SettingsService`, `AuthorizationService`, `ProfileImageService`). Reusable mixin logic lives in `src/Service/Traits/` (e.g. `NotificationDispatcherTrait`, `GenericAttachmentTrait`, `TicketSystemTrait`, `ConfigResolutionTrait`, `SecureHttpTrait`). File storage is abstracted through `src/Service/Storage/FileStorageInterface.php` with an `S3StorageAdapter` implementation.
+- **`src/Service/`** — Business logic. Domain service `TicketService`, integrations (`GmailService`, `EmailService`, `WhatsappService`, `N8nService`), cross-cutting helpers (`SidebarCountsService`, `NumberGenerationService`, `EmailTemplateRenderer`, `SettingsService`, `AuthorizationService`, `ProfileImageService`). Reusable mixin logic lives in `src/Service/Traits/` (e.g. `NotificationDispatcherTrait`, `GenericAttachmentTrait`, `TicketSystemTrait`, `ConfigResolutionTrait`, `SecureHttpTrait`). Attachments are stored on local disk under `webroot/uploads/`.
 - **`src/Model/Table/`, `src/Model/Entity/`** — CakePHP ORM. Tickets data family: `Tickets`/`TicketComments`/`TicketHistory`/`TicketFollowers`/`TicketTags`. Plus `Users`, `Tags`, `Attachments`, `EmailTemplates`, `SystemSettings`.
 - **`src/Model/Behavior/AuditBehavior.php`** — behavior that powers the `ticket_history` table. New auditable models should attach this rather than rolling custom audit logic.
 - **`src/Command/`** — CLI commands: `ImportGmailCommand` (one-shot debug wrapper around `GmailImportService`), `TestEmailCommand`.
@@ -59,14 +59,14 @@ The codebase follows a fat-service / thin-controller pattern on top of CakePHP:
 ### Cross-cutting conventions
 - **Audit trail**: ticket mutations write to `ticket_history` via `AuditBehavior` (changed_by, field_name, old_value, new_value, description, created). Don't bypass this when mutating ticket entities.
 - **Notifications**: outbound notifications (email + WhatsApp + n8n webhook) flow through `NotificationDispatcherTrait` + `EmailTemplateRenderer` + `Renderer/NotificationRenderer`. Add new notification types by extending the renderer + templates rather than calling integrations directly from controllers.
-- **Attachments**: shared via `GenericAttachmentTrait` and the `FileStorageInterface` abstraction so the same code path works against local disk and S3 (toggled by `AWS_S3_ENABLED`).
+- **Attachments**: shared via `GenericAttachmentTrait`. Files are stored on local disk under `webroot/uploads/attachments/{ticket_number}/`. Profile images live under `webroot/uploads/profile_images/`.
 - **Sidebar counters**: `SidebarCountsService` produces the unread/unassigned counts displayed across the layout — reuse it instead of querying tables ad-hoc from views.
 - **Coding standard**: CakePHP CodeSniffer ruleset (`phpcs.xml`), with `SlevomatCodingStandard.TypeHints.ReturnTypeHint.MissingNativeTypeHint` excluded for `src/Controller/*` (controllers don't need return type hints; services and other classes do). Run `composer cs-fix` then `composer cs-check` before committing.
 - **Strict types**: every PHP file declares `declare(strict_types=1);`.
 
 ### Configuration & environment
 - Local config in `config/app_local.php` (gitignored; copy from `config/app_local.example.php`).
-- Runtime configuration is environment-driven; `docker-compose.yml` enumerates the variables (`DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `SECURITY_SALT`, `TRUST_PROXY`, `FULL_BASE_URL`, AWS S3 vars).
+- Runtime configuration is environment-driven; `docker-compose.yml` enumerates the variables (`DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `SECURITY_SALT`, `TRUST_PROXY`, `FULL_BASE_URL`).
 - Optional `.env` loading (`config/.env`) is wired through `josegonzalez/dotenv` in `config/bootstrap.php`.
 - Per-tenant runtime settings (Gmail OAuth tokens, integration credentials, email templates, etc.) live in `system_settings` and `email_templates` tables and are managed at `/admin/*` — there is no static config file for them.
 
