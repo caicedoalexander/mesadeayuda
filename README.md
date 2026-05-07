@@ -1,6 +1,6 @@
 # Mesa de Ayuda
 
-Plataforma corporativa de mesa de ayuda desarrollada en **CakePHP 5.x**. Incluye integraciones nativas con Gmail, n8n, WhatsApp (Evolution API) y AWS S3.
+Plataforma corporativa de mesa de ayuda desarrollada en **CakePHP 5.x**. Incluye integraciones nativas con Gmail, n8n y WhatsApp (Evolution API).
 
 [![CakePHP](https://img.shields.io/badge/CakePHP-5.x-D33C44?style=flat-square&logo=cakephp&logoColor=white)](https://cakephp.org)
 [![PHP](https://img.shields.io/badge/PHP-8.1%2B-777BB4?style=flat-square&logo=php&logoColor=white)](https://www.php.net)
@@ -43,7 +43,6 @@ Prefijo `/admin` para gestión de configuración del sistema, plantillas de emai
 | **Gmail API** | Importación de correos como tickets, lectura de adjuntos y mapeo de hilos. Disparada por n8n vía `POST /webhooks/gmail/import` (ver `docs/operations/n8n-gmail-webhook.md`). |
 | **n8n** | Webhooks bidireccionales para automatizaciones externas (clasificación, notificaciones avanzadas, orquestación). |
 | **WhatsApp (Evolution API)** | Notificaciones transaccionales a usuarios y agentes. |
-| **AWS S3** | Almacenamiento de adjuntos a través de `FileStorageInterface` (conmutable con `AWS_S3_ENABLED`). |
 
 ---
 
@@ -54,7 +53,6 @@ Prefijo `/admin` para gestión de configuración del sistema, plantillas de emai
 - **Base de datos:** MySQL / MariaDB
 - **Autenticación:** `cakephp/authentication` (Form + Session)
 - **Migraciones:** `cakephp/migrations`
-- **AWS SDK:** `aws/aws-sdk-php`
 - **Google API:** `google/apiclient`
 - **Infraestructura:** Docker (Nginx + PHP-FPM), worker independiente
 
@@ -117,7 +115,6 @@ La configuración base vive en `config/app_local.php` (ignorado por Git). Variab
 | `SECURITY_SALT` | Salt para CSRF y encriptación |
 | `FULL_BASE_URL` | URL pública absoluta del sitio |
 | `TRUST_PROXY` | Habilitar cuando hay un proxy reverso al frente |
-| `AWS_S3_ENABLED`, `AWS_S3_BUCKET`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Configuración de S3 |
 
 Opcionalmente puede usarse un archivo `config/.env` (cargado por `josegonzalez/dotenv` desde `config/bootstrap.php`).
 
@@ -160,7 +157,6 @@ src/
 │   ├── Admin/              # Prefijo /admin (Settings, EmailTemplates, Tags…)
 │   └── Traits/             # Comportamiento compartido entre módulos de tickets
 ├── Service/                # Lógica de negocio
-│   ├── Storage/            # Abstracción FileStorageInterface (local / S3)
 │   └── Traits/             # Mixins reutilizables (Notification, Attachment…)
 ├── Model/
 │   ├── Table/              # ORM de CakePHP
@@ -183,7 +179,7 @@ Dockerfile                  # Imagen Nginx + PHP-FPM
 
 - **Auditoría:** todos los módulos operativos escriben en su tabla `*_history` mediante `AuditBehavior`. No se debe omitir esta capa al mutar entidades.
 - **Notificaciones:** salen a través de `NotificationDispatcherTrait` + `EmailTemplateRenderer`, que orquestan email, WhatsApp y webhooks de n8n. Para tipos nuevos extender el renderer y las plantillas, no llamar integraciones desde controladores.
-- **Adjuntos:** uso compartido vía `GenericAttachmentTrait` y `FileStorageInterface`, lo que permite alternar entre disco local y S3 sin cambios en los controladores.
+- **Adjuntos:** uso compartido vía `GenericAttachmentTrait`. Almacenamiento en disco local bajo `webroot/uploads/attachments/{ticket_number}/`.
 - **Contadores del sidebar:** centralizados en `SidebarCountsService`. Reutilizarlo en lugar de consultar tablas desde las vistas.
 
 ---
