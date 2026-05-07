@@ -158,10 +158,6 @@ class TicketsTable extends Table
             ->dateTime('resolved_at')
             ->allowEmptyDateTime('resolved_at');
 
-        $validator
-            ->dateTime('first_response_at')
-            ->allowEmptyDateTime('first_response_at');
-
         return $validator;
     }
 
@@ -197,21 +193,24 @@ class TicketsTable extends Table
      */
     public function generateTicketNumber(): string
     {
-        return (new \App\Service\NumberGenerationService())->generate('ticket');
+        return (new \App\Service\NumberGenerationService())->generate();
     }
 
     /**
      * Find tickets with filters
      *
      * @param \Cake\ORM\Query\SelectQuery $query Query object
-     * @param array $options Filter options
+     * @param string $view Predefined view name
+     * @param array $filters Filter values keyed by field
+     * @param mixed $user Authenticated identity (or null)
      * @return \Cake\ORM\Query\SelectQuery
      */
-    public function findWithFilters(SelectQuery $query, array $options): SelectQuery
-    {
-        $filters = $options['filters'] ?? [];
-        $view = $options['view'] ?? 'todos_sin_resolver';
-        $user = $options['user'] ?? null;
+    public function findWithFilters(
+        SelectQuery $query,
+        string $view = 'todos_sin_resolver',
+        array $filters = [],
+        mixed $user = null,
+    ): SelectQuery {
         $userRole = $user ? $user->get('role') : null;
         $userId = $user ? $user->get('id') : null;
 

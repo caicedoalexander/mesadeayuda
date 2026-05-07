@@ -21,13 +21,6 @@
                 </div>
             <?php endif; ?>
 
-            <?php if ($ticket->requester->organization_id): ?>
-                <div class="mb-2">
-                    <label class="small text-muted fw-semibold mb-1">Organización</label>
-                    <div class="small"><?= h($ticket->requester->organization->name ?? 'N/A') ?></div>
-                </div>
-            <?php endif; ?>
-
             <div class="mb-2">
                 <label class="small text-muted fw-semibold mb-1">Usuario desde:</label>
                 <div class="small"><?= $this->TimeHuman->long($ticket->requester->created) ?></div>
@@ -46,33 +39,6 @@
                         <small><?= h($follower->user->name) ?></small>
                     </div>
                 <?php endforeach; ?>
-            </section>
-        <?php endif; ?>
-
-        <?php if (in_array($currentUser->role, ['admin', 'agent']) && $ticket->status !== 'resuelto'): ?>
-            <section class="mb-3">
-                <div class="card">
-                    <div class="card-header bg-success bg-opacity-50 text-dark small fw-bold text-center">
-                        <i class="bi bi-cart-fill"></i> Convertir a Compra
-                    </div>
-                    <div class="card-body p-3">
-                        <p class="small text-muted mb-3 fw-light">
-                            Convierte este ticket en una orden de compra. El ticket será marcado como convertido.
-                        </p>
-                        <?= $this->Form->create(null, [
-                            'url' => ['action' => 'convertToCompra', $ticket->id]
-                        ]) ?>
-                            <?= $this->Form->button(
-                                '<i class="bi bi-arrow-right-circle me-1"></i> Convertir',
-                                [
-                                    'class' => 'btn btn-success btn-sm w-100 shadow-sm',
-                                    'escapeTitle' => false,
-                                    'onclick' => 'return confirm("¿Estás seguro de convertir este ticket a una orden de compra? El ticket será marcado como resuelto.")'
-                                ]
-                            ) ?>
-                        <?= $this->Form->end() ?>
-                    </div>
-                </div>
             </section>
         <?php endif; ?>
 

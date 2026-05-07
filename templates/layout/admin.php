@@ -8,10 +8,8 @@
         <div class="d-flex justify-content-between align-items-center px-3 w-100">
             <img src="<?= $this->Url->image('logos/soporte-interno.svg') ?>">
             <div class="nav-menu d-flex align-items-center gap-3 py-3">
-                <?= $this->Html->link('<i class="bi bi-bar-chart"></i> Estadísticas', ['prefix' => false, 'controller' => 'Tickets', 'action' => 'statistics'], ['escape' => false]) ?>
                 <?= $this->Html->link('<i class="bi bi-ticket"></i> Tickets', ['prefix' => false, 'controller' => 'Tickets', 'action' => 'index'], ['escape' => false]) ?>
                 <?= $this->Html->link('<i class="bi bi-people"></i> Usuarios', ['prefix' => 'Admin', 'controller' => 'Settings', 'action' => 'users'], ['escape' => false]) ?>
-                <?= $this->Html->link('<i class="bi bi-building"></i> Organizaciones', ['prefix' => 'Admin', 'controller' => 'Settings', 'action' => 'organizations'], ['escape' => false]) ?>
                 <?= $this->Html->link('<i class="bi bi-tags"></i> Etiquetas', ['prefix' => 'Admin', 'controller' => 'Settings', 'action' => 'tags'], ['escape' => false]) ?>
                 <?= $this->Html->link('<i class="bi bi-envelope"></i> Plantillas', ['prefix' => 'Admin', 'controller' => 'Settings', 'action' => 'emailTemplates'], ['escape' => false]) ?>
                 <?= $this->Html->link('<i class="bi bi-gear"></i> Configuración', ['prefix' => 'Admin', 'controller' => 'Settings', 'action' => 'index'], ['escape' => false]) ?>

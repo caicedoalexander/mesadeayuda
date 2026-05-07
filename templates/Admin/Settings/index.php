@@ -502,76 +502,52 @@ $this->assign('title', 'Configuración');
         <?php endif; ?>
     </div>
 
-    <!-- Gmail Client Secret Upload -->
+    <!-- Gmail Client Secret JSON -->
     <div class="config-card">
         <div class="config-header">
-            <i class="bi bi-file-earmark-arrow-up text-primary"></i>
-            <h3>Archivo de Configuración de Gmail</h3>
+            <i class="bi bi-key text-primary"></i>
+            <h3>Credenciales OAuth de Gmail (client_secret.json)</h3>
         </div>
+
+        <?php $clientSecretConfigured = !empty($settings[\App\Utility\SettingKeys::GMAIL_CLIENT_SECRET_JSON] ?? ''); ?>
 
         <div class="alert alert-info">
             <i class="bi bi-info-circle"></i>
-            <strong>client_secret.json</strong> - Archivo de credenciales OAuth2 de Google.
-            <?php
-            $clientSecretPath = CONFIG . 'google' . DS . 'client_secret.json';
-            $fileExists = file_exists($clientSecretPath);
-            ?>
-            <?php if ($fileExists): ?>
-                <span class="badge bg-success">Archivo cargado</span>
-                <small class="d-block mt-2">Última modificación: <?= date('Y-m-d H:i:s', filemtime($clientSecretPath)) ?></small>
+            Pega el contenido del archivo <strong>client_secret.json</strong> descargado desde Google Cloud Console.
+            Se guarda cifrado en la base de datos.
+            <?php if ($clientSecretConfigured): ?>
+                <span class="badge bg-success">Configurado</span>
             <?php else: ?>
-                <span class="badge bg-warning">No cargado</span>
+                <span class="badge bg-warning">No configurado</span>
             <?php endif; ?>
         </div>
 
         <?= $this->Form->create(null, [
-            'url' => ['controller' => 'ConfigFiles', 'action' => 'upload', 'prefix' => 'Admin'],
-            'type' => 'file',
-            'class' => 'config-form'
+            'url' => ['controller' => 'Settings', 'action' => 'gmailClientSecret', 'prefix' => 'Admin'],
+            'class' => 'config-form',
         ]) ?>
-            <?= $this->Form->hidden('file_type', ['value' => 'gmail']) ?>
-
             <div class="form-group">
-                <?= $this->Form->label('config_file', 'Seleccionar archivo client_secret.json') ?>
-                <?= $this->Form->file('config_file', [
+                <?= $this->Form->label('client_secret_json', 'Contenido JSON') ?>
+                <?= $this->Form->textarea('client_secret_json', [
                     'class' => 'form-control',
-                    'accept' => '.json',
-                    'required' => true
+                    'rows' => 10,
+                    'spellcheck' => 'false',
+                    'autocomplete' => 'off',
+                    'style' => 'font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.85rem;',
+                    'placeholder' => '{"web":{"client_id":"...","client_secret":"...","redirect_uris":["..."]}}',
+                    'required' => true,
                 ]) ?>
                 <small class="form-text text-muted">
-                    Debe ser el archivo JSON descargado de Google Cloud Console
+                    Por seguridad, el JSON guardado no se muestra en pantalla. Pega de nuevo si necesitas reemplazarlo.
                 </small>
             </div>
 
             <div class="btn-actions">
-                <?= $this->Form->button('<i class="bi bi-upload"></i> Subir Archivo', [
+                <?= $this->Form->button('<i class="bi bi-save"></i> Guardar credenciales', [
                     'type' => 'submit',
                     'class' => 'btn-primary',
-                    'escapeTitle' => false
+                    'escapeTitle' => false,
                 ]) ?>
-
-                <?php if ($fileExists): ?>
-                    <?= $this->Html->link('<i class="bi bi-download"></i> Descargar', [
-                        'controller' => 'ConfigFiles',
-                        'action' => 'download',
-                        'gmail',
-                        'prefix' => 'Admin'
-                    ], [
-                        'class' => 'btn-secondary',
-                        'escapeTitle' => false
-                    ]) ?>
-
-                    <?= $this->Form->postLink('<i class="bi bi-trash"></i> Eliminar', [
-                        'controller' => 'ConfigFiles',
-                        'action' => 'delete',
-                        'gmail',
-                        'prefix' => 'Admin'
-                    ], [
-                        'class' => 'btn-danger',
-                        'escapeTitle' => false,
-                        'confirm' => '¿Estás seguro de eliminar el archivo de configuración de Gmail?'
-                    ]) ?>
-                <?php endif; ?>
             </div>
         <?= $this->Form->end() ?>
     </div>
@@ -629,22 +605,6 @@ $this->assign('title', 'Configuración');
                 <?= $this->Form->label('whatsapp_tickets_number', 'Número de alerta de tickets') ?>
                 <?= $this->Form->text('whatsapp_tickets_number', [
                     'value' => $settings['whatsapp_tickets_number'] ?? '',
-                    'placeholder' => '5511999999999@s.whatsapp.net'
-                ]) ?>
-            </div>
-
-            <div class="form-group">
-                <?= $this->Form->label('whatsapp_compras_number', 'Número de alerta de compras') ?>
-                <?= $this->Form->text('whatsapp_compras_number', [
-                    'value' => $settings['whatsapp_compras_number'] ?? '',
-                    'placeholder' => '5511999999999@s.whatsapp.net'
-                ]) ?>
-            </div>
-
-            <div class="form-group">
-                <?= $this->Form->label('whatsapp_pqrs_number', 'Número de alerta de PQRS') ?>
-                <?= $this->Form->text('whatsapp_pqrs_number', [
-                    'value' => $settings['whatsapp_pqrs_number'] ?? '',
                     'placeholder' => '5511999999999@s.whatsapp.net'
                 ]) ?>
             </div>
@@ -772,6 +732,63 @@ $this->assign('title', 'Configuración');
         <?= $this->Form->end() ?>
     </div>
 
+    <!-- Webhooks Configuration -->
+    <div class="config-card">
+        <div class="config-header">
+            <i class="bi bi-link-45deg text-primary"></i>
+            <h3>Webhooks — Gmail Import</h3>
+        </div>
+
+        <p class="text-muted">
+            Endpoint disparado por n8n para importar correos. Reemplaza al worker continuo.
+        </p>
+
+        <div class="form-group">
+            <label>URL del webhook</label>
+            <code style="display:inline-block; padding:.35rem .6rem; background:#f5f5f5; border-radius:4px;">
+                <?= h($webhookGmailUrl) ?>
+            </code>
+        </div>
+
+        <div class="form-group">
+            <label for="webhook-gmail-token">Token (X-Webhook-Token)</label>
+            <div style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
+                <input type="password"
+                       id="webhook-gmail-token"
+                       value="<?= h($webhookGmailToken) ?>"
+                       readonly
+                       style="flex:1 1 40ch; min-width:30ch; font-family:monospace;">
+                <button type="button"
+                        class="btn-outline"
+                        onclick="var f=document.getElementById('webhook-gmail-token');f.type=f.type==='password'?'text':'password';">
+                    <i class="bi bi-eye"></i> Mostrar / ocultar
+                </button>
+                <button type="button"
+                        class="btn-outline"
+                        onclick="navigator.clipboard.writeText(document.getElementById('webhook-gmail-token').value)">
+                    <i class="bi bi-clipboard"></i> Copiar
+                </button>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Última ejecución</label>
+            <span><?= $webhookGmailLastRun ? h($webhookGmailLastRun) : '— sin registros —' ?></span>
+        </div>
+
+        <div class="btn-actions">
+            <?= $this->Form->postLink(
+                '<i class="bi bi-arrow-clockwise"></i> Regenerar token',
+                ['action' => 'regenerateWebhookToken'],
+                [
+                    'class' => 'btn-outline',
+                    'escapeTitle' => false,
+                    'confirm' => '¿Seguro? El token actual dejará de funcionar inmediatamente; deberás actualizarlo en n8n.',
+                ]
+            ) ?>
+        </div>
+    </div>
+
     <!-- Quick Links -->
     <div class="quick-links-section pb-3">
         <h3>Otras Opciones</h3>
@@ -787,18 +804,8 @@ $this->assign('title', 'Configuración');
                 ['class' => 'quick-link-card', 'escapeTitle' => false]
             ) ?>
             <?= $this->Html->link(
-                '<i class="bi bi-building"></i><span>Organizaciones</span>',
-                ['action' => 'organizations'],
-                ['class' => 'quick-link-card', 'escapeTitle' => false]
-            ) ?>
-            <?= $this->Html->link(
                 '<i class="bi bi-tags"></i><span>Etiquetas</span>',
                 ['action' => 'tags'],
-                ['class' => 'quick-link-card', 'escapeTitle' => false]
-            ) ?>
-            <?= $this->Html->link(
-                '<i class="bi bi-clock-history"></i><span>Gestión SLA</span>',
-                ['controller' => 'SlaManagement', 'action' => 'index'],
                 ['class' => 'quick-link-card', 'escapeTitle' => false]
             ) ?>
         </div>

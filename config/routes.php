@@ -64,60 +64,25 @@ return function (RouteBuilder $routes): void {
             '_name' => 'health_check'
         ]);
 
-        // PQRS Public Routes (no authentication required)
-        $builder->connect('/pqrs/formulario', ['controller' => 'Pqrs', 'action' => 'create'], [
-            '_name' => 'pqrs_public_form'
-        ]);
-        $builder->connect('/pqrs/success/{pqrsNumber}', ['controller' => 'Pqrs', 'action' => 'success'], [
-            '_name' => 'pqrs_success',
-            'pass' => ['pqrsNumber']
-        ]);
-
         // Admin routes
         $builder->prefix('Admin', function (RouteBuilder $routes) {
             $routes->connect('/', ['controller' => 'Settings', 'action' => 'index']);
             $routes->fallbacks();
         });
 
-        // Compras routes (admin and compras roles only)
-        $builder->connect('/compras', ['controller' => 'Compras', 'action' => 'index'], [
-            '_name' => 'compras_index'
-        ]);
-        $builder->connect('/compras/view/{id}', ['controller' => 'Compras', 'action' => 'view'], [
-            '_name' => 'compras_view',
-            'pass' => ['id']
-        ]);
-        $builder->connect('/compras/add-comment/{id}', ['controller' => 'Compras', 'action' => 'addComment'], [
-            '_name' => 'compras_add_comment',
-            'pass' => ['id']
-        ])->setMethods(['POST']);
-        $builder->connect('/compras/assign/{id}', ['controller' => 'Compras', 'action' => 'assign'], [
-            '_name' => 'compras_assign',
-            'pass' => ['id']
-        ])->setMethods(['POST']);
-        $builder->connect('/compras/change-status/{id}', ['controller' => 'Compras', 'action' => 'changeStatus'], [
-            '_name' => 'compras_change_status',
-            'pass' => ['id']
-        ])->setMethods(['POST']);
-        $builder->connect('/compras/change-priority/{id}', ['controller' => 'Compras', 'action' => 'changePriority'], [
-            '_name' => 'compras_change_priority',
-            'pass' => ['id']
-        ])->setMethods(['POST']);
-        $builder->connect('/compras/download/{id}', ['controller' => 'Compras', 'action' => 'download'], [
-            '_name' => 'compras_download',
-            'pass' => ['id']
-        ])->setMethods(['GET']);
-
-        // Ticket to Compra conversion
-        $builder->connect('/tickets/convert-to-compra/{id}', ['controller' => 'Tickets', 'action' => 'convertToCompra'], [
-            '_name' => 'ticket_convert_to_compra',
-            'pass' => ['id']
-        ])->setMethods(['POST']);
-
         /*
          * Connect catchall routes for all controllers.
          */
         $builder->fallbacks();
+    });
+
+    $routes->scope('/webhooks', function (RouteBuilder $builder): void {
+        $builder->setExtensions(['json']);
+        $builder->post(
+            '/gmail/import',
+            ['controller' => 'Webhooks', 'action' => 'gmailImport'],
+            'webhook_gmail_import'
+        );
     });
 
     /*

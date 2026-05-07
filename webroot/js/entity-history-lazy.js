@@ -1,5 +1,5 @@
 /**
- * Generic Lazy Loading for Entity History (Tickets, PQRS, Compras)
+ * Generic Lazy Loading for Entity History (Tickets)
  * PERFORMANCE FIX: Only loads history when user scrolls to history section
  *
  * Usage: Include this script in any entity view template that has a history section
@@ -11,7 +11,7 @@
 
     /**
      * Load entity history via AJAX
-     * @param {string} entityType - Entity type (ticket, pqrs, compra)
+     * @param {string} entityType - Entity type (ticket)
      * @param {number} entityId - Entity ID
      */
     function loadEntityHistory(entityType, entityId) {
@@ -29,9 +29,7 @@
 
         // Build endpoint URL based on entity type (handle proper pluralization)
         const pluralMap = {
-            'ticket': 'tickets',
-            'pqrs': 'pqrs',
-            'compra': 'compras'
+            'ticket': 'tickets'
         };
         const endpoint = `/${pluralMap[entityType] || entityType + 's'}/history/${entityId}`;
 
@@ -78,9 +76,7 @@
      */
     function getEntityLabel(entityType) {
         const labels = {
-            'ticket': 'este ticket',
-            'pqrs': 'este PQRS',
-            'compra': 'esta compra'
+            'ticket': 'este ticket'
         };
         return labels[entityType] || 'esta entidad';
     }
@@ -89,7 +85,7 @@
      * Get badge HTML for status/priority/type values
      * @param {string} fieldName - Field name (status, priority, type)
      * @param {string} value - Field value
-     * @param {string} entityType - Entity type (ticket, pqrs, compra)
+     * @param {string} entityType - Entity type (ticket)
      * @param {boolean} strikethrough - Apply strikethrough styling
      * @returns {string} Badge HTML or plain text
      */
@@ -107,9 +103,6 @@
         } else if (fieldName === 'priority') {
             color = colors.priority[value.toLowerCase()];
             label = colors.priorityLabels[value.toLowerCase()] || value;
-        } else if (fieldName === 'type') {
-            color = colors.type[value.toLowerCase()];
-            label = colors.typeLabels[value.toLowerCase()] || value;
         }
 
         // Return badge if color found, otherwise plain text
@@ -150,22 +143,6 @@
                     'pendiente': '#0d6efd',
                     'resuelto': '#198754',
                     'convertido': '#6c757d'
-                },
-                pqrs: {
-                    'nuevo': '#ffc107',
-                    'en_revision': '#0dcaf0',
-                    'en_proceso': '#0d6efd',
-                    'resuelto': '#198754',
-                    'cerrado': '#6c757d'
-                },
-                compra: {
-                    'nuevo': '#ffc107',
-                    'en_revision': '#0dcaf0',
-                    'aprobado': '#198754',
-                    'en_proceso': '#0d6efd',
-                    'completado': '#28a745',
-                    'rechazado': '#dc3545',
-                    'convertido': '#6c757d'
                 }
             },
             statusLabels: {
@@ -175,43 +152,15 @@
                     'pendiente': 'Pendiente',
                     'resuelto': 'Resuelto',
                     'convertido': 'Convertido'
-                },
-                pqrs: {
-                    'nuevo': 'Nuevo',
-                    'en_revision': 'En Revisión',
-                    'en_proceso': 'En Proceso',
-                    'resuelto': 'Resuelto',
-                    'cerrado': 'Cerrado'
-                },
-                compra: {
-                    'nuevo': 'Nuevo',
-                    'en_revision': 'En Revisión',
-                    'aprobado': 'Aprobado',
-                    'en_proceso': 'En Proceso',
-                    'completado': 'Completado',
-                    'rechazado': 'Rechazado',
-                    'convertido': 'Convertido'
                 }
             },
-            type: {
-                'peticion': '#3B82F6',
-                'queja': '#F59E0B',
-                'reclamo': '#EF4444',
-                'sugerencia': '#00A85E'
-            },
-            typeLabels: {
-                'peticion': 'Petición',
-                'queja': 'Queja',
-                'reclamo': 'Reclamo',
-                'sugerencia': 'Sugerencia'
-            }
         };
     }
 
     /**
      * Render history HTML from JSON data
      * @param {Array} history - History entries
-     * @param {string} entityType - Entity type (ticket, pqrs, compra)
+     * @param {string} entityType - Entity type (ticket)
      * @returns {string} HTML string
      */
     function renderHistory(history, entityType) {

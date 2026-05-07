@@ -1,6 +1,6 @@
 /**
  * Bulk Actions Module
- * Módulo JavaScript compartido para acciones masivas en Tickets y PQRS
+ * Módulo JavaScript compartido para acciones masivas en Tickets
  * Extraído de templates inline scripts para mejor mantenibilidad
  */
 
@@ -13,7 +13,7 @@
 
     /**
      * Inicializar bulk actions
-     * @param {string} type - 'ticket' o 'pqrs'
+     * @param {string} type - 'ticket'
      */
     window.initBulkActions = function(type) {
         entityType = type;
@@ -62,7 +62,7 @@
         const searchForm = document.getElementById('searchForm');
         if (searchForm) {
             searchForm.addEventListener('submit', function() {
-                LoadingSpinner.show(`Buscando ${entityType === 'ticket' ? 'tickets' : 'PQRS'}...`);
+                LoadingSpinner.show('Buscando tickets...');
             });
         }
 
@@ -152,14 +152,14 @@
      */
     window.bulkAction = function(action) {
         if (selectedItems.length === 0) {
-            alert(`Por favor seleccione al menos un ${entityType === 'ticket' ? 'ticket' : 'PQRS'}`);
+            alert('Por favor seleccione al menos un ticket');
             return;
         }
 
         const itemsIdsStr = selectedItems.join(',');
         const count = selectedItems.length;
-        const entityIdsField = entityType === 'ticket' ? 'ticket_ids' : 'pqrs_ids';
-        const entityIdsIdPrefix = entityType === 'ticket' ? 'Ticket' : 'Pqrs';
+        const entityIdsField = 'ticket_ids';
+        const entityIdsIdPrefix = 'Ticket';
 
         switch (action) {
             case 'assign':
@@ -208,7 +208,7 @@
 
                         // Si es evento 'clear' o valor vacío
                         if (e.type === 'select2:clear' || this.value === '') {
-                            LoadingSpinner.show(`Desasignando ${entityType === 'ticket' ? 'ticket' : 'PQRS'}...`);
+                            LoadingSpinner.show('Desasignando ticket...');
                         } else {
                             // Obtener el texto de la opción seleccionada
                             const selectedOption = this.options[this.selectedIndex];
@@ -228,7 +228,7 @@
      * Obtener mensaje de loading según la acción
      */
     function getLoadingMessage(action) {
-        const entityLabel = entityType === 'ticket' ? 'tickets' : 'PQRS';
+        const entityLabel = 'tickets';
 
         const messages = {
             assign: `Asignando ${entityLabel}...`,

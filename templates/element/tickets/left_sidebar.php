@@ -12,7 +12,7 @@
             <div class="mb-3">
                 <label class="small text-muted fw-semibold mb-1">Estado:</label>
                 <div>
-                    <?= $this->Status->statusBadge($ticket->status, 'ticket') ?>
+                    <?= $this->Status->statusBadge($ticket->status) ?>
                     <?php if ($isLocked): ?>
                         <i class="bi bi-lock-fill text-muted" title="Solicitud cerrada"></i>
                     <?php endif; ?>

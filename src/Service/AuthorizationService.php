@@ -14,13 +14,12 @@ use App\Utility\ValidationConstants;
 class AuthorizationService
 {
     /**
-     * Check if assignment is disabled for a user on a given entity type
+     * Check if ticket assignment is disabled for a user.
      *
-     * @param string $entityType Entity type: 'ticket', 'pqrs', or 'compra'
      * @param mixed $user User identity object or array
      * @return bool True if assignment should be disabled
      */
-    public function isAssignmentDisabled(string $entityType, $user): bool
+    public function isAssignmentDisabled($user): bool
     {
         if (!$user) {
             return true;
@@ -28,13 +27,6 @@ class AuthorizationService
 
         $userRole = is_object($user) ? ($user->role ?? $user->get('role')) : ($user['role'] ?? null);
 
-        $allowedRoles = match ($entityType) {
-            'ticket' => [ValidationConstants::ROLE_ADMIN, ValidationConstants::ROLE_AGENT],
-            'compra' => [ValidationConstants::ROLE_ADMIN, ValidationConstants::ROLE_COMPRAS],
-            'pqrs' => [ValidationConstants::ROLE_ADMIN, ValidationConstants::ROLE_SERVICIO_CLIENTE],
-            default => [ValidationConstants::ROLE_ADMIN],
-        };
-
-        return !in_array($userRole, $allowedRoles);
+        return !in_array($userRole, [ValidationConstants::ROLE_ADMIN, ValidationConstants::ROLE_AGENT], true);
     }
 }

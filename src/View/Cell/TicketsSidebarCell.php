@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\View\Cell;
 
-use App\Service\StatisticsService;
+use App\Service\SidebarCountsService;
 use App\Utility\ValidationConstants;
 use Cake\ORM\Locator\LocatorAwareTrait;
 use Cake\View\Cell;
@@ -27,8 +27,8 @@ class TicketsSidebarCell extends Cell
             $currentUser = $this->fetchTable('Users')->get($userId);
         }
 
-        $service = new StatisticsService();
-        $data = $service->getSidebarCounts('Tickets', $userRole, $userId);
+        $service = new SidebarCountsService();
+        $data = $service->getSidebarCounts($userRole, $userId);
         $statusCounts = $data['statusCounts'];
 
         $isAgent = $userRole === ValidationConstants::ROLE_AGENT;
@@ -40,7 +40,7 @@ class TicketsSidebarCell extends Cell
             $agentStatusCounts = $ticketsTable->find()
                 ->select(['status', 'count' => $ticketsTable->find()->func()->count('*')])
                 ->where(['assignee_id' => $userId, 'status IN' => ['nuevo', 'abierto', 'pendiente']])
-                ->group(['status'])
+                ->groupBy(['status'])
                 ->all()
                 ->combine('status', 'count')
                 ->toArray();

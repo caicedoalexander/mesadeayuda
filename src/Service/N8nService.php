@@ -123,11 +123,6 @@ class N8nService
                 'name' => $ticket->requester->name,
                 'email' => $ticket->requester->email,
             ];
-
-            // Add organization if available
-            if ($ticket->requester->organization) {
-                $payload['ticket']['requester']['organization'] = $ticket->requester->organization->name;
-            }
         }
 
         // Add attachments info if requested

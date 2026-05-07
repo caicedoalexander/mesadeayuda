@@ -33,7 +33,7 @@ RUN cp config/app_local.example.php config/app_local.php
 
 # Create necessary directories and set permissions
 RUN mkdir -p logs tmp/cache/models tmp/cache/persistent tmp/cache/views \
-    tmp/sessions webroot/uploads/tickets webroot/uploads/compras webroot/uploads/pqrs config/google \
+    tmp/sessions webroot/uploads/tickets webroot/uploads/compras config/google \
     && chown -R www-data:www-data tmp logs webroot/uploads config/google \
     && chmod -R 775 tmp logs webroot/uploads config/google
 
@@ -47,6 +47,6 @@ COPY docker/php/php.ini /usr/local/etc/php/conf.d/custom.ini
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-EXPOSE 80
+EXPOSE 8082
 
 ENTRYPOINT ["entrypoint.sh"]

@@ -84,7 +84,7 @@ class AppController extends Controller
 
         // Filter out sensitive settings before passing to views
         $sensitiveKeys = [
-            SettingKeys::GMAIL_REFRESH_TOKEN, SettingKeys::GMAIL_CLIENT_SECRET_PATH,
+            SettingKeys::GMAIL_REFRESH_TOKEN, SettingKeys::GMAIL_CLIENT_SECRET_JSON,
             SettingKeys::WHATSAPP_API_KEY,
             SettingKeys::N8N_API_KEY, SettingKeys::N8N_WEBHOOK_URL,
         ];
@@ -99,8 +99,6 @@ class AppController extends Controller
                 $this->viewBuilder()->setLayout('admin');
             } elseif ($role === ValidationConstants::ROLE_AGENT) {
                 $this->viewBuilder()->setLayout('agent');
-            } elseif ($role === ValidationConstants::ROLE_COMPRAS) {
-                $this->viewBuilder()->setLayout('compras');
             } elseif ($role === ValidationConstants::ROLE_SERVICIO_CLIENTE) {
                 $this->viewBuilder()->setLayout('servicio_cliente');
             } else {
@@ -118,8 +116,6 @@ class AppController extends Controller
     protected function getDefaultRedirectForRole(string $role): array
     {
         $roleRedirects = [
-            ValidationConstants::ROLE_SERVICIO_CLIENTE => ['controller' => 'Pqrs', 'action' => 'index', '?' => ['view' => 'mis_pqrs']],
-            ValidationConstants::ROLE_COMPRAS => ['controller' => 'Compras', 'action' => 'index', '?' => ['view' => 'mis_compras']],
             ValidationConstants::ROLE_AGENT => ['controller' => 'Tickets', 'action' => 'index', '?' => ['view' => 'mis_tickets']],
             ValidationConstants::ROLE_REQUESTER => ['controller' => 'Tickets', 'action' => 'index', '?' => ['view' => 'mis_tickets']],
             ValidationConstants::ROLE_ADMIN => ['controller' => 'Tickets', 'action' => 'index'],
@@ -134,7 +130,7 @@ class AppController extends Controller
      * Eliminates ~45 lines of duplicated code across 3 controllers
      *
      * @param array $allowedRoles Roles allowed to access current module
-     * @param string $moduleName Module name for error message (e.g., 'tickets', 'PQRS', 'compras')
+     * @param string $moduleName Module name for error message (e.g., 'tickets')
      * @return \Cake\Http\Response|null Redirect response if not allowed, null if access granted
      */
     protected function redirectByRole(array $allowedRoles, string $moduleName): ?\Cake\Http\Response

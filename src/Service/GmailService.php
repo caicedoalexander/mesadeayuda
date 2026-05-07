@@ -38,7 +38,7 @@ class GmailService
      * Centralized method to get Gmail config from system settings with automatic decryption.
      * Used by TicketService, ImportGmailCommand, and any other class needing Gmail access.
      *
-     * @return array Configuration array with 'client_secret_path' and 'refresh_token'
+     * @return array Configuration array with 'client_secret' (decoded array) and 'refresh_token'
      */
     public static function loadConfigFromDatabase(): array
     {
@@ -48,16 +48,26 @@ class GmailService
 
             $settingsTable = $instance->fetchTable('SystemSettings');
             $settings = $settingsTable->find()
-                ->where(['setting_key IN' => [SettingKeys::GMAIL_REFRESH_TOKEN, SettingKeys::GMAIL_CLIENT_SECRET_PATH]])
+                ->where(['setting_key IN' => [
+                    SettingKeys::GMAIL_REFRESH_TOKEN,
+                    SettingKeys::GMAIL_CLIENT_SECRET_JSON,
+                ]])
                 ->all();
 
-            $config = [];
+            $config = ['refresh_token' => '', 'client_secret' => []];
             foreach ($settings as $setting) {
-                $key = str_replace('gmail_', '', $setting->setting_key);
-                // Decrypt sensitive values using SettingsEncryptionTrait
-                $config[$key] = $instance->shouldEncrypt($setting->setting_key)
-                    ? $instance->decryptSetting($setting->setting_value, $setting->setting_key)
-                    : $setting->setting_value;
+                $decrypted = $instance->decryptSetting($setting->setting_value, $setting->setting_key);
+
+                if ($setting->setting_key === SettingKeys::GMAIL_REFRESH_TOKEN) {
+                    $config['refresh_token'] = $decrypted;
+                } elseif ($setting->setting_key === SettingKeys::GMAIL_CLIENT_SECRET_JSON && !empty($decrypted)) {
+                    $decoded = json_decode($decrypted, true);
+                    if (is_array($decoded)) {
+                        $config['client_secret'] = $decoded;
+                    } else {
+                        Log::error('Gmail client_secret JSON in DB is malformed; skipping');
+                    }
+                }
             }
 
             return $config;
@@ -67,7 +77,7 @@ class GmailService
     /**
      * Constructor
      *
-     * @param array $config Configuration array with client_secret_path and refresh_token
+     * @param array $config Configuration array with 'client_secret' (decoded array) and 'refresh_token'
      */
     public function __construct(array $config = [])
     {
@@ -84,13 +94,11 @@ class GmailService
     {
         $this->client = new GoogleClient();
 
-        // Load client secret from file
-        $clientSecretPath = $this->config['client_secret_path'] ?? CONFIG . 'google' . DS . 'client_secret.json';
-
-        if (file_exists($clientSecretPath)) {
-            $this->client->setAuthConfig($clientSecretPath);
+        // Client secret is loaded from system_settings (encrypted JSON), decoded into an array.
+        if (!empty($this->config['client_secret']) && is_array($this->config['client_secret'])) {
+            $this->client->setAuthConfig($this->config['client_secret']);
         } else {
-            Log::error('Client secret file not found: ' . $clientSecretPath);
+            Log::error('Gmail client_secret not configured in system_settings');
         }
 
         $this->client->addScope(Gmail::GMAIL_READONLY);
@@ -428,12 +436,9 @@ class GmailService
         }
 
         // Check 3: Subject contains notification patterns
-        // Match any replies to system notifications (Re: [Ticket #, Re: [PQRS #, Re: [Compra #)
         $subject = $this->getHeader($headers, 'Subject');
         $notificationPatterns = [
             'Re: [Ticket #',        // Matches all ticket notification replies
-            'Re: [PQRS #',          // Matches all PQRS notification replies
-            'Re: [Compra #',        // Matches all Compra notification replies
             'Re: Tu Solicitud',     // Generic confirmation pattern (if used)
         ];
 
@@ -459,7 +464,7 @@ class GmailService
                 ->where(['setting_key' => SettingKeys::GMAIL_USER_EMAIL])
                 ->first();
 
-            return $setting ? $setting->setting_value : '';
+            return $setting ? (string)($setting->setting_value ?? '') : '';
         } catch (\Exception $e) {
             Log::error('Failed to load system email: ' . $e->getMessage());
             return '';

@@ -4,9 +4,10 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Model\Entity\Ticket;
-use Cake\ORM\Locator\LocatorAwareTrait;
+use Cake\Datasource\EntityInterface;
+use Cake\I18n\FrozenTime;
 use Cake\Log\Log;
-use App\Service\Traits\EntityConversionTrait;
+use Cake\ORM\Locator\LocatorAwareTrait;
 
 /**
  * Ticket Service
@@ -20,10 +21,7 @@ use App\Service\Traits\EntityConversionTrait;
 class TicketService
 {
     use LocatorAwareTrait;
-    use \App\Service\Traits\TicketSystemTrait;
-    use \App\Service\Traits\NotificationDispatcherTrait;
     use \App\Service\Traits\GenericAttachmentTrait;
-    use EntityConversionTrait;
 
     private EmailService $emailService;
     private WhatsappService $whatsappService;
@@ -145,7 +143,7 @@ class TicketService
         }
 
         // Send creation notifications (Email + WhatsApp)
-        $this->dispatchCreationNotifications('ticket', $ticket);
+        $this->dispatchCreationNotifications($ticket);
 
         // Send n8n webhook for AI tag assignment (lazy loaded only when creating tickets)
         try {
@@ -380,7 +378,6 @@ class TicketService
 
                 // Save attachment using GenericAttachmentTrait
                 $this->saveAttachmentFromBinary(
-                    'ticket',
                     $ticket,
                     $attachmentData['filename'],
                     $content,
@@ -419,7 +416,7 @@ class TicketService
         }
         assert($ticket instanceof \App\Model\Entity\Ticket);
 
-        $result = $this->saveGenericUploadedFile('ticket', $ticket, $file, $commentId, $userId);
+        $result = $this->saveGenericUploadedFile($ticket, $file, $commentId, $userId);
         assert($result instanceof \App\Model\Entity\Attachment || $result === null);
         return $result;
     }
@@ -469,7 +466,7 @@ class TicketService
         $uploadedCount = 0;
 
         if ($hasComment) {
-            $comment = $this->addComment($entityId, $userId, $commentBody, 'ticket', $commentType, false, $emailTo, $emailCc);
+            $comment = $this->addComment($entityId, $userId, $commentBody, $commentType, false, $emailTo, $emailCc);
 
             if (!$comment) {
                 return [
@@ -496,123 +493,9 @@ class TicketService
             $entity->status = $newStatus;
         }
 
-        $this->sendResponseNotifications('ticket', $entity, $comment, $oldStatus, $newStatus, $hasComment, $commentType, $hasStatusChange, $emailTo, $emailCc);
+        $this->sendResponseNotifications($entity, $comment, $oldStatus, $newStatus, $hasComment, $commentType, $hasStatusChange, $emailTo, $emailCc);
 
         return $this->buildResponseResult($hasComment, $hasStatusChange, $uploadedCount, $entity);
-    }
-
-    /**
-     * Convert ticket to compra (full workflow)
-     *
-     * This method handles the complete conversion workflow:
-     * 1. Creates the compra from ticket
-     * 2. Marks ticket as converted
-     * 3. Copies all data (comments, attachments)
-     *
-     * @param \App\Model\Entity\Ticket $ticket Source ticket
-     * @param int $userId User performing the conversion
-     * @param \App\Service\ComprasService $comprasService Injected ComprasService
-     * @return \App\Model\Entity\Compra|null Created compra or null on failure
-     */
-    public function convertToCompra(
-        \App\Model\Entity\Ticket $ticket,
-        int $userId,
-        \App\Service\ComprasService $comprasService
-    ): ?\App\Model\Entity\Compra {
-        try {
-            // Create compra from ticket
-            $compra = $comprasService->createFromTicket($ticket, ['user_id' => $userId]);
-
-            if (!$compra) {
-                Log::error('Failed to create compra from ticket', ['ticket_id' => $ticket->id]);
-                return null;
-            }
-
-            // Mark ticket as converted using trait method
-            $this->markAsConverted('ticket', $ticket, 'compra', $compra, $userId);
-
-            // Copy all data (comments and attachments)
-            $comprasService->copyTicketData($ticket, $compra);
-
-            Log::info('Ticket converted to Compra successfully', [
-                'ticket_id' => $ticket->id,
-                'ticket_number' => $ticket->ticket_number,
-                'compra_id' => $compra->id,
-                'compra_number' => $compra->compra_number,
-            ]);
-
-            return $compra;
-
-        } catch (\Exception $e) {
-            Log::error('Error in convertToCompra: ' . $e->getMessage(), [
-                'ticket_id' => $ticket->id,
-                'exception' => $e,
-            ]);
-            return null;
-        }
-    }
-
-    /**
-     * Create ticket from compra
-     *
-     * Workflow: Compra → Convert → Ticket
-     *
-     * @param \App\Model\Entity\Compra $compra Source compra
-     * @param array $data Additional data (assignee_id, user_id)
-     * @return \App\Model\Entity\Ticket|null Created ticket or null on failure
-     */
-    public function createFromCompra(\App\Model\Entity\Compra $compra, array $data = []): ?\App\Model\Entity\Ticket
-    {
-        $ticketsTable = $this->fetchTable('Tickets');
-
-        try {
-            // Generate ticket number using Table method (avoids duplication)
-            $ticketNumber = $ticketsTable->generateTicketNumber();
-
-            // Create ticket from compra data
-            $ticket = $ticketsTable->newEntity([
-                'ticket_number' => $ticketNumber,
-                'subject' => "{$compra->subject}",
-                'description' => $compra->description,
-                'status' => 'nuevo',
-                'priority' => $compra->priority,
-                'requester_id' => $compra->requester_id,
-                'assignee_id' => $data['assignee_id'] ?? null,
-                'channel' => $compra->channel ?? 'email',
-                'email_to' => $compra->email_to,
-                'email_cc' => $compra->email_cc,
-                'source_email' => $compra->requester->email ?? null,
-            ], ['accessibleFields' => [
-                'ticket_number' => true, 'status' => true, 'requester_id' => true,
-                'channel' => true, 'source_email' => true,
-            ]]);
-
-            if ($ticketsTable->save($ticket)) {
-                // Log creation in ticket history
-                $this->logHistory(
-                    'TicketHistory',
-                    'ticket_id',
-                    $ticket->id,
-                    'created_from_compra',
-                    null,
-                    $compra->compra_number,
-                    $data['user_id'] ?? null,
-                    "Creado desde Compra #{$compra->compra_number}"
-                );
-
-                return $ticket;
-            }
-
-            Log::error('Error al guardar ticket desde compra', ['compra_id' => $compra->id]);
-            return null;
-
-        } catch (\Exception $e) {
-            Log::error('Error en createFromCompra: ' . $e->getMessage(), [
-                'compra_id' => $compra->id,
-                'exception' => $e,
-            ]);
-            return null;
-        }
     }
 
     /**
@@ -703,55 +586,6 @@ class TicketService
     }
 
     /**
-     * Copy compra data (comments and attachments) to ticket
-     *
-     * REFACTORED: Now uses EntityConversionTrait for generic copying logic
-     *
-     * @param \App\Model\Entity\Compra $compra Source compra
-     * @param \App\Model\Entity\Ticket $ticket Destination ticket
-     * @return bool Success status
-     */
-    public function copyCompraData(\App\Model\Entity\Compra $compra, \App\Model\Entity\Ticket $ticket): bool
-    {
-        try {
-            // Load compra with associations
-            $comprasTable = $this->fetchTable('Compras');
-            $compra = $comprasTable->get($compra->id, [
-                'contain' => ['ComprasComments', 'ComprasAttachments']
-            ]);
-
-            // Copy comments using trait
-            $commentsCopied = $this->copyComments('compra', $compra, 'ticket', $ticket);
-
-            // Copy attachments using trait
-            $attachmentsCopied = $this->copyAttachments(
-                'compra',
-                $compra,
-                'ticket',
-                $ticket,
-                $ticket->ticket_number
-            );
-
-            Log::info('Copied compra data to ticket', [
-                'compra_id' => $compra->id,
-                'ticket_id' => $ticket->id,
-                'comments_copied' => $commentsCopied,
-                'attachments_copied' => $attachmentsCopied,
-            ]);
-
-            return true;
-
-        } catch (\Exception $e) {
-            Log::error('Error copiando datos de compra a ticket: ' . $e->getMessage(), [
-                'compra_id' => $compra->id,
-                'ticket_id' => $ticket->id,
-                'exception' => $e,
-            ]);
-            return false;
-        }
-    }
-
-    /**
      * Sanitize HTML content from emails to prevent stored XSS
      *
      * @param string $html Raw HTML content
@@ -770,4 +604,419 @@ class TicketService
 
         return $purifier->purify($html);
     }
+
+    // region: TicketSystem
+
+    /**
+     * Change ticket status.
+     */
+    public function changeStatus(
+        \Cake\Datasource\EntityInterface $entity,
+        string $newStatus,
+        ?int $userId = null,
+        ?string $comment = null,
+        bool $sendNotifications = true
+    ): bool {
+        $table = $this->fetchTable('Tickets');
+        $oldStatus = $entity->status;
+
+        if ($oldStatus === $newStatus) {
+            return true;
+        }
+
+        $entity->status = $newStatus;
+
+        $now = FrozenTime::now();
+        if ($newStatus === 'resuelto' && !$entity->resolved_at) {
+            $entity->resolved_at = $now;
+        }
+        if ($newStatus === 'cerrado' && isset($entity->closed_at) && !$entity->closed_at) {
+            $entity->closed_at = $now;
+        }
+
+        if (!$table->save($entity)) {
+            Log::error('Failed to change status', ['errors' => $entity->getErrors()]);
+            return false;
+        }
+
+        $this->logHistory(
+            'TicketHistory',
+            'ticket_id',
+            $entity->id,
+            'status',
+            $oldStatus,
+            $newStatus,
+            $userId,
+            "Estado cambiado de '{$oldStatus}' a '{$newStatus}'"
+        );
+
+        $systemComment = $comment ?? "El estado cambió de '{$oldStatus}' a '{$newStatus}'";
+        $this->addComment($entity->id, $userId, $systemComment, 'internal', true);
+
+        if ($sendNotifications) {
+            try {
+                $this->emailService->sendEntityStatusChangeNotification($entity, $oldStatus, $newStatus);
+            } catch (\Exception $e) {
+                Log::error('Failed to send status change email notification: ' . $e->getMessage());
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Add comment to a ticket.
+     *
+     * NOTE: This method does NOT send notifications. Notifications are handled
+     * by the service's handleResponse() via sendResponseNotifications() for proper
+     * coordination of comment + status change + file uploads.
+     */
+    public function addComment(
+        int $entityId,
+        ?int $userId,
+        string $body,
+        string $type = 'public',
+        bool $isSystem = false,
+        ?array $emailTo = null,
+        ?array $emailCc = null
+    ): ?\Cake\Datasource\EntityInterface {
+        $commentsTable = $this->fetchTable('TicketComments');
+
+        $config = \HTMLPurifier_Config::createDefault();
+        $config->set('HTML.Allowed', 'p,br,b,i,u,strong,em,a[href],ul,ol,li,blockquote,h1,h2,h3,h4,h5,h6,img[src|alt|width|height],table,thead,tbody,tr,td,th,span,div,pre,code,hr');
+        $config->set('HTML.TargetBlank', true);
+        $config->set('URI.AllowedSchemes', ['http' => true, 'https' => true, 'mailto' => true]);
+        $config->set('Attr.AllowedFrameTargets', ['_blank']);
+        $config->set('Cache.DefinitionImpl', null);
+        $purifier = new \HTMLPurifier($config);
+        $sanitizedBody = $purifier->purify($body);
+
+        $data = [
+            'ticket_id' => $entityId,
+            'user_id' => $userId,
+            'comment_type' => $type,
+            'body' => $sanitizedBody,
+            'is_system_comment' => $isSystem,
+        ];
+
+        if ($type === 'public' && !$isSystem) {
+            if (is_array($emailTo) && count($emailTo) > 0) {
+                $data['email_to'] = json_encode($emailTo);
+            }
+            if (is_array($emailCc) && count($emailCc) > 0) {
+                $data['email_cc'] = json_encode($emailCc);
+            }
+        }
+
+        $comment = $commentsTable->newEntity($data, ['accessibleFields' => [
+            'user_id' => true, 'is_system_comment' => true, 'sent_as_email' => true,
+        ]]);
+
+        if (!$commentsTable->save($comment)) {
+            Log::error('Failed to add comment', ['errors' => $comment->getErrors()]);
+            return null;
+        }
+
+        return $comment;
+    }
+
+    /**
+     * Assign ticket to a user.
+     */
+    public function assign(
+        \Cake\Datasource\EntityInterface $entity,
+        ?int $assigneeId,
+        ?int $userId = null
+    ): bool {
+        $table = $this->fetchTable('Tickets');
+        $usersTable = $this->fetchTable('Users');
+
+        $oldAssigneeId = $entity->assignee_id;
+        $entity->assignee_id = ($assigneeId === 0 || $assigneeId === '0') ? null : $assigneeId;
+
+        if (!$table->save($entity)) {
+            $errors = $entity->getErrors();
+            Log::error("Failed to assign ticket - ID: {$entity->id}");
+            Log::error("Assignment details - New assignee: {$assigneeId}, Old assignee: {$oldAssigneeId}");
+            Log::error('Validation errors: ' . print_r($errors, true));
+            Log::error('Dirty fields: ' . print_r($entity->getDirty(), true));
+            return false;
+        }
+
+        $oldAssigneeName = 'Sin asignar';
+        if ($oldAssigneeId) {
+            $oldUser = $usersTable->get($oldAssigneeId);
+            $oldAssigneeName = $oldUser->first_name . ' ' . $oldUser->last_name;
+        }
+
+        $newAssigneeName = 'Sin asignar';
+        if ($assigneeId) {
+            $newUser = $usersTable->get($assigneeId);
+            $newAssigneeName = $newUser->first_name . ' ' . $newUser->last_name;
+        }
+
+        $this->logHistory(
+            'TicketHistory',
+            'ticket_id',
+            $entity->id,
+            'assignee_id',
+            $oldAssigneeName,
+            $newAssigneeName,
+            $userId,
+            "Asignado a {$newAssigneeName}"
+        );
+
+        $this->addComment($entity->id, $userId, "Asignado a {$newAssigneeName}", 'internal', true);
+
+        return true;
+    }
+
+    /**
+     * Change ticket priority.
+     */
+    public function changePriority(
+        \Cake\Datasource\EntityInterface $entity,
+        string $newPriority,
+        ?int $userId = null
+    ): bool {
+        $table = $this->fetchTable('Tickets');
+        $oldPriority = $entity->priority;
+
+        if ($oldPriority === $newPriority) {
+            return true;
+        }
+
+        $entity->priority = $newPriority;
+
+        if (!$table->save($entity)) {
+            Log::error('Failed to change priority', ['errors' => $entity->getErrors()]);
+            return false;
+        }
+
+        $this->logHistory(
+            'TicketHistory',
+            'ticket_id',
+            $entity->id,
+            'priority',
+            $oldPriority,
+            $newPriority,
+            $userId,
+            "Prioridad cambiada de '{$oldPriority}' a '{$newPriority}'"
+        );
+
+        $this->addComment(
+            $entity->id,
+            $userId,
+            "Prioridad cambiada de '{$oldPriority}' a '{$newPriority}'",
+            'internal',
+            true
+        );
+
+        return true;
+    }
+
+    /**
+     * Log change to ticket history.
+     */
+    private function logHistory(
+        string $tableName,
+        string $foreignKey,
+        int $entityId,
+        string $fieldName,
+        ?string $oldValue,
+        ?string $newValue,
+        ?int $userId = null,
+        ?string $description = null
+    ): void {
+        $historyTable = $this->fetchTable($tableName);
+
+        if (method_exists($historyTable, 'logChange')) {
+            $historyTable->logChange($entityId, $fieldName, $oldValue, $newValue, $userId, $description);
+        } else {
+            $history = $historyTable->newEntity([
+                $foreignKey => $entityId,
+                'changed_by' => $userId,
+                'field_name' => $fieldName,
+                'old_value' => $oldValue,
+                'new_value' => $newValue,
+                'description' => $description,
+            ], ['accessibleFields' => ['changed_by' => true]]);
+            $historyTable->save($history);
+        }
+    }
+
+    /**
+     * Send notifications based on response changes (comment + status + files).
+     */
+    protected function sendResponseNotifications(
+        $entity,
+        $comment,
+        string $oldStatus,
+        ?string $newStatus,
+        bool $hasComment,
+        string $commentType,
+        bool $hasStatusChange,
+        array $emailTo = [],
+        array $emailCc = []
+    ): void {
+        $hasPublicComment = $hasComment && $commentType === 'public';
+
+        if ($hasPublicComment && $hasStatusChange && $comment) {
+            $this->dispatchUpdateNotifications($entity, 'response', [
+                'comment' => $comment,
+                'old_status' => $oldStatus,
+                'new_status' => $newStatus,
+                'additional_to' => $emailTo,
+                'additional_cc' => $emailCc,
+            ]);
+        } elseif ($hasPublicComment && $comment) {
+            $this->dispatchUpdateNotifications($entity, 'comment', [
+                'comment' => $comment,
+                'additional_to' => $emailTo,
+                'additional_cc' => $emailCc,
+            ]);
+        } elseif ($hasStatusChange) {
+            $this->dispatchUpdateNotifications($entity, 'status_change', [
+                'old_status' => $oldStatus,
+                'new_status' => $newStatus,
+            ]);
+        }
+    }
+
+    /**
+     * Build success message for response operations.
+     */
+    protected function buildResponseResult(bool $hasComment, bool $hasStatusChange, int $uploadedCount, $entity): array
+    {
+        $successMessage = '';
+        if ($hasComment && $hasStatusChange) {
+            $successMessage = 'Comentario agregado y estado actualizado exitosamente.';
+        } elseif ($hasComment) {
+            $successMessage = 'Comentario agregado exitosamente.';
+        } elseif ($hasStatusChange) {
+            $successMessage = 'Estado actualizado exitosamente.';
+        }
+
+        if ($uploadedCount > 0) {
+            $successMessage .= " ({$uploadedCount} archivo(s) adjunto(s))";
+        }
+
+        return [
+            'success' => true,
+            'message' => $successMessage,
+            'entity' => $entity,
+        ];
+    }
+
+    /**
+     * Decode email recipients from JSON string or array.
+     */
+    protected function decodeEmailRecipients($data): array
+    {
+        if (empty($data)) {
+            return [];
+        }
+
+        if (is_string($data)) {
+            $decoded = json_decode($data, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return $decoded;
+            }
+        }
+
+        if (is_array($data)) {
+            return $data;
+        }
+
+        return [];
+    }
+
+    // endregion
+
+    // region: NotificationDispatcher
+
+    /**
+     * Dispatch creation notifications (Email + WhatsApp).
+     */
+    public function dispatchCreationNotifications(
+        EntityInterface $entity,
+        bool $sendEmail = true,
+        bool $sendWhatsapp = true
+    ): void {
+        if ($sendEmail) {
+            try {
+                $this->emailService->sendNewEntityNotification($entity);
+            } catch (\Exception $e) {
+                Log::error('Failed to send ticket creation email', [
+                    'error' => $e->getMessage(),
+                    'entity_id' => $entity->id,
+                ]);
+            }
+        }
+
+        if ($sendWhatsapp) {
+            try {
+                $this->whatsappService->sendNewEntityNotification($entity);
+            } catch (\Exception $e) {
+                Log::error('Failed to send ticket creation WhatsApp', [
+                    'error' => $e->getMessage(),
+                    'entity_id' => $entity->id,
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Dispatch update notifications (Email only).
+     *
+     * @param string $notificationType 'status_change', 'comment', 'response'
+     * @param array $context Additional context (old_status, new_status, comment, etc.)
+     */
+    public function dispatchUpdateNotifications(
+        EntityInterface $entity,
+        string $notificationType,
+        array $context = []
+    ): void {
+        try {
+            switch ($notificationType) {
+                case 'status_change':
+                    $this->emailService->sendEntityStatusChangeNotification(
+                        $entity,
+                        $context['old_status'] ?? '',
+                        $context['new_status'] ?? ''
+                    );
+                    break;
+
+                case 'comment':
+                    $this->emailService->sendEntityCommentNotification(
+                        $entity,
+                        $context['comment'] ?? null,
+                        $context['additional_to'] ?? [],
+                        $context['additional_cc'] ?? []
+                    );
+                    break;
+
+                case 'response':
+                    $this->emailService->sendEntityResponseNotification(
+                        $entity,
+                        $context['comment'] ?? null,
+                        $context['old_status'] ?? '',
+                        $context['new_status'] ?? '',
+                        $context['additional_to'] ?? [],
+                        $context['additional_cc'] ?? []
+                    );
+                    break;
+
+                default:
+                    Log::warning("Unknown notification type: {$notificationType}");
+            }
+        } catch (\Exception $e) {
+            Log::error("Failed to send ticket {$notificationType} email", [
+                'error' => $e->getMessage(),
+                'entity_id' => $entity->id,
+            ]);
+        }
+    }
+
+    // endregion
 }

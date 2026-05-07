@@ -53,7 +53,7 @@ class TagsController extends AppController
                 'ticket_count' => $tagsTable->find()->func()->count('TicketTags.ticket_id')
             ])
             ->leftJoinWith('TicketTags')
-            ->group(['Tags.id'])
+            ->groupBy(['Tags.id'])
             ->orderBy(['Tags.name' => 'ASC'])
             ->all();
 

@@ -16,7 +16,7 @@ final class SettingKeys
 
     // ── Gmail ───────────────────────────────────────────────────────────
     public const GMAIL_REFRESH_TOKEN = 'gmail_refresh_token';
-    public const GMAIL_CLIENT_SECRET_PATH = 'gmail_client_secret_path';
+    public const GMAIL_CLIENT_SECRET_JSON = 'gmail_client_secret_json';
     public const GMAIL_CHECK_INTERVAL = 'gmail_check_interval';
     public const GMAIL_USER_EMAIL = 'gmail_user_email';
 
@@ -26,8 +26,6 @@ final class SettingKeys
     public const WHATSAPP_API_KEY = 'whatsapp_api_key';
     public const WHATSAPP_INSTANCE_NAME = 'whatsapp_instance_name';
     public const WHATSAPP_TICKETS_NUMBER = 'whatsapp_tickets_number';
-    public const WHATSAPP_COMPRAS_NUMBER = 'whatsapp_compras_number';
-    public const WHATSAPP_PQRS_NUMBER = 'whatsapp_pqrs_number';
 
     // ── n8n ─────────────────────────────────────────────────────────────
     public const N8N_ENABLED = 'n8n_enabled';
@@ -35,4 +33,7 @@ final class SettingKeys
     public const N8N_API_KEY = 'n8n_api_key';
     public const N8N_SEND_TAGS_LIST = 'n8n_send_tags_list';
     public const N8N_TIMEOUT = 'n8n_timeout';
+
+    // ── Webhooks ────────────────────────────────────────────────────────
+    public const WEBHOOK_GMAIL_IMPORT_TOKEN = 'webhook_gmail_import_token';
 }

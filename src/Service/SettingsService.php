@@ -30,7 +30,6 @@ class SettingsService
         'whatsapp_settings',
         'n8n_settings',
         'gmail_settings',
-        'sla_settings',
     ];
 
     private const CACHE_CONFIG = ValidationConstants::CACHE_CONFIG;

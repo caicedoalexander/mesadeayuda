@@ -2,228 +2,78 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
+## Project
 
-**Mesa de Ayuda** is a CakePHP 5.x corporate management system integrating helpdesk (support tickets), purchase management, and PQRS (customer requests/complaints). It features integrations with Gmail, n8n, WhatsApp, and AWS S3 for automation and communication.
+**Mesa de Ayuda** — CakePHP 5.x corporate helpdesk platform built around the **Tickets** module. Backend in PHP 8.1+, MySQL/MariaDB, server-rendered Bootstrap 5 templates. Integrates Gmail (email-to-ticket), n8n (webhooks), WhatsApp via Evolution API, and AWS S3.
 
-### Key Modules
-- **Helpdesk (Tickets)**: Internal support ticket management with email-to-ticket conversion via Gmail
-- **Compras (Purchases)**: Procurement workflow with approval chains and trazability
-- **PQRS**: Customer-facing channel for requests, complaints, and suggestions with public tracking portal
-- **Admin**: Configuration for integrations, SLA management, statistics, and system settings
+> Note: the older Estadísticas (Statistics), Organizaciones (Organizations), PQRS, SLA management and **Compras** modules have been removed from the codebase. Don't reintroduce references to them.
+
+## Common commands
+
+Run from project root. Inside Docker prefix with `docker compose exec web …`.
+
+```bash
+composer install                            # install PHP deps
+composer cs-check                           # PHPCS using CakePHP ruleset
+composer cs-fix                             # PHPCBF auto-fix
+
+bin/cake server                              # dev server on http://localhost:8765
+bin/cake migrations migrate                  # apply pending migrations
+bin/cake migrations status
+bin/cake bake migration CreateFooTable
+bin/cake bake model Foos
+bin/cake import_gmail --max 5                # one-shot Gmail import (debug). Production
+                                              # imports are triggered by n8n via
+                                              # POST /webhooks/gmail/import.
+
+docker compose up -d --build                 # web (Nginx + PHP-FPM)
+```
+
+This project does not run an automated test suite — there is no `tests/` directory and no PHPStan configuration. Verify changes by exercising the affected flows manually (browser, CLI command, app logs).
 
 ## Architecture
 
-### Directory Structure
-```
-src/
-├── Service/         # Business logic services (TicketService, ComprasService, GmailService, etc.)
-├── Controller/      # HTTP request handlers (TicketsController, ComprasController, PqrsController)
-│   ├── Admin/      # Admin panel controllers
-│   ├── Component/  # Reusable controller components
-│   └── Traits/     # Controller trait mixins
-├── Model/
-│   ├── Table/      # ORM table classes for each entity
-│   ├── Entity/     # Data entity classes
-│   └── Behavior/   # ORM behaviors (auditing, timestamps, etc.)
-├── Command/        # Console commands (migrations, import_gmail, etc.)
-├── View/
-│   ├── Cell/       # Reusable view components
-│   └── Helper/     # Custom template helpers
-├── Utility/        # Utility functions and helpers
-└── Console/        # Console application class
+### Layered structure
+The codebase follows a fat-service / thin-controller pattern on top of CakePHP:
 
-config/
-├── Migrations/     # Database migration files (versioned DB schema)
-├── routes.php      # URL routing definitions
-├── app.php         # Application configuration
-├── app_local.php   # Local environment overrides (DB, auth, etc.)
-└── bootstrap.php   # Framework bootstrap and service registration
+- **`src/Controller/`** — HTTP edge. Controllers stay slim and delegate to services. `TicketsController` composes behavior from controller traits in `src/Controller/Traits/` (`TicketSystemControllerTrait`, `TicketSystemListingTrait`, `TicketSystemViewTrait`, `TicketSystemActionsTrait`, `TicketSystemBulkTrait`, `TicketSystemHistoryTrait`, `ServiceInitializerTrait`, `ViewDataNormalizerTrait`). These traits still expose an `$entityType` parameter from when a second module existed; today only `'ticket'` is supported.
+- **`src/Controller/Admin/`** — `Admin` route prefix (Settings, EmailTemplates, Tags). Las credenciales OAuth de Gmail (`client_secret.json`) se pegan como texto en `/admin/settings` y se guardan cifradas en `system_settings.gmail_client_secret_json` — no se sube ningún archivo.
+- **`src/Service/`** — Business logic. Domain service `TicketService`, integrations (`GmailService`, `EmailService`, `WhatsappService`, `N8nService`, `S3Service`), cross-cutting helpers (`SidebarCountsService`, `NumberGenerationService`, `EmailTemplateRenderer`, `SettingsService`, `AuthorizationService`, `ProfileImageService`). Reusable mixin logic lives in `src/Service/Traits/` (e.g. `NotificationDispatcherTrait`, `GenericAttachmentTrait`, `TicketSystemTrait`, `ConfigResolutionTrait`, `SecureHttpTrait`). File storage is abstracted through `src/Service/Storage/FileStorageInterface.php` with an `S3StorageAdapter` implementation.
+- **`src/Model/Table/`, `src/Model/Entity/`** — CakePHP ORM. Tickets data family: `Tickets`/`TicketComments`/`TicketHistory`/`TicketFollowers`/`TicketTags`. Plus `Users`, `Tags`, `Attachments`, `EmailTemplates`, `SystemSettings`.
+- **`src/Model/Behavior/AuditBehavior.php`** — behavior that powers the `ticket_history` table. New auditable models should attach this rather than rolling custom audit logic.
+- **`src/Command/`** — CLI commands: `ImportGmailCommand` (one-shot debug wrapper around `GmailImportService`), `TestEmailCommand`.
+- **`src/Controller/WebhooksController.php`** — sin-sesión, sin-CSRF endpoint para integraciones externas. Hoy solo expone `POST /webhooks/gmail/import` (autenticado por shared secret en header `X-Webhook-Token`, almacenado cifrado en `system_settings.webhook_gmail_import_token`). Disparado por n8n; ver `docs/operations/n8n-gmail-webhook.md`.
+- **`src/View/`** — `AppView` and `AjaxView`; `Cell/` for reusable view components, `Helper/` for templating helpers.
+- **`templates/`** — server-rendered `.php` templates organized per controller.
+- **`config/Migrations/`** — versioned schema; migrations are the source of truth for DB structure.
 
-templates/         # Server-rendered views (Blade-like syntax)
-tests/TestCase/    # PHPUnit test suites (structure mirrors src/)
-webroot/           # Public assets (CSS, JS, images)
-```
+### Routing & request flow
+`config/routes.php` is the canonical map. Highlights:
+- `/` → `TicketsController::index` (named `home`).
+- `/health` → `HealthController::check` (used by Docker healthchecks; verifies Nginx + PHP-FPM + DB).
+- `/admin/*` → `Admin` prefix (defaults to `Settings::index`).
+- All routes use `DashedRoute` and accept `.json` extension for API-style responses.
 
-### Key Services & Integrations
-- **TicketService**: Ticket creation, status transitions, assignment, history tracking
-- **GmailService**: OAuth authentication, email fetching, attachment handling
-- **EmailService**: SMTP sending, template rendering, notification queue
-- **ComprasService**: Purchase order management, approval workflows, status tracking
-- **N8nService**: Webhook integration for n8n workflows (ticket classification, notifications)
-- **WhatsappService**: WhatsApp Business API integration via Evolution API
-- **SlaManagementService**: SLA rule evaluation and breach detection
-- **StatisticsService**: Analytics queries for dashboards
-- **S3Service**: AWS S3 file storage and management
+`src/Application.php` defines the middleware stack: ErrorHandler → AssetMiddleware → Routing → BodyParser → CSRF (httponly) → SecurityHeaders + an inline CSP middleware (allows `cdn.jsdelivr.net`, jQuery CDN, Google Fonts) → Authentication. Auth uses `Authentication.Session` + `Authentication.Form` against `email`/`password` on `Users`; unauthenticated users redirect to `/users/login`.
 
-### Database
-- **MySQL 8.0+** with utf8mb4 encoding
-- Timezone: America/Bogota (UTC-5)
-- Migrations managed via CakePHP Migrations plugin
-- Audit trail: History tables log all changes (changed_by, field_name, old_value, new_value, description, created)
+### Cross-cutting conventions
+- **Audit trail**: ticket mutations write to `ticket_history` via `AuditBehavior` (changed_by, field_name, old_value, new_value, description, created). Don't bypass this when mutating ticket entities.
+- **Notifications**: outbound notifications (email + WhatsApp + n8n webhook) flow through `NotificationDispatcherTrait` + `EmailTemplateRenderer` + `Renderer/NotificationRenderer`. Add new notification types by extending the renderer + templates rather than calling integrations directly from controllers.
+- **Attachments**: shared via `GenericAttachmentTrait` and the `FileStorageInterface` abstraction so the same code path works against local disk and S3 (toggled by `AWS_S3_ENABLED`).
+- **Sidebar counters**: `SidebarCountsService` produces the unread/unassigned counts displayed across the layout — reuse it instead of querying tables ad-hoc from views.
+- **Coding standard**: CakePHP CodeSniffer ruleset (`phpcs.xml`), with `SlevomatCodingStandard.TypeHints.ReturnTypeHint.MissingNativeTypeHint` excluded for `src/Controller/*` (controllers don't need return type hints; services and other classes do). Run `composer cs-fix` then `composer cs-check` before committing.
+- **Strict types**: every PHP file declares `declare(strict_types=1);`.
 
-## Development Commands
+### Configuration & environment
+- Local config in `config/app_local.php` (gitignored; copy from `config/app_local.example.php`).
+- Runtime configuration is environment-driven; `docker-compose.yml` enumerates the variables (`DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `SECURITY_SALT`, `TRUST_PROXY`, `FULL_BASE_URL`, AWS S3 vars).
+- Optional `.env` loading (`config/.env`) is wired through `josegonzalez/dotenv` in `config/bootstrap.php`.
+- Per-tenant runtime settings (Gmail OAuth tokens, integration credentials, email templates, etc.) live in `system_settings` and `email_templates` tables and are managed at `/admin/*` — there is no static config file for them.
 
-### Setup
-```bash
-composer install                           # Install PHP dependencies
-cp config/app_local.example.php config/app_local.php  # Configure database
-php bin/cake.php migrations migrate       # Run database migrations
-```
+### Docker topology
+Single `Dockerfile` builds an image that runs Nginx + PHP-FPM (port 80, mapped to 8082 on host). `docker-compose.yml` defines a single service:
+- **`web`** — HTTP entrypoint. References `mesadeayuda_network` (assumed to be created externally; database connectivity is reached over the host network via `DB_HOST`).
 
-### Running the Application
-```bash
-php bin/cake.php server                   # Start dev server on http://localhost:8765
-docker compose up -d --build              # Start Docker environment
-```
+Gmail import: triggered by n8n via `POST /webhooks/gmail/import` (shared secret in `webhook_gmail_import_token` setting). The CLI command `bin/cake import_gmail` is preserved for manual debug. The previous `worker` service that ran `bin/cake gmail_worker` continuously was removed; recover from git history if needed.
 
-### Testing
-```bash
-composer test                             # Run all tests (PHPUnit)
-phpunit tests/TestCase/                   # Run specific test suite
-phpunit --filter TicketsControllerTest    # Run specific test class
-phpunit --filter testView                 # Run specific test method
-```
-
-### Code Quality
-```bash
-composer check                            # Run all checks: tests + cs-check + stan
-composer cs-check                         # Check CakePHP coding standards (PHPCS)
-composer cs-fix                           # Auto-fix code style violations (PHPCBF)
-composer stan                             # Static type analysis (PHPStan level 5)
-psalm config/psalm.xml                    # Alternative type checking
-```
-
-### Database Maintenance
-```bash
-php bin/cake.php migrations status        # Show migration status
-php bin/cake.php migrations migrate       # Run pending migrations
-php bin/cake.php bake migration           # Generate new migration
-docker compose exec web php bin/cake.php migrations migrate  # Via Docker
-```
-
-### Monitoring & Debugging
-```bash
-docker compose logs -f web                # Stream application logs
-docker compose logs -f worker             # Stream Gmail worker logs
-curl http://localhost:8765/health         # Health check endpoint (JSON)
-docker compose exec web php bin/cake.php cache clear_all  # Clear cache
-```
-
-## Configuration
-
-### Critical Environment Variables
-- **SECURITY_SALT**: 64-character hex string (encryption key). Generate: `php -r "echo bin2hex(random_bytes(32));"`
-- **DB_HOST, DB_USER, DB_PASSWORD, DB_NAME**: Database connection credentials
-- **TRUST_PROXY**: Set to `true` when behind reverse proxy (HTTPS detection)
-- **WORKER_ENABLED**: Enable/disable Gmail background worker
-
-### Integration Configuration
-Stored in `SystemSettings` table (accessed via `/admin/settings`):
-- **Gmail**: OAuth credentials file (client_secret.json), check interval (default 5 min)
-- **n8n**: Webhook endpoint URL for outbound automation
-- **WhatsApp**: Evolution API base URL and auth token
-- **AWS S3**: Bucket name, region, credentials (optional, for file storage)
-
-See `DOCKER.md` for comprehensive environment variable documentation.
-
-## Key CakePHP Concepts Used
-
-### ORM & Models
-- **Table classes** (`src/Model/Table/`): Database queries, relationships, validation
-- **Entity classes** (`src/Model/Entity/`): Object representation with type hints
-- **Behaviors**: DRY pattern for shared model functionality (timestamps, audit trail)
-
-### Controllers & Routing
-- Prefix routing: `/admin/*` routes to `Admin` prefix controllers
-- RESTful actions: `index`, `view`, `add`, `edit`, `delete` follow conventions
-- JSON support: Routes accept `.json` extension for API responses
-- Request/Response objects: Type-hint `\Cake\Http\ServerRequest $request`
-
-### Views & Templates
-- Server-side rendering with `.php` template files in `templates/`
-- Cell pattern: Reusable components rendered via `$this->cell()`
-- Bootstrap 5 for UI framework
-
-### Testing
-- Uses CakePHP test fixtures (`tests/Fixture/`) for test database setup
-- Database gets rolled back after each test
-- Mock external services (Gmail API, WhatsApp, n8n) to avoid outbound calls
-
-## Code Style & Standards
-
-- **PSR-12** extended by CakePHP CodeSniffer ruleset
-- **Return type hints** mandatory on public methods (except Controllers, excluded by phpcs.xml)
-- **Property type declarations** required (strict types)
-- **Strict comparison** (`===`, `!==`) preferred over loose (`==`, `!=`)
-- **Service injection** over static calls (e.g., `$this->TicketService->create()` in controllers)
-
-### PHPStan Configuration
-- Analysis level: **5** (strict)
-- Configured to ignore CakePHP magic properties, dynamic finders, and authentication interface quirks
-- Run before committing: `composer stan`
-
-## Common Development Patterns
-
-### Creating a New Feature
-1. **Add database schema** (Migrations/): `php bin/cake.php bake migration create_table_name`
-2. **Generate Model classes** (Table, Entity): `php bin/cake.php bake model TableName`
-3. **Create Service class** (`src/Service/FeatureService.php`) with business logic
-4. **Build Controller** (`src/Controller/FeatureName.php`) with HTTP request handling
-5. **Write tests first** (`tests/TestCase/Controller/FeatureNameControllerTest.php`)
-6. **Add routes** if new URL patterns needed (`config/routes.php`)
-7. **Create templates** (`templates/FeatureName/`) for views
-8. **Run checks** before pushing: `composer check`
-
-### Database Auditing
-- All tables have `created` (timestamp), `modified` (timestamp)
-- History tables log changes: field_name, old_value, new_value, changed_by (user ID), description, created
-- Use `HistoriesBehavior` on models to auto-log changes (enabled on Tickets, Compras, Pqrs tables)
-
-### External Service Integration
-- Services are injected into controllers via property type declarations
-- Methods should be documented with parameter/return types
-- Use environment variables for API credentials (never hardcode)
-- Wrap API calls in try-catch with meaningful error handling
-- Log errors for debugging: `$this->log($message, LogLevel::ERROR)`
-
-## Docker Deployment
-
-```bash
-docker compose up -d --build
-# Services: web (Nginx + PHP-FPM), worker (Gmail import)
-```
-
-Single Dockerfile runs Nginx + PHP-FPM in one container (port 80). Compatible with Easypanel and single-container platforms. The `worker` container runs `php bin/cake.php gmail_worker` in a continuous loop. It waits for database connectivity on startup (10 attempts, 5s intervals). Gmail OAuth must be configured in admin panel (`/admin/settings`) before emails are imported. Set `WORKER_ENABLED=false` to disable.
-
-## Troubleshooting
-
-### Database Connection Errors
-```bash
-docker compose exec web php bin/cake.php migrations status
-docker compose exec web env | grep DB_
-```
-
-### Worker Not Importing Emails
-1. Verify SECURITY_SALT set for worker service
-2. Check Gmail configured: `/admin/settings`
-3. Inspect logs: `docker compose logs -f worker`
-4. Test manually: `docker compose exec web php bin/cake.php import_gmail --max 5`
-
-### Code Quality Failures
-- **PHPStan**: Usually type hint issues. Check error location and add explicit type casts/assertions
-- **PHPCS**: Run `composer cs-fix` to auto-fix most issues
-- **PHPUnit**: Check test database connectivity and fixtures are properly defined
-
-### Permission Issues in Docker
-```bash
-docker compose exec web chown -R www-data:www-data logs tmp webroot/uploads
-```
-
-## Important Notes
-
-- **HTTPS Required**: Gmail OAuth requires HTTPS in production. Use reverse proxy (Nginx, Traefik, Caddy) with `TRUST_PROXY=true`
-- **Sensitive Data**: Never commit `.env` or `config/app_local.php`. Use `.example` templates
-- **Migrations**: Always run migrations before starting application (`php bin/cake.php migrations migrate`)
-- **File Uploads**: Public uploads go to `webroot/uploads/`, ensure `tmp/` is writable
-- **Gmail Worker**: Enabled by default (`WORKER_ENABLED=true`). Requires Gmail OAuth setup in admin panel (`/admin/settings`). Uses exponential backoff on errors (max 10min)
+The MySQL database is **not** part of `docker-compose.yml` — it's expected to be provided externally (managed instance, host MySQL, or a separately-orchestrated container).

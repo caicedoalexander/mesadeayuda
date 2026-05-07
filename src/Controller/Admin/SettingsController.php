@@ -9,7 +9,10 @@ use App\Service\SettingsService;
 use App\Service\WhatsappService;
 use App\Utility\SettingKeys;
 use App\Utility\ValidationConstants;
+use Cake\Cache\Cache;
+use Cake\Http\Response;
 use Cake\Log\Log;
+use Cake\Routing\Router;
 
 /**
  * Settings Controller
@@ -41,7 +44,7 @@ class SettingsController extends AppController
 
         // Unlock actions with dynamic forms
         $this->FormProtection->setConfig('unlockedActions', [
-            'index', 'gmailAuth', 'testWhatsapp',
+            'index', 'gmailAuth', 'gmailClientSecret', 'testWhatsapp', 'regenerateWebhookToken',
         ]);
 
         $user = $this->Authentication->getIdentity();
@@ -77,7 +80,6 @@ class SettingsController extends AppController
                 SettingKeys::SYSTEM_TITLE, SettingKeys::GMAIL_CHECK_INTERVAL,
                 SettingKeys::WHATSAPP_ENABLED, SettingKeys::WHATSAPP_API_URL, SettingKeys::WHATSAPP_API_KEY,
                 SettingKeys::WHATSAPP_INSTANCE_NAME, SettingKeys::WHATSAPP_TICKETS_NUMBER,
-                SettingKeys::WHATSAPP_COMPRAS_NUMBER, SettingKeys::WHATSAPP_PQRS_NUMBER,
                 SettingKeys::N8N_ENABLED, SettingKeys::N8N_WEBHOOK_URL, SettingKeys::N8N_API_KEY,
                 SettingKeys::N8N_SEND_TAGS_LIST, SettingKeys::N8N_TIMEOUT,
             ];
@@ -92,7 +94,17 @@ class SettingsController extends AppController
             return $this->redirect(['action' => 'index']);
         }
 
-        $this->set('settings', $this->settingsService->loadAll());
+        $allSettings = $this->settingsService->loadAll();
+        $webhookToken = $allSettings[SettingKeys::WEBHOOK_GMAIL_IMPORT_TOKEN] ?? '';
+        $webhookUrl = Router::url(['_name' => 'webhook_gmail_import'], true);
+        $lastWebhookRun = (int)(Cache::read('gmail_import_last_run', 'default') ?? 0);
+
+        $this->set([
+            'settings' => $allSettings,
+            'webhookGmailToken' => $webhookToken,
+            'webhookGmailUrl' => $webhookUrl,
+            'webhookGmailLastRun' => $lastWebhookRun > 0 ? date('Y-m-d H:i:s', $lastWebhookRun) : null,
+        ]);
     }
 
     /**
@@ -106,8 +118,12 @@ class SettingsController extends AppController
         $allSettings = $this->settingsService->loadAll();
 
         $config = [];
-        if (!empty($allSettings[SettingKeys::GMAIL_CLIENT_SECRET_PATH])) {
-            $config['client_secret_path'] = $allSettings[SettingKeys::GMAIL_CLIENT_SECRET_PATH];
+        $clientSecretJson = $allSettings[SettingKeys::GMAIL_CLIENT_SECRET_JSON] ?? '';
+        if (!empty($clientSecretJson)) {
+            $decoded = json_decode($clientSecretJson, true);
+            if (is_array($decoded)) {
+                $config['client_secret'] = $decoded;
+            }
         }
 
         // Set redirect URI for OAuth2 flow (callback URL)
@@ -149,9 +165,6 @@ class SettingsController extends AppController
                     }
                 }
 
-                // Always trigger the worker on successful authentication/re-authentication
-                @file_put_contents(TMP . \App\Command\GmailWorkerCommand::TRIGGER_FILE, (string)time());
-
                 return $this->redirect(['action' => 'index']);
             } catch (\Exception $e) {
                 $this->Flash->error('Error en la autorización: ' . $e->getMessage());
@@ -172,16 +185,8 @@ class SettingsController extends AppController
      */
     public function testGmail()
     {
-        // Load all settings (already decrypted by SettingsService)
-        $allSettings = $this->settingsService->loadAll();
-
-        $config = [
-            'refresh_token' => $allSettings[SettingKeys::GMAIL_REFRESH_TOKEN] ?? '',
-            'client_secret_path' => $allSettings[SettingKeys::GMAIL_CLIENT_SECRET_PATH] ?? '',
-        ];
-
         try {
-            $gmailService = new GmailService($config);
+            $gmailService = new GmailService(GmailService::loadConfigFromDatabase());
             $messages = $gmailService->getMessages('is:unread', 5);
 
             $this->Flash->success('Conexión exitosa. Se encontraron ' . count($messages) . ' mensajes no leídos.');
@@ -189,6 +194,57 @@ class SettingsController extends AppController
         } catch (\Exception $e) {
             $this->Flash->error('Error al conectar con Gmail: ' . $e->getMessage());
             Log::error('Gmail connection test failed: ' . $e->getMessage());
+        }
+
+        return $this->redirect(['action' => 'index']);
+    }
+
+    /**
+     * Save Gmail OAuth client_secret JSON pasted from Google Cloud Console.
+     *
+     * Validates JSON structure (web/installed root with client_id, client_secret,
+     * redirect_uris) and persists encrypted via SettingsService.
+     *
+     * @return \Cake\Http\Response
+     */
+    public function gmailClientSecret(): Response
+    {
+        $this->request->allowMethod(['post']);
+
+        $json = trim((string)$this->request->getData('client_secret_json'));
+
+        if ($json === '') {
+            $this->Flash->error('Pega el contenido del archivo client_secret.json.');
+
+            return $this->redirect(['action' => 'index']);
+        }
+
+        $decoded = json_decode($json, true);
+        if (!is_array($decoded)) {
+            $this->Flash->error('JSON inválido: ' . json_last_error_msg());
+
+            return $this->redirect(['action' => 'index']);
+        }
+
+        $root = $decoded['web'] ?? $decoded['installed'] ?? null;
+        $required = ['client_id', 'client_secret', 'redirect_uris'];
+        if (!is_array($root) || array_diff($required, array_keys($root))) {
+            $this->Flash->error(
+                'El JSON debe contener client_id, client_secret y redirect_uris bajo "web" o "installed".'
+            );
+
+            return $this->redirect(['action' => 'index']);
+        }
+
+        $saved = $this->settingsService->saveSetting(SettingKeys::GMAIL_CLIENT_SECRET_JSON, $json);
+
+        if ($saved) {
+            $this->Flash->success('Configuración de Gmail guardada. Ahora autoriza el acceso OAuth.');
+            Log::info('Gmail client_secret updated', [
+                'user' => $this->Authentication->getIdentity()?->get('email'),
+            ]);
+        } else {
+            $this->Flash->error('No se pudo guardar la configuración de Gmail.');
         }
 
         return $this->redirect(['action' => 'index']);
@@ -221,7 +277,6 @@ class SettingsController extends AppController
         $usersTable = $this->fetchTable('Users');
 
         $users = $this->paginate($usersTable->find()
-            ->contain(['Organizations'])
             ->where(['Users.role IN' => ValidationConstants::STAFF_ROLES])
             ->orderBy(['Users.created' => 'DESC']));
 
@@ -237,7 +292,7 @@ class SettingsController extends AppController
     public function editUser($id = null)
     {
         $usersTable = $this->fetchTable('Users');
-        $user = $usersTable->get($id, contain: ['Organizations']);
+        $user = $usersTable->get($id);
 
         if ($this->request->is(['patch', 'post', 'put'])) {
             $data = $this->request->getData();
@@ -251,8 +306,7 @@ class SettingsController extends AppController
                     $data['profile_image'] = $result['filename'];
                 } else {
                     $this->Flash->error($result['message']);
-                    $organizations = $this->fetchTable('Organizations')->find('list')->toArray();
-                    $this->set(compact('user', 'organizations'));
+                    $this->set(compact('user'));
                     return;
                 }
             }
@@ -261,8 +315,7 @@ class SettingsController extends AppController
             if (!empty($data['new_password'])) {
                 if ($data['new_password'] !== $data['confirm_password']) {
                     $this->Flash->error('Las contraseñas no coinciden.');
-                    $organizations = $this->fetchTable('Organizations')->find('list')->toArray();
-                    $this->set(compact('user', 'organizations'));
+                    $this->set(compact('user'));
                     return;
                 }
                 // Set password field to new_password value
@@ -287,8 +340,7 @@ class SettingsController extends AppController
             }
         }
 
-        $organizations = $this->fetchTable('Organizations')->find('list')->toArray();
-        $this->set(compact('user', 'organizations'));
+        $this->set(compact('user'));
     }
 
     public function tags()
@@ -342,8 +394,7 @@ class SettingsController extends AppController
             }
         }
 
-        $organizations = $this->fetchTable('Organizations')->find('list')->toArray();
-        $this->set(compact('user', 'organizations'));
+        $this->set(compact('user'));
     }
 
     /**
@@ -418,6 +469,27 @@ class SettingsController extends AppController
     }
 
     /**
+     * Regenera el shared secret del webhook de Gmail.
+     *
+     * @return \Cake\Http\Response
+     */
+    public function regenerateWebhookToken(): Response
+    {
+        $this->request->allowMethod(['POST']);
+
+        $token = bin2hex(random_bytes(32));
+        $saved = $this->settingsService->saveSetting(SettingKeys::WEBHOOK_GMAIL_IMPORT_TOKEN, $token);
+
+        if ($saved) {
+            $this->Flash->success('Token de webhook regenerado. Actualiza la credencial en n8n.');
+        } else {
+            $this->Flash->error('No se pudo regenerar el token.');
+        }
+
+        return $this->redirect(['action' => 'index']);
+    }
+
+    /**
      * Test n8n connection
      *
      * @return \Cake\Http\Response|null
@@ -437,24 +509,5 @@ class SettingsController extends AppController
         $this->viewBuilder()->setOption('serialize', ['success', 'message']);
 
         return null;
-    }
-    public function organizations()
-    {
-        return $this->redirect(['controller' => 'Organizations', 'action' => 'index', 'prefix' => 'Admin']);
-    }
-
-    public function addOrganization()
-    {
-        return $this->redirect(['controller' => 'Organizations', 'action' => 'add', 'prefix' => 'Admin']);
-    }
-
-    public function editOrganization($id = null)
-    {
-        return $this->redirect(['controller' => 'Organizations', 'action' => 'edit', $id, 'prefix' => 'Admin']);
-    }
-
-    public function deleteOrganization($id = null)
-    {
-        return $this->redirect(['controller' => 'Organizations', 'action' => 'delete', $id, 'prefix' => 'Admin']);
     }
 }

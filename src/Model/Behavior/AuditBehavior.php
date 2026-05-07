@@ -8,12 +8,10 @@ use Cake\ORM\Behavior;
 /**
  * AuditBehavior
  *
- * Provides a generic logChange() method for history tables.
- * Eliminates duplicated logChange() across TicketHistoryTable,
- * ComprasHistoryTable, and PqrsHistoryTable.
+ * Provides a generic logChange() method for TicketHistoryTable.
  *
  * Configuration:
- * - 'foreignKey': The FK field name (e.g., 'ticket_id', 'compra_id', 'pqrs_id')
+ * - 'foreignKey': The FK field name (e.g., 'ticket_id')
  *
  * Usage in Table::initialize():
  *   $this->addBehavior('Audit', ['foreignKey' => 'ticket_id']);
@@ -32,7 +30,7 @@ class AuditBehavior extends Behavior
     /**
      * Log a change to the history table
      *
-     * @param int $entityId Entity ID (ticket, compra, or pqrs)
+     * @param int $entityId Entity ID (ticket)
      * @param string $fieldName Field that changed
      * @param string|null $oldValue Old value
      * @param string|null $newValue New value

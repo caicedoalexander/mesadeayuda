@@ -5,8 +5,8 @@ echo "==> Ensuring directory permissions..."
 chown -R www-data:www-data tmp logs webroot/uploads config/google 2>/dev/null || true
 chmod -R 775 tmp logs webroot/uploads config/google 2>/dev/null || true
 
-# If a command is passed (e.g. from docker-compose `command:`), run it directly
-# This allows the worker container to run `php bin/cake.php gmail_worker`
+# If a command is passed (e.g. from docker-compose `command:`), run it directly.
+# Used historically by the worker container; the web service hits the default branch below.
 if [ "$#" -gt 0 ]; then
     echo "==> Running command: $@"
     exec "$@"

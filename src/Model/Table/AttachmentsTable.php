@@ -42,7 +42,7 @@ class AttachmentsTable extends Table
     {
         parent::initialize($config);
 
-        $this->setTable('attachments');
+        $this->setTable('ticket_attachments');
         $this->setDisplayField('filename');
         $this->setPrimaryKey('id');
 

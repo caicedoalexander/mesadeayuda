@@ -211,8 +211,7 @@ $this->assign('title', 'Usuarios');
 }
 
 .role-badge.agent,
-.role-badge.servicio_cliente,
-.role-badge.compras {
+.role-badge.servicio_cliente {
     background: linear-gradient(135deg, #E6F7F0 0%, #CCF0E1 100%);
     color: var(--admin-green);
     border-color: var(--admin-green);
@@ -424,7 +423,6 @@ $this->assign('title', 'Usuarios');
                     <th>Usuario</th>
                     <th>Email</th>
                     <th>Rol</th>
-                    <th>Organización</th>
                     <th>Estado</th>
                     <th>Registro</th>
                     <th>Acciones</th>
@@ -447,7 +445,6 @@ $this->assign('title', 'Usuarios');
                                     'admin' => 'Administrador',
                                     'agent' => 'Agente',
                                     'servicio_cliente' => 'Servicio al Cliente',
-                                    'compras' => 'Compras',
                                     'requester' => 'Solicitante'
                                 ];
                                 $roleKey = $user->role;
@@ -456,9 +453,6 @@ $this->assign('title', 'Usuarios');
                                 <span class="role-badge <?= h($roleKey) ?>">
                                     <?= h($roleName) ?>
                                 </span>
-                            </td>
-                            <td>
-                                <?= $user->organization ? h($user->organization->name) : '<em class="text-muted">Sin organización</em>' ?>
                             </td>
                             <td>
                                 <span class="status-badge <?= $user->is_active ? 'active' : 'inactive' ?>">

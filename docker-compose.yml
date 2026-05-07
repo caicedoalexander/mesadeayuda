@@ -7,7 +7,7 @@ services:
     container_name: mesadeayuda_web
     restart: always
     ports:
-      - "${APP_PORT:-80}:80"
+      - 8082:80
     volumes:
       - ./logs:/var/www/html/logs
       - ./tmp:/var/www/html/tmp
@@ -36,45 +36,7 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Gmail Import Worker
-  worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: mesadeayuda_worker
-    restart: always
-    command: php bin/cake.php gmail_worker
-    volumes:
-      - ./logs:/var/www/html/logs
-      - ./tmp:/var/www/html/tmp
-      - ./webroot/uploads:/var/www/html/webroot/uploads
-    environment:
-      - APP_ENV=${APP_ENV:-production}
-      - DEBUG=${DEBUG:-false}
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT:-3306}
-      - DB_DATABASE=${DB_DATABASE:-mesadeayuda}
-      - DB_USERNAME=${DB_USERNAME:-root}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - SECURITY_SALT=${SECURITY_SALT}
-      - TRUST_PROXY=${TRUST_PROXY:-false}
-      - FULL_BASE_URL=${FULL_BASE_URL:-}
-      - WORKER_ENABLED=${WORKER_ENABLED:-true}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
-      - AWS_REGION=${AWS_REGION:-}
-      - AWS_S3_BUCKET=${AWS_S3_BUCKET:-}
-      - AWS_S3_ENABLED=${AWS_S3_ENABLED:-false}
-    networks:
-      - mesadeayuda_network
-    depends_on:
-      - web
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-networks:
-  mesadeayuda_network:
-    driver: bridge
+# Gmail import is now triggered by n8n via POST /webhooks/gmail/import
+# (see docs/operations/n8n-gmail-webhook.md). The continuous `worker`
+# service that ran `bin/cake gmail_worker` was removed; if you need to
+# restore it, recover this block from git history.

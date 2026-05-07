@@ -20,17 +20,14 @@ use Cake\ORM\Entity;
  * @property string $priority
  * @property int $requester_id
  * @property int|null $assignee_id
- * @property int|null $organization_id
  * @property string $channel
  * @property string|null $source_email
  * @property \Cake\I18n\DateTime $created
  * @property \Cake\I18n\DateTime $modified
  * @property \Cake\I18n\DateTime|null $resolved_at
- * @property \Cake\I18n\DateTime|null $first_response_at
  *
  * @property \App\Model\Entity\User $requester
  * @property \App\Model\Entity\User $assignee
- * @property \App\Model\Entity\Organization $organization
  * @property \App\Model\Entity\Attachment[] $attachments
  * @property \App\Model\Entity\TicketComment[] $ticket_comments
  * @property \App\Model\Entity\TicketFollower[] $ticket_followers
@@ -61,16 +58,13 @@ class Ticket extends Entity
         'priority' => true,
         'requester_id' => false,
         'assignee_id' => true,
-        'organization_id' => true,
         'channel' => false,
         'source_email' => false,
         'created' => false,
         'modified' => false,
         'resolved_at' => false,
-        'first_response_at' => false,
         'requester' => false,
         'assignee' => false,
-        'organization' => false,
         'attachments' => false,
         'ticket_comments' => false,
         'ticket_followers' => false,

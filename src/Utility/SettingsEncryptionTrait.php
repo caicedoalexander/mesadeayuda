@@ -24,8 +24,10 @@ trait SettingsEncryptionTrait
      */
     private array $encryptedSettings = [
         SettingKeys::GMAIL_REFRESH_TOKEN,
+        SettingKeys::GMAIL_CLIENT_SECRET_JSON,
         SettingKeys::WHATSAPP_API_KEY,
         SettingKeys::N8N_API_KEY,
+        SettingKeys::WEBHOOK_GMAIL_IMPORT_TOKEN,
     ];
 
     /**

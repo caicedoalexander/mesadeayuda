@@ -70,24 +70,6 @@ class NotificationRenderer
     }
 
     /**
-     * Get Type Label (for PQRS)
-     *
-     * @param string $type Type key
-     * @return string Human readable label
-     */
-    public function getTypeLabel(string $type): string
-    {
-        $labels = [
-            'peticion' => 'Petición',
-            'queja' => 'Queja',
-            'reclamo' => 'Reclamo',
-            'sugerencia' => 'Sugerencia',
-        ];
-
-        return $labels[$type] ?? ucfirst($type);
-    }
-
-    /**
      * Render attachments list as HTML
      *
      * @param array $attachments Array of attachment entities
@@ -161,69 +143,4 @@ class NotificationRenderer
             "— _Mesa de Ayuda_";
     }
 
-    /**
-     * Render WhatsApp message for new PQRS
-     *
-     * @param \App\Model\Entity\Pqr $pqrs PQRS entity
-     * @return string Message text
-     */
-    public function renderWhatsappNewPqrs(\App\Model\Entity\Pqr $pqrs): string
-    {
-        $typeLabel = $this->getTypeLabel($pqrs->type);
-
-        $contact = "*Solicitante:* {$pqrs->requester_name}\n" .
-            "*Correo:* {$pqrs->requester_email}";
-        if (!empty($pqrs->requester_phone)) {
-            $contact .= "\n*Teléfono:* {$pqrs->requester_phone}";
-        }
-        if (!empty($pqrs->requester_city)) {
-            $contact .= "\n*Ciudad:* {$pqrs->requester_city}";
-        }
-
-        return "━━━━━━━━━━━━━━━━━━━━\n" .
-            "*NUEVA PQRS REGISTRADA*\n" .
-            "━━━━━━━━━━━━━━━━━━━━\n\n" .
-            "*{$pqrs->pqrs_number}*\n" .
-            "{$pqrs->subject}\n\n" .
-            "*Tipo:* {$typeLabel}\n" .
-            $contact . "\n" .
-            "*Fecha:* {$this->formatDate($pqrs->created)}\n\n" .
-            "— _Mesa de Ayuda_";
-    }
-
-    /**
-     * Render WhatsApp message for new Compra
-     *
-     * @param \App\Model\Entity\Compra $compra Compra entity
-     * @return string Message text
-     */
-    public function renderWhatsappNewCompra(\App\Model\Entity\Compra $compra): string
-    {
-        $priorityLabels = ['baja' => 'Baja', 'media' => 'Media', 'alta' => 'Alta', 'urgente' => 'Urgente'];
-        $priorityLabel = $priorityLabels[$compra->priority] ?? ucfirst($compra->priority);
-
-        $slaLine = '';
-        $slaDue = $compra->resolution_sla_due ?? $compra->sla_due_date ?? null;
-        if ($slaDue) {
-            $slaLine = "*Fecha límite SLA:* {$this->formatDate($slaDue)}\n";
-        }
-
-        $origin = '';
-        if (!empty($compra->original_ticket_number)) {
-            $origin = "*Origen:* Ticket {$compra->original_ticket_number}\n";
-        }
-
-        return "━━━━━━━━━━━━━━━━━━━━\n" .
-            "*NUEVA SOLICITUD DE COMPRA*\n" .
-            "━━━━━━━━━━━━━━━━━━━━\n\n" .
-            "*{$compra->compra_number}*\n" .
-            "{$compra->subject}\n\n" .
-            "*Solicitante:* {$compra->requester->name}\n" .
-            "*Correo:* {$compra->requester->email}\n" .
-            "*Prioridad:* {$priorityLabel}\n" .
-            $origin .
-            $slaLine .
-            "*Fecha:* {$this->formatDate($compra->created)}\n\n" .
-            "— _Mesa de Ayuda_";
-    }
 }

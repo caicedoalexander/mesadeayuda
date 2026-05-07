@@ -13,14 +13,12 @@ final class ValidationConstants
     // ── Roles ───────────────────────────────────────────────────────────
     public const ROLE_ADMIN = 'admin';
     public const ROLE_AGENT = 'agent';
-    public const ROLE_COMPRAS = 'compras';
     public const ROLE_SERVICIO_CLIENTE = 'servicio_cliente';
     public const ROLE_REQUESTER = 'requester';
 
     public const ROLES = [
         self::ROLE_ADMIN,
         self::ROLE_AGENT,
-        self::ROLE_COMPRAS,
         self::ROLE_SERVICIO_CLIENTE,
         self::ROLE_REQUESTER,
     ];
@@ -31,7 +29,6 @@ final class ValidationConstants
     public const STAFF_ROLES = [
         self::ROLE_ADMIN,
         self::ROLE_AGENT,
-        self::ROLE_COMPRAS,
         self::ROLE_SERVICIO_CLIENTE,
     ];
 
@@ -53,44 +50,6 @@ final class ValidationConstants
         self::STATUS_PENDIENTE,
         self::STATUS_RESUELTO,
         self::STATUS_CERRADO,
-    ];
-
-    // ── Compra statuses ─────────────────────────────────────────────────
-    public const STATUS_EN_REVISION = 'en_revision';
-    public const STATUS_APROBADO = 'aprobado';
-    public const STATUS_EN_PROCESO = 'en_proceso';
-    public const STATUS_COMPLETADO = 'completado';
-    public const STATUS_RECHAZADO = 'rechazado';
-
-    public const COMPRA_STATUSES = [
-        self::STATUS_NUEVO,
-        self::STATUS_EN_REVISION,
-        self::STATUS_APROBADO,
-        self::STATUS_EN_PROCESO,
-        self::STATUS_COMPLETADO,
-        self::STATUS_RECHAZADO,
-    ];
-
-    // ── PQRS statuses ───────────────────────────────────────────────────
-    public const PQRS_STATUSES = [
-        self::STATUS_NUEVO,
-        self::STATUS_EN_REVISION,
-        self::STATUS_EN_PROCESO,
-        self::STATUS_RESUELTO,
-        self::STATUS_CERRADO,
-    ];
-
-    // ── PQRS types ──────────────────────────────────────────────────────
-    public const PQRS_TYPE_PETICION = 'peticion';
-    public const PQRS_TYPE_QUEJA = 'queja';
-    public const PQRS_TYPE_RECLAMO = 'reclamo';
-    public const PQRS_TYPE_SUGERENCIA = 'sugerencia';
-
-    public const PQRS_TYPES = [
-        self::PQRS_TYPE_PETICION,
-        self::PQRS_TYPE_QUEJA,
-        self::PQRS_TYPE_RECLAMO,
-        self::PQRS_TYPE_SUGERENCIA,
     ];
 
     // ── Comment types ───────────────────────────────────────────────────

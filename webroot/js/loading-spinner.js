@@ -7,7 +7,7 @@
  * LoadingSpinner.hide();
  *
  * Con formularios:
- * LoadingSpinner.showOnSubmit('#myForm', 'Enviando PQRS...');
+ * LoadingSpinner.showOnSubmit('#myForm', 'Enviando solicitud...');
  */
 
 (function(window) {

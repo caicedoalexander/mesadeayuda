@@ -129,20 +129,12 @@ $this->assign('title', 'Iniciar Sesión');
             </div>
             <div class="text-center mt-5">
                 <small class="fw-light d-flex flex-column gap-0" style="font-size: 13px;">
-                    &copy; <?= date('Y') ?> Casi todos los derechos reservados.
+                    &copy; <?= date('Y') ?> Compañía Operadora Portuaria Cafetera S.A.<br> Todos los derechos reservados.
                 </small>
             </div>
         </div>
     </section>
 
-    <!-- Bootstrap 5 JS Bundle (includes Popper) -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-    <!-- Flash Messages Auto-Hide -->
-    <?= $this->Html->script('flash-messages') ?>
-
-    <!-- Loading Spinner -->
-    <?= $this->Html->script('loading-spinner') ?>
     <script>
         // Mostrar spinner al enviar el formulario de login
         document.querySelector('form').addEventListener('submit', function(e) {

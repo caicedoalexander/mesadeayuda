@@ -394,12 +394,6 @@ $this->assign('title', 'Añadir Usuario');
                         ]) ?>
                     </div>
 
-                    <div class="form-group">
-                        <?= $this->Form->label('organization_id', 'Organización') ?>
-                        <?= $this->Form->select('organization_id', $organizations, [
-                            'empty' => '-- Seleccionar --'
-                        ]) ?>
-                    </div>
                 </div>
             </div>
 
@@ -419,7 +413,6 @@ $this->assign('title', 'Añadir Usuario');
                             'admin' => 'Administrador',
                             'agent' => 'Agente',
                             'servicio_cliente' => 'Servicio al Cliente',
-                            'compras' => 'Compras',
                             'requester' => 'Solicitante'
                         ], [
                             'required' => true

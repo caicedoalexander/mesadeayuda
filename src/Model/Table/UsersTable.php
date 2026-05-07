@@ -12,7 +12,6 @@ use Cake\Validation\Validator;
 /**
  * Users Model
  *
- * @property \App\Model\Table\OrganizationsTable&\Cake\ORM\Association\BelongsTo $Organizations
  * @property \App\Model\Table\TicketCommentsTable&\Cake\ORM\Association\HasMany $TicketComments
  * @property \App\Model\Table\TicketFollowersTable&\Cake\ORM\Association\HasMany $TicketFollowers
  *
@@ -50,9 +49,6 @@ class UsersTable extends Table
 
         $this->addBehavior('Timestamp');
 
-        $this->belongsTo('Organizations', [
-            'foreignKey' => 'organization_id',
-        ]);
         $this->hasMany('TicketComments', [
             'foreignKey' => 'user_id',
         ]);
@@ -117,10 +113,6 @@ class UsersTable extends Table
             ->inList('role', ValidationConstants::ROLES, 'Rol no válido');
 
         $validator
-            ->integer('organization_id')
-            ->allowEmptyString('organization_id');
-
-        $validator
             ->boolean('is_active')
             ->notEmptyString('is_active');
 
@@ -142,7 +134,6 @@ class UsersTable extends Table
     public function buildRules(RulesChecker $rules): RulesChecker
     {
         $rules->add($rules->isUnique(['email']), ['errorField' => 'email']);
-        $rules->add($rules->existsIn(['organization_id'], 'Organizations'), ['errorField' => 'organization_id']);
 
         return $rules;
     }

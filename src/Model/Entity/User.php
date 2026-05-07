@@ -17,12 +17,10 @@ use Cake\ORM\Entity;
  * @property string $name
  * @property string|null $phone
  * @property string $role
- * @property int|null $organization_id
  * @property bool $is_active
  * @property string|null $profile_image
  * @property \Cake\I18n\DateTime $created
  *
- * @property \App\Model\Entity\Organization $organization
  * @property \App\Model\Entity\TicketComment[] $ticket_comments
  * @property \App\Model\Entity\TicketFollower[] $ticket_followers
  */
@@ -44,11 +42,9 @@ class User extends Entity
         'last_name' => true,
         'phone' => true,
         'role' => false,
-        'organization_id' => true,
         'is_active' => false,
         'profile_image' => true,
         'created' => false,
-        'organization' => true,
         'ticket_comments' => true,
         'ticket_followers' => true,
     ];

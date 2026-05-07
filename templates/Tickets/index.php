@@ -49,16 +49,14 @@ $userId = $user ? $user->get('id') : null;
 
     <div class="d-flex align-items-center mb-1 gap-2">
         <!-- Search Bar -->
-        <?= $this->element('shared/search_bar', [
+        <?= $this->element('tickets/search_bar', [
             'searchValue' => $filters['search'] ?? '',
             'placeholder' => 'Buscar tickets...',
-            'entityType' => 'ticket',
             'view' => $view
         ]) ?>
 
         <!-- Bulk Actions Bar -->
-        <?= $this->element('shared/bulk_actions_bar', [
-            'entityType' => 'ticket',
+        <?= $this->element('tickets/bulk_actions_bar', [
             'showTagAction' => true
         ]) ?>
     </div>
@@ -100,7 +98,7 @@ $userId = $user ? $user->get('id') : null;
                                 </td>
 
                                 <td class="py-0 align-middle " style="width: 100px; font-size: 14px;">
-                                    <?= $this->Status->statusBadge($ticket->status, 'ticket') ?>
+                                    <?= $this->Status->statusBadge($ticket->status) ?>
                                 </td>
 
                                 <td class="py-0 fw-light align-middle text-truncate"
@@ -166,8 +164,7 @@ $userId = $user ? $user->get('id') : null;
 </div>
 
 <!-- Modales para acciones rápidas -->
-<?= $this->element('shared/bulk_modals', [
-    'entityType' => 'ticket',
+<?= $this->element('tickets/bulk_modals', [
     'agents' => $agents,
     'tags' => $tags,
     'showTagModal' => true

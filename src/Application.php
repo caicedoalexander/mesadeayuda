@@ -90,9 +90,11 @@ class Application extends BaseApplication implements AuthenticationServiceProvid
 
             // Cross Site Request Forgery (CSRF) Protection Middleware
             // https://book.cakephp.org/5/en/security/csrf.html#cross-site-request-forgery-csrf-middleware
-            ->add(new CsrfProtectionMiddleware([
+            ->add((new CsrfProtectionMiddleware([
                 'httponly' => true,
-            ]))
+            ]))->skipCheckCallback(static function ($request): bool {
+                return str_starts_with($request->getUri()->getPath(), '/webhooks/');
+            }))
 
             // Security headers middleware
             ->add((new \Cake\Http\Middleware\SecurityHeadersMiddleware())
@@ -141,22 +143,20 @@ class Application extends BaseApplication implements AuthenticationServiceProvid
             'queryParam' => 'redirect',
         ]);
 
-        // Load identifiers - this identifies users from the provided credentials
-        $authenticationService->loadIdentifier('Authentication.Password', [
-            'fields' => [
-                'username' => 'email',
-                'password' => 'password',
-            ],
-        ]);
+        $fields = [
+            'username' => 'email',
+            'password' => 'password',
+        ];
 
-        // Load the authenticators - this handles the login process
         $authenticationService->loadAuthenticator('Authentication.Session');
         $authenticationService->loadAuthenticator('Authentication.Form', [
-            'fields' => [
-                'username' => 'email',
-                'password' => 'password',
-            ],
+            'fields' => $fields,
             'loginUrl' => '/users/login',
+            'identifier' => [
+                'Authentication.Password' => [
+                    'fields' => $fields,
+                ],
+            ],
         ]);
 
         return $authenticationService;

@@ -3,7 +3,6 @@
  * @var \App\View\AppView $this
  * @var array $settings
  * @var \App\Model\Entity\User $user
- * @var array $organizations
  */
 $this->assign('title', 'Editar usuario');
 ?>
@@ -11,7 +10,6 @@ $this->assign('title', 'Editar usuario');
 <style>
 /**
  * Edit User Form - Modern Minimalist Design
- * Matches PQRS form and statistics section aesthetic
  */
 
 :root {
@@ -556,14 +554,6 @@ small.form-text {
                     ]) ?>
                 </div>
 
-                <div class="form-group">
-                    <label for="organization-id" class="form-label">Organización</label>
-                    <?= $this->Form->select('organization_id', $organizations, [
-                        'class' => 'form-select',
-                        'id' => 'organization-id',
-                        'empty' => '-- Sin organización --'
-                    ]) ?>
-                </div>
             </div>
         </div>
 
@@ -583,7 +573,6 @@ small.form-text {
                         'admin' => 'Administrador',
                         'agent' => 'Agente',
                         'servicio_cliente' => 'Servicio al Cliente',
-                        'compras' => 'Compras',
                         'requester' => 'Solicitante'
                     ], [
                         'value' => h($user->role),

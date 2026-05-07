@@ -7,7 +7,7 @@ namespace App\Model\Entity\Trait;
  * EmailRecipientsTrait
  *
  * Provides JSON encode/decode for email_to and email_cc fields.
- * Used by Ticket and Compra entities that share identical logic.
+ * Used by Ticket entity that share identical logic.
  */
 trait EmailRecipientsTrait
 {

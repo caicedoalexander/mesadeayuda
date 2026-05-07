@@ -13,8 +13,6 @@ use Cake\ORM\Locator\LocatorAwareTrait;
  *
  * Handles WhatsApp notifications via Evolution API:
  * - New ticket notifications (to tickets team)
- * - New PQRS notifications (to customer service team)
- * - New compra notifications (to purchasing team)
  */
 class WhatsappService
 {
@@ -107,7 +105,6 @@ class WhatsappService
         return $this->resolveSettingsBatch(SettingKeys::WHATSAPP_ENABLED, 'whatsapp_settings', [
             SettingKeys::WHATSAPP_ENABLED, SettingKeys::WHATSAPP_API_URL, SettingKeys::WHATSAPP_API_KEY,
             SettingKeys::WHATSAPP_INSTANCE_NAME, SettingKeys::WHATSAPP_TICKETS_NUMBER,
-            SettingKeys::WHATSAPP_PQRS_NUMBER, SettingKeys::WHATSAPP_COMPRAS_NUMBER,
         ]);
     }
 
@@ -168,43 +165,27 @@ class WhatsappService
     }
 
     /**
-     * Send new entity notification via WhatsApp (generic)
+     * Send new ticket notification via WhatsApp.
      *
-     * Loads entity with required associations and sends WhatsApp message
-     * to the configured number for the entity type.
-     *
-     * @param string $entityType 'ticket', 'pqrs', 'compra'
-     * @param \Cake\Datasource\EntityInterface $entity Entity instance
+     * @param \Cake\Datasource\EntityInterface $entity Ticket entity
      * @return bool Success status
      */
-    public function sendNewEntityNotification(string $entityType, \Cake\Datasource\EntityInterface $entity): bool
+    public function sendNewEntityNotification(\Cake\Datasource\EntityInterface $entity): bool
     {
         try {
-            $configMap = [
-                'ticket' => ['numberKey' => SettingKeys::WHATSAPP_TICKETS_NUMBER, 'renderer' => 'renderWhatsappNewTicket', 'table' => 'Tickets', 'contain' => ['Requesters']],
-                'pqrs' => ['numberKey' => SettingKeys::WHATSAPP_PQRS_NUMBER, 'renderer' => 'renderWhatsappNewPqrs', 'table' => null, 'contain' => []],
-                'compra' => ['numberKey' => SettingKeys::WHATSAPP_COMPRAS_NUMBER, 'renderer' => 'renderWhatsappNewCompra', 'table' => 'Compras', 'contain' => ['Requesters', 'Assignees']],
-            ];
-
-            $map = $configMap[$entityType];
             $config = $this->getConfig();
 
-            if (!$config || empty($config[$map['numberKey']])) {
-                Log::info("WhatsApp {$entityType} number not configured, skipping notification");
+            if (!$config || empty($config[SettingKeys::WHATSAPP_TICKETS_NUMBER])) {
+                Log::info('WhatsApp tickets number not configured, skipping notification');
                 return false;
             }
 
-            // Load entity with required associations if needed
-            if ($map['table'] !== null) {
-                $table = $this->fetchTable($map['table']);
-                $entity = $table->get($entity->id, contain: $map['contain']);
-            }
+            $entity = $this->fetchTable('Tickets')->get($entity->id, contain: ['Requesters']);
+            $message = $this->renderer->renderWhatsappNewTicket($entity);
 
-            $message = $this->renderer->{$map['renderer']}($entity);
-
-            return $this->sendMessage($config[$map['numberKey']], $message);
+            return $this->sendMessage($config[SettingKeys::WHATSAPP_TICKETS_NUMBER], $message);
         } catch (\Exception $e) {
-            Log::error("Failed to send WhatsApp {$entityType} notification", [
+            Log::error('Failed to send WhatsApp ticket notification', [
                 'entity_id' => $entity->id,
                 'error' => $e->getMessage(),
             ]);
@@ -213,12 +194,11 @@ class WhatsappService
     }
 
     /**
-     * Test WhatsApp connection
+     * Test WhatsApp connection by sending a test message to the tickets number.
      *
-     * @param string $module Module to test ('tickets', 'pqrs', or 'compras')
      * @return array Test result with status and message
      */
-    public function testConnection(string $module = 'tickets'): array
+    public function testConnection(): array
     {
         $config = $this->getConfig();
 
@@ -229,28 +209,19 @@ class WhatsappService
             ];
         }
 
-        // Get the appropriate number based on module
-        $numberKey = "whatsapp_{$module}_number";
-        if (empty($config[$numberKey])) {
+        if (empty($config[SettingKeys::WHATSAPP_TICKETS_NUMBER])) {
             return [
                 'success' => false,
-                'message' => "No se ha configurado un número de WhatsApp para {$module}",
+                'message' => 'No se ha configurado un número de WhatsApp para Tickets',
             ];
         }
 
-        $moduleLabels = [
-            'tickets' => 'Tickets',
-            'pqrs' => 'PQRS',
-            'compras' => 'Compras',
-        ];
-        $moduleLabel = $moduleLabels[$module] ?? $module;
-
         $testMessage = "✅ Prueba de conexión - Evolution API\n\n" .
-            "Este es un mensaje de prueba del módulo de {$moduleLabel}.\n" .
+            "Este es un mensaje de prueba del módulo de Tickets.\n" .
             "Si recibes este mensaje, la integración está funcionando correctamente.\n\n" .
-            "_" . ValidationConstants::DEFAULT_SYSTEM_TITLE . " - {$moduleLabel}_";
+            '_' . ValidationConstants::DEFAULT_SYSTEM_TITLE . " - Tickets_";
 
-        $result = $this->sendMessage($config[$numberKey], $testMessage);
+        $result = $this->sendMessage($config[SettingKeys::WHATSAPP_TICKETS_NUMBER], $testMessage);
 
         return [
             'success' => $result,
