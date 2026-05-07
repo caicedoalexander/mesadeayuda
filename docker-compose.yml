@@ -13,7 +13,6 @@ services:
       - ./tmp:/var/www/html/tmp
       - ./webroot/uploads:/var/www/html/webroot/uploads
     environment:
-      - APP_ENV=${APP_ENV:-production}
       - DEBUG=${DEBUG:-false}
       - DB_HOST=${DB_HOST}
       - DB_PORT=${DB_PORT:-3306}
@@ -22,12 +21,6 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - SECURITY_SALT=${SECURITY_SALT}
       - TRUST_PROXY=${TRUST_PROXY:-true}
-      - FULL_BASE_URL=${FULL_BASE_URL:-}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
-      - AWS_REGION=${AWS_REGION:-}
-      - AWS_S3_BUCKET=${AWS_S3_BUCKET:-}
-      - AWS_S3_ENABLED=${AWS_S3_ENABLED:-false}
     networks:
       - mesadeayuda_network
     logging:
@@ -35,8 +28,3 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-
-# Gmail import is now triggered by n8n via POST /webhooks/gmail/import
-# (see docs/operations/n8n-gmail-webhook.md). The continuous `worker`
-# service that ran `bin/cake gmail_worker` was removed; if you need to
-# restore it, recover this block from git history.

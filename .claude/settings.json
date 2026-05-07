@@ -1,5 +1,8 @@
 {
   "enabledPlugins": {
-    "acc@awesome-claude-code": true
+    "acc@awesome-claude-code": true,
+    "frontend-design@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": true
   }
 }
