@@ -6,7 +6,6 @@
     "homepage": "https://cakephp.org",
     "require": {
         "php": ">=8.1",
-        "aws/aws-sdk-php": "^3.369",
         "cakephp/authentication": "^3.0",
         "cakephp/cakephp": "5.2.*",
         "cakephp/migrations": "^4.0.0",
