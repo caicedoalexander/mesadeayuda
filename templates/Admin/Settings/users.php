@@ -459,7 +459,7 @@ $this->assign('title', 'Usuarios');
                                     <?= $user->is_active ? 'Activo' : 'Inactivo' ?>
                                 </span>
                             </td>
-                            <td><?= $user->created->format('d/m/Y') ?></td>
+                            <td><?= $user->created ? $user->created->format('d/m/Y') : '—' ?></td>
                             <td>
                                 <div class="action-buttons">
                                     <?= $this->Html->link(
