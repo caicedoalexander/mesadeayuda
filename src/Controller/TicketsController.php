@@ -18,7 +18,6 @@ use Cake\Http\Response;
 use Cake\Log\Log;
 use Cake\ORM\Table;
 use Exception;
-use InvalidArgumentException;
 use RuntimeException;
 
 /**
@@ -35,8 +34,6 @@ class TicketsController extends AppController
     /**
      * beforeFilter callback - Redirect users based on their role
      *
-     * REFACTORED: Uses AppController::redirectByRole() to eliminate duplicated code
-     *
      * @param \Cake\Event\EventInterface<\Cake\Controller\Controller> $event Event
      * @return \Cake\Http\Response|null|void
      */
@@ -52,33 +49,25 @@ class TicketsController extends AppController
             'history',
         ]);
 
-        // Allow admin, agent, and requester roles for Tickets module
         return $this->redirectByRole([RoleConstants::ROLE_ADMIN, RoleConstants::ROLE_AGENT, RoleConstants::ROLE_REQUESTER], 'tickets');
     }
 
     /**
-     * Initialize
-     *
-     * REFACTORED: Uses ServiceInitializerTrait for clean service initialization
-     *
      * @return void
      */
     public function initialize(): void
     {
         parent::initialize();
 
-        // Initialize all ticket system services using trait
         $this->initializeTicketSystemServices();
     }
 
     /**
      * Index method - List tickets with filters
-     *
-     * @return \Cake\Http\Response|null|void Renders view
      */
     public function index()
     {
-        $this->indexEntity('ticket', [
+        $this->indexTicketList([
             'filterParams' => [],
             'specialRedirects' => function ($request, $user, $userRole) {
                 // Handle Gmail OAuth callback redirect
@@ -91,10 +80,10 @@ class TicketsController extends AppController
                         '?' => ['code' => $code],
                     ]);
 
-                    return true; // Indicate redirect happened
+                    return true;
                 }
 
-                return null; // No redirect
+                return null;
             },
         ]);
     }
@@ -103,18 +92,16 @@ class TicketsController extends AppController
      * View method - Show ticket detail
      *
      * @param string|null $id Ticket id.
-     * @return \Cake\Http\Response|null|void Renders view
      * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
      */
     public function view(?string $id = null)
     {
-        return $this->viewEntity('ticket', (int)$id, [
-            'lazyLoadHistory' => true, // PERFORMANCE FIX: Load history via AJAX
+        return $this->viewTicket((int)$id, [
+            'lazyLoadHistory' => true,
             'permissionCheck' => function ($ticket) {
                 return $this->_checkTicketViewPermission($ticket);
             },
             'beforeSet' => function ($ticket, $viewVars) {
-                // Get all tags for selection
                 $tags = $this->fetchTable('Tags')->find('list')->toArray();
 
                 return array_merge($viewVars, compact('tags'));
@@ -123,8 +110,6 @@ class TicketsController extends AppController
     }
 
     /**
-     * Check if current user has permission to view ticket
-     *
      * @param \App\Model\Entity\Ticket $ticket Ticket entity
      * @return \Cake\Http\Response|null Redirect response if no permission, null if allowed
      */
@@ -138,8 +123,7 @@ class TicketsController extends AppController
         $userRole = $user->get('role');
         $userId = $user->get('id');
 
-        // Requester can only view their own tickets
-        if ($userRole === 'requester' && $ticket->requester_id !== $userId) {
+        if ($userRole === RoleConstants::ROLE_REQUESTER && $ticket->requester_id !== $userId) {
             $this->Flash->error('No tienes permiso para ver este ticket.');
 
             return $this->redirect(['action' => 'index']);
@@ -149,54 +133,39 @@ class TicketsController extends AppController
     }
 
     /**
-     * Add comment to ticket
-     *
      * @param string|null $id Ticket id
-     * @return \Cake\Http\Response|null|void Redirects back to ticket view
      */
     public function addComment(?string $id = null)
     {
-        return $this->addEntityComment('ticket', (int)$id);
+        return $this->addTicketComment((int)$id);
     }
 
     /**
-     * Assign ticket to agent
-     *
      * @param string|null $id Ticket id
-     * @return \Cake\Http\Response|null|void Redirects back
      */
     public function assign(?string $id = null)
     {
-        return $this->assignEntity('ticket', (int)$id, $this->request->getData('assignee_id'));
+        return $this->assignTicket((int)$id, $this->request->getData('assignee_id'));
     }
 
     /**
-     * Change ticket status
-     *
      * @param string|null $id Ticket id
-     * @return \Cake\Http\Response|null|void Redirects back
      */
     public function changeStatus(?string $id = null)
     {
-        return $this->changeEntityStatus('ticket', (int)$id, $this->request->getData('status'));
+        return $this->changeTicketStatus((int)$id, $this->request->getData('status'));
     }
 
     /**
-     * Change ticket priority
-     *
      * @param string|null $id Ticket id
-     * @return \Cake\Http\Response|null|void Redirects back
      */
     public function changePriority(?string $id = null)
     {
-        return $this->changeEntityPriority('ticket', (int)$id, $this->request->getData('priority'));
+        return $this->changeTicketPriority((int)$id, $this->request->getData('priority'));
     }
 
     /**
-     * Add tag to ticket
-     *
      * @param string|null $id Ticket id
-     * @return \Cake\Http\Response|null|void Redirects back
      */
     public function addTag(?string $id = null)
     {
@@ -211,11 +180,8 @@ class TicketsController extends AppController
     }
 
     /**
-     * Remove tag from ticket
-     *
      * @param string|null $id Ticket id
      * @param string|null $tagId Tag id
-     * @return \Cake\Http\Response|null|void Redirects back
      */
     public function removeTag(?string $id = null, ?string $tagId = null)
     {
@@ -229,10 +195,7 @@ class TicketsController extends AppController
     }
 
     /**
-     * Add follower to ticket
-     *
      * @param string|null $id Ticket id
-     * @return \Cake\Http\Response|null|void Redirects back
      */
     public function addFollower(?string $id = null)
     {
@@ -247,73 +210,58 @@ class TicketsController extends AppController
     }
 
     /**
-     * Bulk assign tickets to an agent
-     *
-     * @return \Cake\Http\Response|null|void Redirects on success
+     * Bulk assign tickets to an agent.
      */
     public function bulkAssign()
     {
-        return $this->bulkAssignEntity('ticket');
+        return $this->bulkAssignTickets();
     }
 
     /**
-     * Bulk change priority of tickets
-     *
-     * @return \Cake\Http\Response|null|void Redirects on success
+     * Bulk change priority of tickets.
      */
     public function bulkChangePriority()
     {
-        return $this->bulkChangeEntityPriority('ticket');
+        return $this->bulkChangeTicketPriority();
     }
 
     /**
-     * Bulk add tag to tickets
-     *
-     * @return \Cake\Http\Response|null|void Redirects on success
+     * Bulk add tag to tickets.
      */
     public function bulkAddTag()
     {
-        return $this->bulkAddTagEntity('ticket');
+        return $this->bulkAddTicketTag();
     }
 
     /**
-     * Bulk delete tickets
-     *
-     * @return \Cake\Http\Response|null|void Redirects on success
+     * Bulk delete tickets.
      */
     public function bulkDelete()
     {
-        return $this->bulkDeleteEntity('ticket');
+        return $this->bulkDeleteTickets();
     }
 
     /**
-     * Download ticket attachment
-     *
      * @param string|null $id Attachment id
-     * @return \Cake\Http\Response File download response
      */
     public function downloadAttachment(?string $id = null)
     {
-        return $this->downloadEntityAttachment('ticket', (int)$id);
+        return $this->downloadTicketAttachment((int)$id);
     }
 
     /**
      * AJAX endpoint for lazy loading ticket history
-     * PERFORMANCE FIX: Only loads when history tab is opened
      *
      * @param string|null $id Ticket id
-     * @return void JSON response
      */
     public function history(?string $id = null)
     {
-        $this->historyEntity('ticket', (int)$id);
+        $this->historyTicket((int)$id);
     }
 
     // region: ServiceInitializer
 
     /**
-     * Initialize services based on provided configuration
-     *
      * @param array<string, class-string> $serviceMap Map of property names to class names
      * @return void
      */
@@ -327,8 +275,6 @@ class TicketsController extends AppController
     }
 
     /**
-     * Initialize standard ticket system services
-     *
      * @return void
      */
     protected function initializeTicketSystemServices(): void
@@ -343,8 +289,7 @@ class TicketsController extends AppController
     // region: ViewDataNormalizer
 
     /**
-     * Status display configuration with icons, colors and labels
-     * for use in status badges, dropdowns and filters.
+     * Status display configuration with icons, colors and labels.
      */
     protected function getStatusConfig(): array
     {
@@ -365,12 +310,7 @@ class TicketsController extends AppController
      */
     protected function getPriorityConfig(): array
     {
-        return [
-            'baja' => 'Baja',
-            'media' => 'Media',
-            'alta' => 'Alta',
-            'urgente' => 'Urgente',
-        ];
+        return TicketConstants::PRIORITY_LABELS;
     }
 
     /**
@@ -381,9 +321,6 @@ class TicketsController extends AppController
         return TicketConstants::RESOLVED_STATUSES;
     }
 
-    /**
-     * Whether a ticket is locked (in a final/closed status).
-     */
     protected function isEntityLocked($entity): bool
     {
         return in_array($entity->status, $this->getResolvedStatuses(), true);
@@ -394,23 +331,17 @@ class TicketsController extends AppController
     // region: TicketSystemController helpers
 
     /**
-     * Get entity components (table, service, display name) based on type
-     *
-     * @param string $entityType 'ticket'
-     * @return array Associative array with keys: table, service, displayName, tableName, foreignKey
+     * @return array{table: \Cake\ORM\Table, service: ?\App\Service\TicketService, displayName: string, tableName: string, foreignKey: string, 0: \Cake\ORM\Table, 1: ?\App\Service\TicketService, 2: string}
      */
-    private function getEntityComponents(string $entityType): array
+    private function getEntityComponents(): array
     {
-        $components = match ($entityType) {
-            'ticket' => [
-                'table' => $this->Tickets ?? $this->fetchTable('Tickets'),
-                'service' => $this->ticketService ?? null,
-                'displayName' => 'Ticket',
-                'tableName' => 'Tickets',
-                'foreignKey' => 'ticket_id',
-            ],
-            default => throw new InvalidArgumentException("Invalid entity type: {$entityType}"),
-        };
+        $components = [
+            'table' => $this->Tickets ?? $this->fetchTable('Tickets'),
+            'service' => $this->ticketService ?? null,
+            'displayName' => 'Ticket',
+            'tableName' => 'Tickets',
+            'foreignKey' => 'ticket_id',
+        ];
 
         return array_merge($components, [
             0 => $components['table'],
@@ -420,24 +351,21 @@ class TicketsController extends AppController
     }
 
     /**
-     * Get history table based on entity type
-     *
-     * @param string $entityType 'ticket'
-     * @return \Cake\ORM\Table History table instance
+     * @return \Cake\ORM\Table
      */
-    private function getHistoryTable(string $entityType): Table
+    private function getHistoryTable(): Table
     {
-        return match ($entityType) {
-            'ticket' => $this->fetchTable('TicketHistory'),
-            default => throw new InvalidArgumentException("Invalid entity type: {$entityType}"),
-        };
+        return $this->fetchTable('TicketHistory');
     }
 
     // endregion
 
     // region: Listing
 
-    protected function indexEntity(string $entityType, array $config = []): void
+    /**
+     * @param array $config Listing configuration overrides
+     */
+    protected function indexTicketList(array $config = []): void
     {
         $defaults = [
             'defaultView' => 'todos_sin_resolver',
@@ -474,9 +402,9 @@ class TicketsController extends AppController
         foreach ($config['filterParams'] as $paramName => $queryKey) {
             $additionalFilters[$paramName] = $this->request->getQuery($queryKey);
         }
-        [$table, , $entityName] = $this->getEntityComponents($entityType);
+        [$table, , ] = $this->getEntityComponents();
         $tableAlias = $table->getAlias();
-        $entityVariable = $this->getEntityVariable($entityType);
+        $entityVariable = $this->getEntityVariable();
         $filters = array_merge([
             'search' => $search,
             'status' => $filterStatus,
@@ -489,9 +417,9 @@ class TicketsController extends AppController
         if ($config['contain'] !== null) {
             $query->contain($config['contain']);
         } else {
-            $query->contain($this->getDefaultContain($entityType));
+            $query->contain($this->getDefaultContain());
         }
-        $validSortFields = $config['validSortFields'] ?? $this->getValidSortFields($entityType);
+        $validSortFields = $config['validSortFields'] ?? $this->getValidSortFields();
         $resolvedViews = ['resueltos', 'resueltas', 'completados'];
         $isResolvedView = in_array($view, $resolvedViews);
         if ($isResolvedView && $this->request->getQuery('sort') === null) {
@@ -501,14 +429,14 @@ class TicketsController extends AppController
         } else {
             $query->orderBy([$tableAlias . '.' . $config['defaultSort'] => 'DESC']);
         }
-        $this->applyRoleBasedFilters($query, $entityType, $user, $userRole, $tableAlias);
+        $this->applyRoleBasedFilters($query, $user, $userRole, $tableAlias);
         if (is_callable($config['beforeQuery'])) {
             $config['beforeQuery']($query, $user, $userRole);
         }
         $entities = $this->paginate($query, [
             'limit' => $config['paginationLimit'],
         ]);
-        $filterData = $this->getFilterDataForView($entityType, $config);
+        $filterData = $this->getFilterDataForView($config);
         $filters = compact(
             'search',
             'filterStatus',
@@ -537,107 +465,100 @@ class TicketsController extends AppController
         $this->set($viewVars);
     }
 
-    private function applyRoleBasedFilters($query, string $entityType, $user, ?string $userRole, string $tableAlias): void
+    private function applyRoleBasedFilters($query, $user, ?string $userRole, string $tableAlias): void
     {
         if (!$user || !$userRole) {
             return;
         }
-        $userId = $user->get('id');
-        if ($userRole === 'requester' && $entityType === 'ticket') {
-            $query->where([$tableAlias . '.requester_id' => $userId]);
+        if ($userRole === RoleConstants::ROLE_REQUESTER) {
+            $query->where([$tableAlias . '.requester_id' => $user->get('id')]);
         }
     }
 
-    private function getDefaultContain(string $entityType): array
+    /**
+     * @return array
+     */
+    private function getDefaultContain(): array
     {
-        return match ($entityType) {
-            'ticket' => ['Requesters', 'Assignees'],
-            default => [],
-        };
+        return ['Requesters', 'Assignees'];
     }
 
-    private function getValidSortFields(string $entityType): array
+    /**
+     * @return array
+     */
+    private function getValidSortFields(): array
     {
-        $common = ['created', 'modified', 'status', 'priority', 'subject'];
-
-        return match ($entityType) {
-            'ticket' => array_merge($common, ['ticket_number']),
-            default => $common,
-        };
+        return ['created', 'modified', 'status', 'priority', 'subject', 'ticket_number'];
     }
 
-    private function getEntityVariable(string $entityType): string
+    /**
+     * @return string
+     */
+    private function getEntityVariable(): string
     {
-        return match ($entityType) {
-            'ticket' => 'tickets',
-            default => $entityType . 's',
-        };
+        return 'tickets';
     }
 
-    private function getFilterDataForView(string $entityType, array $config): array
+    /**
+     * @param array $config Listing config
+     * @return array
+     */
+    private function getFilterDataForView(array $config): array
     {
         $data = [];
-        $usersRoleFilter = $config['usersRoleFilter'] ?? $this->getDefaultUsersRoleFilter($entityType);
+        $usersRoleFilter = $config['usersRoleFilter'] ?? $this->getDefaultUsersRoleFilter();
         if ($usersRoleFilter !== null) {
-            $usersVarName = $this->getUsersVariableName($entityType);
+            $usersVarName = $this->getUsersVariableName();
             $data[$usersVarName] = $this->fetchTable('Users')
                 ->find('list')
                 ->where(['role IN' => $usersRoleFilter, 'is_active' => true])
                 ->toArray();
         }
-        $data['priorities'] = [
-            'baja' => 'Baja',
-            'media' => 'Media',
-            'alta' => 'Alta',
-            'urgente' => 'Urgente',
-        ];
-        $data['statuses'] = $this->getStatusesForEntity($entityType);
-        if ($entityType === 'ticket') {
-            $data['tags'] = $this->fetchTable('Tags')->find()->toArray();
-        }
+        $data['priorities'] = TicketConstants::PRIORITY_LABELS;
+        $data['statuses'] = $this->getStatusesForEntity();
+        $data['tags'] = $this->fetchTable('Tags')->find()->toArray();
 
         return $data;
     }
 
-    private function getDefaultUsersRoleFilter(string $entityType): ?array
+    /**
+     * @return array
+     */
+    private function getDefaultUsersRoleFilter(): array
     {
-        return match ($entityType) {
-            'ticket' => [RoleConstants::ROLE_ADMIN, RoleConstants::ROLE_AGENT],
-            default => null,
-        };
+        return [RoleConstants::ROLE_ADMIN, RoleConstants::ROLE_AGENT];
     }
 
-    private function getUsersVariableName(string $entityType): string
+    /**
+     * @return string
+     */
+    private function getUsersVariableName(): string
     {
-        return match ($entityType) {
-            'ticket' => 'agents',
-            default => 'users',
-        };
+        return 'agents';
     }
 
-    private function getStatusesForEntity(string $entityType): array
+    /**
+     * @return array
+     */
+    private function getStatusesForEntity(): array
     {
-        return match ($entityType) {
-            'ticket' => [
-                'nuevo' => 'Nuevo',
-                'abierto' => 'Abierto',
-                'pendiente' => 'Pendiente',
-                'resuelto' => 'Resuelto',
-            ],
-            default => [],
-        };
+        return TicketConstants::STATUS_LABELS;
     }
 
     // endregion
 
     // region: View
 
-    protected function viewEntity(string $entityType, int $id, array $config = []): ?Response
+    /**
+     * @param int $id Ticket id
+     * @param array $config View configuration overrides
+     */
+    protected function viewTicket(int $id, array $config = []): ?Response
     {
-        $components = $this->getEntityComponents($entityType);
+        $components = $this->getEntityComponents();
         $tableName = $components['tableName'];
-        $variableName = $this->getSingleEntityVariable($entityType);
-        $contain = $config['contain'] ?? $this->getDefaultViewContain($entityType, $config['lazyLoadHistory'] ?? false);
+        $variableName = $this->getSingleEntityVariable();
+        $contain = $config['contain'] ?? $this->getDefaultViewContain($config['lazyLoadHistory'] ?? false);
         $entity = $this->fetchTable($tableName)->get($id, compact('contain'));
         if (isset($config['permissionCheck']) && is_callable($config['permissionCheck'])) {
             $permissionResult = $config['permissionCheck']($entity);
@@ -645,7 +566,7 @@ class TicketsController extends AppController
                 return $permissionResult;
             }
         }
-        $agentsRoleFilter = $config['agentsRoleFilter'] ?? $this->getDefaultAgentsRoleFilter($entityType);
+        $agentsRoleFilter = $config['agentsRoleFilter'] ?? $this->getDefaultAgentsRoleFilter();
         $agents = $this->fetchTable('Users')
             ->find('list')
             ->where(['role IN' => $agentsRoleFilter, 'is_active' => true])
@@ -675,57 +596,51 @@ class TicketsController extends AppController
         return null;
     }
 
-    private function getDefaultViewContain(string $entityType, bool $lazyLoadHistory = false): array
+    /**
+     * @param bool $lazyLoadHistory Whether to skip loading history eagerly
+     * @return array
+     */
+    private function getDefaultViewContain(bool $lazyLoadHistory = false): array
     {
-        $contain = match ($entityType) {
-            'ticket' => [
-                'Requesters',
-                'Assignees',
-                'TicketComments' => ['Users'],
-                'Attachments',
-                'Tags',
-                'TicketFollowers' => ['Users'],
-            ],
-            default => [],
-        };
+        $contain = [
+            'Requesters',
+            'Assignees',
+            'TicketComments' => ['Users'],
+            'Attachments',
+            'Tags',
+            'TicketFollowers' => ['Users'],
+        ];
         if (!$lazyLoadHistory) {
-            $historyAssoc = match ($entityType) {
-                'ticket' => 'TicketHistory',
-                default => null,
-            };
-            if ($historyAssoc) {
-                $contain[$historyAssoc] = [
-                    'Users',
-                    'sort' => [$historyAssoc . '.created' => 'DESC'],
-                ];
-            }
+            $contain['TicketHistory'] = [
+                'Users',
+                'sort' => ['TicketHistory.created' => 'DESC'],
+            ];
         }
 
         return $contain;
     }
 
-    private function getDefaultAgentsRoleFilter(string $entityType): array
+    /**
+     * @return array
+     */
+    private function getDefaultAgentsRoleFilter(): array
     {
-        return match ($entityType) {
-            'ticket' => [RoleConstants::ROLE_ADMIN, RoleConstants::ROLE_AGENT],
-            default => [RoleConstants::ROLE_ADMIN, RoleConstants::ROLE_AGENT],
-        };
+        return [RoleConstants::ROLE_ADMIN, RoleConstants::ROLE_AGENT];
     }
 
-    private function getSingleEntityVariable(string $entityType): string
+    /**
+     * @return string
+     */
+    private function getSingleEntityVariable(): string
     {
-        return match ($entityType) {
-            'ticket' => 'ticket',
-            default => $entityType,
-        };
+        return 'ticket';
     }
 
     // endregion
 
     // region: Actions
 
-    protected function assignEntity(
-        string $entityType,
+    protected function assignTicket(
         int $entityId,
         $assigneeId,
         string $redirectAction = 'index',
@@ -734,7 +649,7 @@ class TicketsController extends AppController
         $assigneeId = $this->normalizeAssigneeId($assigneeId);
         $userId = $this->getCurrentUserId();
 
-        $components = $this->getEntityComponents($entityType);
+        $components = $this->getEntityComponents();
         $entity = $components['table']->get($entityId);
         $entityName = $components['displayName'];
 
@@ -754,8 +669,12 @@ class TicketsController extends AppController
         return $this->redirect(['action' => $redirectAction]);
     }
 
-    protected function changeEntityStatus(
-        string $entityType,
+    /**
+     * @param int $entityId Ticket id
+     * @param string $newStatus New status value
+     * @param string $redirectAction Action to redirect to on completion
+     */
+    protected function changeTicketStatus(
         int $entityId,
         string $newStatus,
         string $redirectAction = 'index',
@@ -763,7 +682,7 @@ class TicketsController extends AppController
         $this->request->allowMethod(['post', 'put']);
         $userId = $this->getCurrentUserId();
 
-        $components = $this->getEntityComponents($entityType);
+        $components = $this->getEntityComponents();
         $entity = $components['table']->get($entityId);
         $entityName = $components['displayName'];
 
@@ -783,8 +702,12 @@ class TicketsController extends AppController
         return $this->redirect(['action' => $redirectAction]);
     }
 
-    protected function changeEntityPriority(
-        string $entityType,
+    /**
+     * @param int $entityId Ticket id
+     * @param string $newPriority New priority value
+     * @param string $redirectAction Action to redirect to on completion
+     */
+    protected function changeTicketPriority(
         int $entityId,
         string $newPriority,
         string $redirectAction = 'index',
@@ -792,7 +715,7 @@ class TicketsController extends AppController
         $this->request->allowMethod(['post', 'put']);
         $userId = $this->getCurrentUserId();
 
-        $components = $this->getEntityComponents($entityType);
+        $components = $this->getEntityComponents();
         $entity = $components['table']->get($entityId);
         $entityName = $components['displayName'];
 
@@ -812,12 +735,15 @@ class TicketsController extends AppController
         return $this->redirect(['action' => $redirectAction]);
     }
 
-    protected function addEntityComment(string $entityType, int $entityId): Response
+    /**
+     * @param int $entityId Ticket id
+     */
+    protected function addTicketComment(int $entityId): Response
     {
         $this->request->allowMethod(['post']);
         $userId = $this->getCurrentUserId();
 
-        $components = $this->getEntityComponents($entityType);
+        $components = $this->getEntityComponents();
         $entityName = $components['displayName'];
         $service = $components['service'];
 
@@ -835,7 +761,10 @@ class TicketsController extends AppController
         return $this->redirect(['action' => 'view', $entityId]);
     }
 
-    protected function downloadEntityAttachment(string $entityType, int $attachmentId): Response
+    /**
+     * @param int $attachmentId Attachment id
+     */
+    protected function downloadTicketAttachment(int $attachmentId): Response
     {
         $attachmentsTable = $this->fetchTable('Attachments');
         $attachment = $attachmentsTable->get($attachmentId);
@@ -850,6 +779,9 @@ class TicketsController extends AppController
             ->withType($attachment->mime_type ?? 'application/octet-stream');
     }
 
+    /**
+     * @return int
+     */
     protected function getCurrentUserId(): int
     {
         $user = $this->Authentication->getIdentity();
@@ -869,6 +801,10 @@ class TicketsController extends AppController
         return (int)$value;
     }
 
+    /**
+     * @param array $result Service result with success/message keys
+     * @param string $redirectUrl URL to redirect to
+     */
     protected function handleServiceResult(array $result, string $redirectUrl): Response
     {
         if (!empty($result['success'])) {
@@ -884,7 +820,10 @@ class TicketsController extends AppController
 
     // region: Bulk
 
-    protected function bulkAssignEntity(string $entityType): Response
+    /**
+     * Bulk assign tickets to an agent.
+     */
+    protected function bulkAssignTickets(): Response
     {
         $this->request->allowMethod(['post']);
         $entityIds = array_map('intval', explode(',', $this->request->getData('entity_ids') ?? $this->request->getData('ticket_ids') ?? ''));
@@ -892,7 +831,7 @@ class TicketsController extends AppController
         $agentId = $this->normalizeAssigneeId($agentId);
         $user = $this->Authentication->getIdentity();
         $userId = $user ? $user->get('id') : 1;
-        [$table, $service, $entityName] = $this->getEntityComponents($entityType);
+        [$table, $service, $entityName] = $this->getEntityComponents();
         $successCount = 0;
         $errorCount = 0;
         foreach ($entityIds as $entityId) {
@@ -902,7 +841,7 @@ class TicketsController extends AppController
                 $successCount++;
             } catch (Exception $e) {
                 $errorCount++;
-                Log::error("Error in bulk assign {$entityType} {$entityId}: " . $e->getMessage());
+                Log::error("Error in bulk assign ticket {$entityId}: " . $e->getMessage());
             }
         }
         if ($successCount > 0) {
@@ -915,15 +854,18 @@ class TicketsController extends AppController
         return $this->redirect(['action' => 'index']);
     }
 
-    protected function bulkChangeEntityPriority(string $entityType): Response
+    /**
+     * Bulk change priority of tickets.
+     */
+    protected function bulkChangeTicketPriority(): Response
     {
         $this->request->allowMethod(['post']);
         $entityIds = array_map('intval', explode(',', $this->request->getData('entity_ids') ?? $this->request->getData('ticket_ids') ?? ''));
         $newPriority = $this->request->getData('priority');
         $user = $this->Authentication->getIdentity();
         $userId = $user ? $user->get('id') : 1;
-        [$table, $service, $entityName] = $this->getEntityComponents($entityType);
-        $historyTable = $this->getHistoryTable($entityType);
+        [$table, , $entityName] = $this->getEntityComponents();
+        $historyTable = $this->getHistoryTable();
         $successCount = 0;
         $errorCount = 0;
         foreach ($entityIds as $entityId) {
@@ -946,7 +888,7 @@ class TicketsController extends AppController
                 }
             } catch (Exception $e) {
                 $errorCount++;
-                Log::error("Error in bulk priority change {$entityType} {$entityId}: " . $e->getMessage());
+                Log::error("Error in bulk priority change ticket {$entityId}: " . $e->getMessage());
             }
         }
         if ($successCount > 0) {
@@ -959,15 +901,17 @@ class TicketsController extends AppController
         return $this->redirect(['action' => 'index']);
     }
 
-    protected function bulkAddTagEntity(string $entityType): Response
+    /**
+     * Bulk add tag to tickets.
+     */
+    protected function bulkAddTicketTag(): Response
     {
         $this->request->allowMethod(['post']);
         $entityIds = array_map('intval', explode(',', $this->request->getData('entity_ids') ?? $this->request->getData('ticket_ids') ?? ''));
         $tagId = (int)$this->request->getData('tag_id');
-        [, , $entityName] = $this->getEntityComponents($entityType);
-        $tagsTableName = $this->getTagsTableName($entityType);
-        $tagsTable = $this->fetchTable($tagsTableName);
-        $foreignKey = $entityType . '_id';
+        [, , $entityName] = $this->getEntityComponents();
+        $tagsTable = $this->fetchTable('TicketTags');
+        $foreignKey = 'ticket_id';
         $successCount = 0;
         $errorCount = 0;
         foreach ($entityIds as $entityId) {
@@ -991,7 +935,7 @@ class TicketsController extends AppController
                 }
             } catch (Exception $e) {
                 $errorCount++;
-                Log::error("Error in bulk tag add {$entityType} {$entityId}: " . $e->getMessage());
+                Log::error("Error in bulk tag add ticket {$entityId}: " . $e->getMessage());
             }
         }
         if ($successCount > 0) {
@@ -1004,11 +948,14 @@ class TicketsController extends AppController
         return $this->redirect(['action' => 'index']);
     }
 
-    protected function bulkDeleteEntity(string $entityType): Response
+    /**
+     * Bulk delete tickets.
+     */
+    protected function bulkDeleteTickets(): Response
     {
         $this->request->allowMethod(['post']);
         $entityIds = array_map('intval', explode(',', $this->request->getData('entity_ids') ?? $this->request->getData('ticket_ids') ?? ''));
-        [$table, , $entityName] = $this->getEntityComponents($entityType);
+        [$table, , $entityName] = $this->getEntityComponents();
         $successCount = 0;
         $errorCount = 0;
         foreach ($entityIds as $entityId) {
@@ -1021,7 +968,7 @@ class TicketsController extends AppController
                 }
             } catch (Exception $e) {
                 $errorCount++;
-                Log::error("Error in bulk delete {$entityType} {$entityId}: " . $e->getMessage());
+                Log::error("Error in bulk delete ticket {$entityId}: " . $e->getMessage());
             }
         }
         if ($successCount > 0) {
@@ -1034,16 +981,14 @@ class TicketsController extends AppController
         return $this->redirect(['action' => 'index']);
     }
 
-    private function getTagsTableName(string $entityType): string
-    {
-        return 'TicketTags';
-    }
-
     // endregion
 
     // region: History
 
-    protected function historyEntity(string $entityType, int $id): void
+    /**
+     * @param int $id Ticket id
+     */
+    protected function historyTicket(int $id): void
     {
         $this->request->allowMethod(['get']);
         $this->viewBuilder()->setClassName('Json');
@@ -1056,20 +1001,20 @@ class TicketsController extends AppController
 
                 return;
             }
-            $components = $this->getEntityComponents($entityType);
+            $components = $this->getEntityComponents();
             $tableName = $components['tableName'];
             $foreignKey = $components['foreignKey'];
             $entity = $this->fetchTable($tableName)->get($id);
             $userRole = $user->get('role');
             $userId = $user->get('id');
-            if ($userRole === 'requester' && $entity->requester_id !== $userId) {
+            if ($userRole === RoleConstants::ROLE_REQUESTER && $entity->requester_id !== $userId) {
                 $this->set('error', 'No tienes permiso para ver este historial');
                 $this->viewBuilder()->setOption('serialize', ['error']);
                 $this->response = $this->response->withStatus(403);
 
                 return;
             }
-            $historyTable = $this->getHistoryTable($entityType);
+            $historyTable = $this->getHistoryTable();
             $history = $historyTable
                 ->find()
                 ->where([$foreignKey => $id])
@@ -1103,13 +1048,13 @@ class TicketsController extends AppController
             $this->set('history', $formattedHistory);
             $this->viewBuilder()->setOption('serialize', ['history']);
         } catch (RecordNotFoundException $e) {
-            Log::warning(ucfirst($entityType) . ' not found for history: ' . $id);
-            $this->set('error', ucfirst($entityType) . ' no encontrado');
+            Log::warning('Ticket not found for history: ' . $id);
+            $this->set('error', 'Ticket no encontrado');
             $this->viewBuilder()->setOption('serialize', ['error']);
             $this->response = $this->response->withStatus(404);
         } catch (Exception $e) {
-            Log::error('Error loading ' . $entityType . ' history: ' . $e->getMessage(), [
-                $entityType . '_id' => $id,
+            Log::error('Error loading ticket history: ' . $e->getMessage(), [
+                'ticket_id' => $id,
                 'exception' => $e,
             ]);
             $this->set('error', 'Error al cargar el historial');
