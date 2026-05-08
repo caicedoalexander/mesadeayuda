@@ -4,7 +4,9 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Model\Entity\Ticket;
+use App\Model\Entity\User;
 use App\Service\Exception\InvalidStatusTransitionException;
+use App\Service\Exception\UnauthorizedAssignmentException;
 use App\Service\Traits\TicketHistoryLoggerTrait;
 use Cake\Datasource\EntityInterface;
 use Cake\I18n\FrozenTime;
@@ -24,6 +26,7 @@ class TicketPipelineService
     private TicketCommentService $comments;
     private TicketAttachmentService $attachments;
     private TicketNotificationService $notifications;
+    private AuthorizationService $authService;
     private ?array $systemConfig;
 
     /**
@@ -31,17 +34,20 @@ class TicketPipelineService
      * @param \App\Service\TicketCommentService|null $comments Optional injected comment service
      * @param \App\Service\TicketAttachmentService|null $attachments Optional injected attachment service
      * @param \App\Service\TicketNotificationService|null $notifications Optional injected notification service
+     * @param \App\Service\AuthorizationService|null $authService Optional injected authorization service
      */
     public function __construct(
         ?array $systemConfig = null,
         ?TicketCommentService $comments = null,
         ?TicketAttachmentService $attachments = null,
         ?TicketNotificationService $notifications = null,
+        ?AuthorizationService $authService = null,
     ) {
         $this->systemConfig = $systemConfig;
         $this->comments = $comments ?? new TicketCommentService($systemConfig);
         $this->attachments = $attachments ?? new TicketAttachmentService();
         $this->notifications = $notifications ?? new TicketNotificationService($systemConfig);
+        $this->authService = $authService ?? new AuthorizationService();
     }
 
     /**
@@ -188,19 +194,41 @@ class TicketPipelineService
      *
      * @param \Cake\Datasource\EntityInterface $entity Ticket entity
      * @param int|null $assigneeId New assignee user ID (0 or null clears)
-     * @param int|null $userId User performing the change
+     * @param int|null $userId User performing the change (for history)
+     * @param mixed $actor Actor identity (User entity or Authentication identity)
      * @return bool
+     * @throws \App\Service\Exception\UnauthorizedAssignmentException When actor lacks role or target is invalid
      */
     public function assign(
         EntityInterface $entity,
         ?int $assigneeId,
         ?int $userId = null,
+        mixed $actor = null,
     ): bool {
         $table = $this->fetchTable('Tickets');
         $usersTable = $this->fetchTable('Users');
 
+        // Guard 1: actor must be allowed to assign tickets
+        if ($actor !== null && $this->authService->isAssignmentDisabled($actor)) {
+            throw new UnauthorizedAssignmentException(
+                'El usuario no tiene permisos para asignar tickets.',
+            );
+        }
+
+        // Guard 2: target must be a valid assignee for this ticket (only when assigning, not clearing)
+        $normalizedAssigneeId = $assigneeId === 0 || $assigneeId === '0' ? null : $assigneeId;
+        if ($normalizedAssigneeId !== null) {
+            $targetUser = $usersTable->get($normalizedAssigneeId);
+            assert($targetUser instanceof User);
+            if (!$entity->canBeAssignedTo($targetUser)) {
+                throw new UnauthorizedAssignmentException(
+                    'No es posible asignar este ticket a ese usuario.',
+                );
+            }
+        }
+
         $oldAssigneeId = $entity->assignee_id;
-        $entity->assignee_id = $assigneeId === 0 || $assigneeId === '0' ? null : $assigneeId;
+        $entity->assignee_id = $normalizedAssigneeId;
 
         if (!$table->save($entity)) {
             $errors = $entity->getErrors();
@@ -219,8 +247,8 @@ class TicketPipelineService
         }
 
         $newAssigneeName = 'Sin asignar';
-        if ($assigneeId) {
-            $newUser = $usersTable->get($assigneeId);
+        if ($normalizedAssigneeId) {
+            $newUser = $usersTable->get($normalizedAssigneeId);
             $newAssigneeName = $newUser->first_name . ' ' . $newUser->last_name;
         }
 
