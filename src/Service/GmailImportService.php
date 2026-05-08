@@ -23,11 +23,11 @@ final class GmailImportService
 
     /**
      * @param \App\Service\GmailService $gmail Cliente Gmail ya configurado
-     * @param \App\Service\TicketService $tickets Servicio de tickets con settings cargados
+     * @param \App\Service\TicketIngestionService $tickets Servicio de tickets con settings cargados
      */
     public function __construct(
         private readonly GmailService $gmail,
-        private readonly TicketService $tickets,
+        private readonly TicketIngestionService $tickets,
     ) {
     }
 
@@ -45,7 +45,7 @@ final class GmailImportService
 
         return new self(
             new GmailService($config),
-            new TicketService(self::loadSystemSettings()),
+            new TicketIngestionService(self::loadSystemSettings()),
         );
     }
 
