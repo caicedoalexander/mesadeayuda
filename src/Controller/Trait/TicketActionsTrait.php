@@ -3,7 +3,9 @@ declare(strict_types=1);
 
 namespace App\Controller\Trait;
 
+use App\Service\AuthorizationService;
 use App\Service\Exception\InvalidStatusTransitionException;
+use App\Service\Exception\UnauthorizedAssignmentException;
 use Cake\Http\Exception\NotFoundException;
 use Cake\Http\Response;
 use RuntimeException;
@@ -113,10 +115,19 @@ trait TicketActionsTrait
         $this->request->allowMethod(['post', 'put']);
         $assigneeId = $this->normalizeAssigneeId($assigneeId);
         $userId = $this->getCurrentUserId();
+        $actor = $this->Authentication->getIdentity();
 
         $components = $this->getEntityComponents();
         $entity = $components['table']->get($entityId);
         $entityName = $components['displayName'];
+
+        // Early actor guard: better UX than tripping the service exception
+        $authService = new AuthorizationService();
+        if ($authService->isAssignmentDisabled($actor)) {
+            $this->Flash->error(__('No tienes permisos para asignar tickets.'));
+
+            return $this->redirect(['action' => $redirectAction]);
+        }
 
         if ($entity->isLocked()) {
             $this->Flash->error(__("No se puede modificar una {$entityName} en estado final."));
@@ -124,16 +135,14 @@ trait TicketActionsTrait
             return $this->redirect(['action' => $redirectAction]);
         }
 
-        if ($assigneeId !== null) {
-            $assigneeUser = $this->fetchTable('Users')->get($assigneeId);
-            if (!$entity->canBeAssignedTo($assigneeUser)) {
-                $this->Flash->error(__('No es posible asignar este ticket a ese usuario.'));
+        try {
+            $result = $components['service']->assign($entity, $assigneeId, $userId, $actor);
+        } catch (UnauthorizedAssignmentException $e) {
+            $this->Flash->error($e->getMessage());
 
-                return $this->redirect(['action' => $redirectAction]);
-            }
+            return $this->redirect(['action' => $redirectAction]);
         }
 
-        $result = $components['service']->assign($entity, $assigneeId, $userId);
         if ($result) {
             $this->Flash->success(__("{$entityName} asignada correctamente."));
         } else {
