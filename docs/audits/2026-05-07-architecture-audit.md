@@ -400,3 +400,15 @@ Tras inspección directa del código, los siguientes críticos también están c
 - **3.6 ✅** `CLAUDE.md` sincronizado con la realidad: describe los 6 traits reales en `src/Controller/Trait/`, los 4 traits en `src/Service/Traits/`, las 4 clases de `src/Constants/` y la entidad `Ticket` enriquecida.
 
 **Pendientes ahora reales:** altos 4.1, 4.2, 4.3, 4.4, 4.5, 4.7, 4.8 + medios 5.1–5.7. Plan de fase 2: `docs/superpowers/plans/2026-05-08-audit-fase2-altos.md`.
+
+### Anexo 3 — Cierre parcial de altos (fase 2, 2026-05-08)
+
+Cerrados en plan `docs/superpowers/plans/2026-05-08-audit-fase2-altos.md` (subset de bajo riesgo):
+
+- **4.2 ✅** `EmailTemplateRenderer` y `Renderer/NotificationRenderer` clarificados como capas separadas (template loader + domain formatter) vía docblocks con cross-references. No se solapaban en realidad.
+- **4.4 ✅** `StatusHelper::statusBadge`/`priorityBadge` ya no concatenan HTML inline; delegan a `templates/element/tickets/{status,priority}_badge.php` con clases CSS en `webroot/css/badges.css`. `TicketHelper` eliminado (era wrapper trivial).
+- **4.5 ✅** Query inline de `TicketsSidebarCell` movida a `SidebarCountsService::getAgentStatusCounts()`.
+- **4.7 ✅** Closure `specialRedirects` en `TicketListingTrait` eliminado. Ruta dedicada `/oauth/gmail/callback` añadida como fallback para configs OAuth legacy.
+- **4.8 ✅** Auditado: todos los call-sites que persisten en `system_settings` pasan por `SettingsService::saveSetting()` que invalida 4 keys. Deuda residual documentada: `CacheConstants::CACHE_CONFIG` apunta a `_cake_core_` (cache de bootstrap), idealmente runtime data debería vivir en un cache config dedicado — queda para fase 3.
+
+**Pendientes:** altos **4.1** (trocear `TicketService` 1046 LOC) y **4.3** (DI explícita en servicios refactorizados) — diferidos a sesión dedicada por riesgo de regresión y necesidad de smoke manual extensivo. Más medios 5.1–5.7.
