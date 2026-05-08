@@ -5,6 +5,7 @@ namespace App\Service;
 
 use App\Constants\SettingKeys;
 use App\Model\Entity\Ticket;
+use App\Service\Dto\SystemConfig;
 use Cake\I18n\FrozenTime;
 use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
@@ -27,11 +28,11 @@ class N8nService
     /**
      * Constructor
      *
-     * @param array|null $systemConfig Optional system configuration to avoid redundant DB queries
+     * @param \App\Service\Dto\SystemConfig|null $config Optional system configuration VO to avoid redundant DB queries
      */
-    public function __construct(?array $systemConfig = null)
+    public function __construct(?SystemConfig $config = null)
     {
-        $this->systemConfig = $systemConfig;
+        $this->systemConfig = $config?->toSettingsArray();
         $this->config = $this->resolveSettingsBatch(SettingKeys::N8N_ENABLED, 'n8n_settings', [
             SettingKeys::N8N_ENABLED,
             SettingKeys::N8N_WEBHOOK_URL,

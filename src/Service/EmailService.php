@@ -7,6 +7,7 @@ use App\Constants\CacheConstants;
 use App\Constants\SettingKeys;
 use App\Model\Entity\EmailTemplate;
 use App\Model\Entity\User;
+use App\Service\Dto\SystemConfig;
 use App\Service\Renderer\NotificationRenderer;
 use App\Service\Traits\GenericAttachmentTrait;
 use App\View\Helper\UserHelper;
@@ -43,8 +44,12 @@ class EmailService
     private ?array $systemConfig = null;
     private ?GmailService $gmailService = null;
 
-    public function __construct(?array $systemConfig = null)
+    /**
+     * @param \App\Service\Dto\SystemConfig|null $config System configuration VO
+     */
+    public function __construct(?SystemConfig $config = null)
     {
+        $systemConfig = $config?->toSettingsArray();
         $this->renderer = new NotificationRenderer();
         $this->templateRenderer = new EmailTemplateRenderer($systemConfig);
         $this->systemConfig = $systemConfig;

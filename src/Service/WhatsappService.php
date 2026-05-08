@@ -5,6 +5,7 @@ namespace App\Service;
 
 use App\Constants\CacheConstants;
 use App\Constants\SettingKeys;
+use App\Service\Dto\SystemConfig;
 use App\Service\Renderer\NotificationRenderer;
 use Cake\Datasource\EntityInterface;
 use Cake\Log\Log;
@@ -38,12 +39,12 @@ class WhatsappService
     /**
      * Constructor
      *
-     * @param array|null $systemConfig Optional system configuration to avoid redundant DB queries
+     * @param \App\Service\Dto\SystemConfig|null $config Optional system configuration VO to avoid redundant DB queries
      */
-    public function __construct(?array $systemConfig = null)
+    public function __construct(?SystemConfig $config = null)
     {
         $this->renderer = new NotificationRenderer();
-        $this->systemConfig = $systemConfig;
+        $this->systemConfig = $config?->toSettingsArray();
     }
 
     /**
