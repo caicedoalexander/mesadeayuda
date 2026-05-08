@@ -390,3 +390,13 @@ De paso se cerró el hallazgo **4.6** (carpeta `src/Controller/Component/` vací
 Detalles en `docs/superpowers/specs/2026-05-08-criticos-pendientes-auditoria-design.md` y plan asociado.
 
 **Pendientes próxima fase:** altos 4.1–4.8 (excepto 4.6 ya cerrado) y medios 5.1–5.7.
+
+### Anexo 2 — Cierre adicional verificado (2026-05-08)
+
+Tras inspección directa del código, los siguientes críticos también están cerrados de facto:
+
+- **3.1 ✅** `src/Utility/` eliminado. Constantes movidas a `src/Constants/` (`TicketConstants`, `RoleConstants`, `CacheConstants`, `SettingKeys`). `SettingsEncryptionTrait` reubicado a `src/Service/Traits/`.
+- **3.4 ✅** Migration `ConsolidateLegacyTicketStatuses` consolidó estados a 4 (`nuevo`, `abierto`, `pendiente`, `resuelto`). `TicketConstants` es la única fuente de verdad para estados, prioridades, labels y colores. `StatusHelper` ya lee de `TicketConstants` (sin duplicación local). Pendiente residual: HTML inline en `StatusHelper::statusBadge`/`priorityBadge` — se cierra como parte del alto 4.4.
+- **3.6 ✅** `CLAUDE.md` sincronizado con la realidad: describe los 6 traits reales en `src/Controller/Trait/`, los 4 traits en `src/Service/Traits/`, las 4 clases de `src/Constants/` y la entidad `Ticket` enriquecida.
+
+**Pendientes ahora reales:** altos 4.1, 4.2, 4.3, 4.4, 4.5, 4.7, 4.8 + medios 5.1–5.7. Plan de fase 2: `docs/superpowers/plans/2026-05-08-audit-fase2-altos.md`.
