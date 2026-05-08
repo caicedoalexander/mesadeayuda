@@ -67,17 +67,6 @@ final class TicketConstants
         self::STATUS_PENDIENTE,
     ];
 
-    /**
-     * Valores de estado huérfanos en BD por módulos removidos.
-     * NO usar para asignar; SOLO para filtrar tickets legacy en queries.
-     * Sin labels ni colores: el helper hace fallback visual genérico.
-     */
-    public const LEGACY_STATUSES = [
-        'convertido',   // módulo Compras (eliminado)
-        'cerrado',      // nunca completó implementación
-        'en_progreso',  // nunca se usó
-    ];
-
     public const STATUS_LABELS = [
         self::STATUS_NUEVO     => 'Nuevo',
         self::STATUS_ABIERTO   => 'Abierto',
@@ -255,6 +244,61 @@ Archivos confirmados con consumo (lista exhaustiva):
 
 **Verificación B:** `composer cs-check` + smoke test manual: home, `/admin/settings`, detalle de ticket, crear comentario, sidebar.
 
+### Fase B.5 — Migración de datos legacy (CakePHP migration)
+
+Antes de eliminar referencias a estados legacy del código (Fase C), consolidar los tickets en BD que tienen `status IN ('convertido','cerrado','en_progreso')` a `resuelto`. Sin esto, esos tickets quedarían con un estado que el validator rechaza y los queries no excluyen.
+
+Generar la migration:
+
+```bash
+bin/cake bake migration ConsolidateLegacyTicketStatuses
+```
+
+Contenido:
+
+```php
+<?php
+declare(strict_types=1);
+
+use Migrations\AbstractMigration;
+
+class ConsolidateLegacyTicketStatuses extends AbstractMigration
+{
+    public function up(): void
+    {
+        $this->execute("
+            UPDATE tickets
+            SET status = 'resuelto',
+                resolved_at = COALESCE(resolved_at, updated)
+            WHERE status IN ('convertido', 'cerrado', 'en_progreso')
+        ");
+    }
+
+    public function down(): void
+    {
+        // No reversible: el UPDATE pierde la distinción entre convertido/cerrado/en_progreso.
+        // Si es necesario revertir, restaurar desde backup de BD pre-migration.
+        throw new \RuntimeException(
+            'ConsolidateLegacyTicketStatuses is not reversible. Restore from backup.'
+        );
+    }
+}
+```
+
+**Notas:**
+- Los literales `'convertido'`, `'cerrado'`, `'en_progreso'` aparecen **solo dentro de la migration** (es archivo histórico, justificable). Los smoke checks de Fase D excluyen `config/Migrations/` del grep.
+- `resolved_at` se rellena con `updated` si era NULL — preserva una fecha de resolución plausible.
+- Antes de aplicar: hacer `mysqldump` (o equivalente) del schema `tickets` por seguridad.
+- Aplicar con `bin/cake migrations migrate`.
+
+**Verificación B.5:**
+
+```sql
+SELECT status, COUNT(*) FROM tickets GROUP BY status;
+```
+
+Solo deben aparecer los 4 estados activos. Si retorna alguna fila con `convertido`/`cerrado`/`en_progreso`, la migration no se aplicó correctamente — investigar antes de Fase C.
+
 ### Fase C — Eliminar referencias legacy y mapas duplicados
 
 **1. `src/View/Helper/StatusHelper.php`** — reescribir como capa delgada:
@@ -279,10 +323,10 @@ Archivos confirmados con consumo (lista exhaustiva):
    - Reemplazar el array literal por uso directo de `TicketConstants::STATUS_LABELS` (ya sin `cerrado`).
 
 **6. `src/Model/Table/TicketsTable.php`:**
-   - Líneas 227, 234, 247: `'Tickets.status NOT IN' => ['resuelto', 'convertido']` → `'Tickets.status NOT IN' => array_merge(TicketConstants::RESOLVED_STATUSES, TicketConstants::LEGACY_STATUSES)`. Mantiene comportamiento: tickets `resuelto`/`convertido`/`cerrado`/`en_progreso` quedan fuera del listado por defecto.
-   - Líneas 242, 282, 302-303: `'Tickets.status !=' => 'convertido'` → reemplazar por `'Tickets.status NOT IN' => TicketConstants::LEGACY_STATUSES`. Razón: la lógica original solo excluía un valor legacy; ahora extendemos a todos.
+   - Líneas 227, 234, 247: `'Tickets.status NOT IN' => ['resuelto', 'convertido']` → `'Tickets.status NOT IN' => TicketConstants::RESOLVED_STATUSES`. Tras la migración B.5 ya no existen tickets `convertido` en BD.
+   - Líneas 242, 282, 302-303: `'Tickets.status !=' => 'convertido'` → **eliminar la cláusula** completa (la condición es vacía tras la migración).
    - Líneas 276-277: eliminar `case 'convertidos': $query->where(['Tickets.status' => 'convertido']);` (el case completo desaparece).
-   - Líneas 301-303: el `if ($view !== 'convertidos')` se reemplaza por una exclusión **incondicional** de `LEGACY_STATUSES`. Bookmarks `?view=convertidos` caen al listado por defecto silenciosamente, donde los tickets `convertido` ya no son visibles.
+   - Líneas 301-303: el `if ($view !== 'convertidos')` se elimina entero (conditional + body). Bookmarks `?view=convertidos` caen al listado por defecto silenciosamente.
 
 **7. `src/View/Cell/TicketsSidebarCell.php`:**
    - Línea 42: `'status IN' => ['nuevo', 'abierto', 'pendiente']` → `'status IN' => TicketConstants::OPEN_STATUSES`.
@@ -316,7 +360,7 @@ Archivos confirmados con consumo (lista exhaustiva):
 7. `composer cs-check && composer cs-fix`.
 8. Smoke test final: home, login, detalle de ticket, crear comentario, `/admin/settings`.
 
-**Punto de no-retorno:** Fases A-C son aditivas o reemplazo y reversibles con `git revert`. Fase D es la eliminación física. Tag de rollback recomendado: `git tag pre-criticos-1-3` antes de Fase A.
+**Punto de no-retorno:** Fases A, B, C son reversibles con `git revert`. Fase B.5 (migration de BD) es **irreversible** sin backup — antes de aplicarla en producción, hacer `mysqldump` del schema `tickets`. Fase D es eliminación física de archivos. Tag de rollback recomendado: `git tag pre-criticos-1-3` antes de Fase A.
 
 ---
 
@@ -350,7 +394,7 @@ Se ejecuta **al final** (después de Fase D) para que el documento describa el e
 
 ### 4.4 Bloque nuevo — sección "Cross-cutting conventions" (agregar)
 
-> **Ticket status enum**: el modelo canónico de 4 estados (`nuevo`, `abierto`, `pendiente`, `resuelto`) vive en `TicketConstants::STATUSES`. Tickets en producción pueden tener valores legacy (`convertido`, `cerrado`, `en_progreso`) de módulos removidos; estos se toleran al leer (los helpers caen a un badge gris genérico) pero los validators los rechazan al escribir.
+> **Ticket status enum**: el modelo canónico de 4 estados (`nuevo`, `abierto`, `pendiente`, `resuelto`) vive en `TicketConstants::STATUSES`. Estados anteriores (`convertido`, `cerrado`, `en_progreso`) fueron consolidados a `resuelto` en la migration `ConsolidateLegacyTicketStatuses` (mayo 2026). Los helpers `StatusHelper::label/color` mantienen un fallback genérico defensivo, pero ningún flujo de runtime debería producir valores fuera de `STATUSES`.
 
 ### 4.5 Eliminar referencias
 
@@ -394,11 +438,9 @@ public function color(string $status): string
 
 Tickets huérfanos en BD con `status='convertido'`/`cerrado`/`en_progreso` se renderizan con label crudo capitalizado (`"Convertido"`, `"Cerrado"`, `"En progreso"`) en badge gris. Sin warnings en logs.
 
-### 5.3 Tickets huérfanos accedidos por URL directa
+### 5.3 Tickets huérfanos en BD
 
-- **Detalle del ticket** (`templates/Tickets/view.php`): badge gris vía fallback. ✅
-- **Sidebar** (`templates/element/tickets/left_sidebar.php`): `$isLocked = in_array($ticket->status, TicketConstants::RESOLVED_STATUSES, true)` → `false` para `convertido`. El usuario verá controles de edición habilitados. Aceptable: si edita y guarda, el validator rechaza el `status='convertido'` actual y el formulario fuerza a elegir uno de los 4 activos.
-- **Cambio de estado**: dropdown solo lista los 4 activos. El estado legacy no se puede perpetuar.
+Tras la Fase B.5 no existen tickets con estados legacy en BD. El fallback de `StatusHelper::label/color` solo aplica como red de seguridad ante datos inesperados (p. ej. inserts directos por DBA), nunca por flujos normales.
 
 ### 5.4 Smoke checks pre-deploy
 
@@ -411,16 +453,26 @@ grep -rn "App\\\\Utility" src/ config/ templates/ webroot/ tests/ 2>&1
 Debe retornar **cero** resultados.
 
 ```bash
-grep -rn -E "(en_progreso|convertido|cerrado)" src/ templates/ 2>&1 \
-  | grep -v 'cerrado sesión' \
-  | grep -v 'src/Constants/TicketConstants.php'
+grep -rn -E "(en_progreso|convertido|cerrado)" src/ templates/ 2>&1 | grep -v 'cerrado sesión'
 ```
 
-Debe retornar **cero** resultados en `templates/` y solo retornar matches "estructurales" en `src/` que son referencias intencionales:
-- `src/Constants/TicketConstants.php` — el array `LEGACY_STATUSES` (excluido del grep arriba).
-- `src/Model/Table/TicketsTable.php` — uso de `LEGACY_STATUSES` vía constante (sin literales).
+Debe retornar **cero** resultados. Cualquier match es código que debe limpiarse antes de Fase D.
 
-**Cero literales `'convertido'`/`'cerrado'`/`'en_progreso'` deben quedar en código (excepto dentro de la constante `LEGACY_STATUSES` y comentarios explicativos).**
+```bash
+grep -rn -E "(en_progreso|convertido|cerrado)" config/Migrations/ 2>&1
+```
+
+Solo deben aparecer matches en:
+- `config/Migrations/20260430213127_Initial.php` (esquema histórico, no se toca).
+- `config/Migrations/<timestamp>_ConsolidateLegacyTicketStatuses.php` (la migration generada en Fase B.5; los literales viven ahí porque es un archivo histórico).
+
+Verificación BD post-migration:
+
+```sql
+SELECT status, COUNT(*) FROM tickets GROUP BY status;
+```
+
+Solo debe retornar los 4 estados activos (`nuevo`, `abierto`, `pendiente`, `resuelto`).
 
 ### 5.5 Cobertura
 
@@ -428,9 +480,10 @@ El proyecto no tiene tests. Verificación 100% manual con los smoke tests listad
 
 ### 5.6 Rollback
 
-- Fases A-C: `git revert` restaura código.
+- Fases A, B, C: `git revert` restaura código.
+- Fase B.5 (BD migration): **no reversible automáticamente** — la migration `down()` lanza excepción. Si se requiere revertir, restaurar `tickets` desde backup pre-migration.
 - Fase D: requiere restaurar archivos desde el tag `pre-criticos-1-3`.
-- No hay migración de BD; ningún dato se pierde.
+- **Pre-deploy obligatorio**: `mysqldump` del schema `tickets` antes de aplicar migrations.
 
 ---
 
@@ -460,7 +513,6 @@ Todos fuera: `src/Event/`, `tests/`, mass-assignment de `assignee_id`, foreign k
 ### 6.4 Decisiones de dominio diferidas
 
 - **Reincorporar `cerrado` con `closed_at`**: no. Si el negocio lo pide, ciclo aparte.
-- **Migrar BD `convertido → resuelto`**: no. Trivial cuando se requiera (`UPDATE tickets SET status='resuelto' WHERE status='convertido'`).
 - **i18n**: no. Labels en español hardcoded.
 
 ### 6.5 Documentación
@@ -474,12 +526,12 @@ Todos fuera: `src/Event/`, `tests/`, mass-assignment de `assignee_id`, foreign k
 
 | Métrica | Valor |
 |---|---|
-| Archivos nuevos | 5 (`Constants/{Ticket,Role,Cache,Setting}*.php` + `Service/Traits/SettingsEncryptionTrait.php`) |
+| Archivos nuevos | 5 (`Constants/{Ticket,Role,Cache,Setting}*.php` + `Service/Traits/SettingsEncryptionTrait.php`) + 1 migration |
 | Archivos modificados (estimación) | ~24 |
 | Archivos eliminados | 4 (`Utility/{SettingKeys,ValidationConstants,SettingsEncryptionTrait}.php` + carpeta) |
-| Migración de BD | Ninguna |
-| Riesgo | Bajo-medio (refactor mecánico + eliminación de 3 valores legacy de UI) |
-| Esfuerzo estimado | ~7 horas (auditoría: 1-2h Crítico 1 + 2h Crítico 2 + 4h Crítico 3) |
+| Migración de BD | 1 — `ConsolidateLegacyTicketStatuses` (UPDATE de 3 valores legacy → `resuelto`, irreversible) |
+| Riesgo | Medio (refactor mecánico de código + UPDATE masivo en BD; mitigación: `mysqldump` previo) |
+| Esfuerzo estimado | ~7-8 horas (auditoría base + ~30 min para migration y backup) |
 | Cobertura de tests | Manual (proyecto sin suite) |
 
 **Próximo paso:** invocar `superpowers:writing-plans` para generar el plan de implementación a partir de este spec.
