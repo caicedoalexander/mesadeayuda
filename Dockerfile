@@ -1,4 +1,4 @@
-FROM php:8.4-fpm
+FROM php:8.5-fpm
 
 # Install system dependencies + nginx
 RUN apt-get update && apt-get install -y \
