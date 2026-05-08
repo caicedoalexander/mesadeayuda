@@ -36,7 +36,15 @@ This project does not run an automated test suite — there is no `tests/` direc
 ### Layered structure
 The codebase follows a fat-service / thin-controller pattern on top of CakePHP:
 
-- **`src/Controller/`** — HTTP edge. `TicketsController` is a single ~1050-line file organized internally by `// region:` markers (Listing, View, Actions, Bulk, History). The original intent was to split these into traits under `src/Controller/Trait/`; the extraction is the next pending refactor. Methods are now ticket-specific (`indexTicketList`, `viewTicket`, `assignTicket`, `changeTicketStatus`, `bulkAssignTickets`, etc.) — el parámetro `$entityType` heredado del módulo Compras fue eliminado en mayo 2026. See `docs/audits/2026-05-07-architecture-audit.md` (Crítico 3.2 god-controller pendiente).
+- **`src/Controller/`** — HTTP edge. `TicketsController` (~70 LOC) compone seis traits bajo `src/Controller/Trait/`:
+  - `TicketServiceInitializerTrait` — initialize de servicios, normalizadores de view-data, helpers de tabla/historia.
+  - `TicketListingTrait` — acción `index` y filtros laterales.
+  - `TicketViewTrait` — acción `view` y configuración de pantalla de detalle.
+  - `TicketActionsTrait` — `assign`, `addComment`, `changeStatus`, `changePriority`, `addTag`, `removeTag`, `addFollower`, `downloadAttachment`.
+  - `TicketBulkTrait` — operaciones masivas (`bulkAssign`, `bulkChangePriority`, `bulkAddTag`, `bulkDelete`).
+  - `TicketHistoryTrait` — endpoint JSON lazy-loaded de historial.
+
+  Las reglas de dominio (estados válidos, transiciones, reasignación) viven en la entidad `Ticket` (`isLocked`, `canTransitionTo`, `canBeAssignedTo`) y son consumidas desde los traits. El parámetro `$entityType` heredado del módulo Compras fue eliminado en mayo 2026.
 - **`src/Controller/Admin/`** — `Admin` route prefix (Settings, EmailTemplates, Tags). Las credenciales OAuth de Gmail (`client_secret.json`) se pegan como texto en `/admin/settings` y se guardan cifradas en `system_settings.gmail_client_secret_json` — no se sube ningún archivo.
 - **`src/Service/`** — Business logic. Domain service `TicketService`, integrations (`GmailService`, `EmailService`, `WhatsappService`, `N8nService`), cross-cutting helpers (`SidebarCountsService`, `NumberGenerationService`, `EmailTemplateRenderer`, `SettingsService`, `AuthorizationService`, `ProfileImageService`). Reusable mixin logic lives in `src/Service/Traits/`: `ConfigResolutionTrait`, `GenericAttachmentTrait`, `SecureHttpTrait`, `SettingsEncryptionTrait` (consumed by `AppController` and `GmailImportService` for transparent encryption of sensitive `system_settings` keys). Attachments are stored on local disk under `webroot/uploads/`.
 - **`src/Constants/`** — final classes con constantes de dominio. **Nunca hardcodear strings o IDs de dominio**; referenciar estas clases. Archivos:
