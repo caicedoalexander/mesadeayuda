@@ -37,7 +37,6 @@ class AppView extends View
      */
     public function initialize(): void
     {
-        $this->addHelper('Ticket');
         $this->addHelper('User');
         $this->addHelper('Sanitize');
     }
