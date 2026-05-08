@@ -5,6 +5,7 @@ namespace App\Service;
 
 use App\Constants\CacheConstants;
 use App\Constants\SettingKeys;
+use App\Service\Exception\GmailAuthenticationException;
 use App\Service\Traits\SettingsEncryptionTrait;
 use Cake\Cache\Cache;
 use Cake\Log\Log;
@@ -15,7 +16,6 @@ use Google\Service\Gmail;
 use Google\Service\Gmail\Message;
 use Google\Service\Gmail\MessagePart;
 use Google\Service\Gmail\ModifyMessageRequest;
-use RuntimeException;
 
 /**
  * Gmail Service
@@ -124,11 +124,11 @@ class GmailService
 
                 if (isset($token['error'])) {
                     Log::error('OAuth token refresh failed', ['error' => $token]);
-                    throw new RuntimeException('Gmail authentication failed: ' . ($token['error_description'] ?? $token['error']));
+                    throw new GmailAuthenticationException('Gmail authentication failed: ' . ($token['error_description'] ?? $token['error']));
                 }
             } catch (Exception $e) {
                 Log::error('Failed to refresh OAuth token: ' . $e->getMessage());
-                throw new RuntimeException('Gmail authentication failed. Please re-authenticate in Admin Settings.');
+                throw new GmailAuthenticationException('Gmail authentication failed. Please re-authenticate in Admin Settings.');
             }
         }
     }
@@ -169,7 +169,7 @@ class GmailService
 
         if (isset($token['error'])) {
             Log::error('Gmail authentication error: ' . $token['error']);
-            throw new RuntimeException('Failed to authenticate with Gmail: ' . $token['error']);
+            throw new GmailAuthenticationException('Failed to authenticate with Gmail: ' . $token['error']);
         }
 
         return $token;
