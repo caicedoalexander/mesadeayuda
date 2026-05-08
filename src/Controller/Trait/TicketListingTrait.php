@@ -19,25 +19,7 @@ trait TicketListingTrait
      */
     public function index()
     {
-        $this->indexTicketList([
-            'filterParams' => [],
-            'specialRedirects' => function ($request, $user, $userRole) {
-                // Handle Gmail OAuth callback redirect
-                $code = $request->getQuery('code');
-                if ($code) {
-                    $this->redirect([
-                        'controller' => 'Settings',
-                        'action' => 'gmailAuth',
-                        'prefix' => 'Admin',
-                        '?' => ['code' => $code],
-                    ]);
-
-                    return true;
-                }
-
-                return null;
-            },
-        ]);
+        $this->indexTicketList(['filterParams' => []]);
     }
 
     /**
@@ -56,17 +38,10 @@ trait TicketListingTrait
             'usersRoleFilter' => null,
             'additionalViewVars' => [],
             'beforeQuery' => null,
-            'specialRedirects' => null,
         ];
         $config = array_merge($defaults, $config);
         $user = $this->Authentication->getIdentity();
         $userRole = $user ? $user->get('role') : null;
-        if (is_callable($config['specialRedirects'])) {
-            $redirect = $config['specialRedirects']($this->request, $user, $userRole);
-            if ($redirect !== null) {
-                return;
-            }
-        }
         $view = $this->request->getQuery('view', $config['defaultView']);
         $search = $this->request->getQuery('search');
         $filterStatus = $this->request->getQuery('filter_status');

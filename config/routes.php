@@ -64,6 +64,12 @@ return function (RouteBuilder $routes): void {
             '_name' => 'health_check'
         ]);
 
+        // Gmail OAuth callback (compat con configs legacy en Google Cloud Console)
+        $builder->connect(
+            '/oauth/gmail/callback',
+            ['controller' => 'Settings', 'action' => 'gmailAuth', 'prefix' => 'Admin']
+        );
+
         // Admin routes
         $builder->prefix('Admin', function (RouteBuilder $routes) {
             $routes->connect('/', ['controller' => 'Settings', 'action' => 'index']);
