@@ -52,4 +52,29 @@ class SidebarCountsService
             'myItems' => $myItems,
         ];
     }
+
+    /**
+     * Get per-status ticket counts for tickets assigned to a specific agent.
+     *
+     * Returns an associative array of status => count for OPEN_STATUSES only.
+     * Statuses with no tickets are absent from the result.
+     *
+     * @param int $userId Agent user ID
+     * @return array<string, int>
+     */
+    public function getAgentStatusCounts(int $userId): array
+    {
+        $table = $this->fetchTable('Tickets');
+
+        return $table->find()
+            ->select(['status', 'count' => $table->find()->func()->count('*')])
+            ->where([
+                'assignee_id' => $userId,
+                'status IN' => TicketConstants::OPEN_STATUSES,
+            ])
+            ->groupBy(['status'])
+            ->all()
+            ->combine('status', 'count')
+            ->toArray();
+    }
 }

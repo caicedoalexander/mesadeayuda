@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace App\View\Cell;
 
 use App\Constants\RoleConstants;
-use App\Constants\TicketConstants;
 use App\Service\SidebarCountsService;
 use Cake\ORM\Locator\LocatorAwareTrait;
 use Cake\View\Cell;
@@ -37,14 +36,7 @@ class TicketsSidebarCell extends Cell
         // For agents: count status-specific tickets assigned to them
         $agentStatusCounts = [];
         if ($isAgent && $userId) {
-            $ticketsTable = $this->fetchTable('Tickets');
-            $agentStatusCounts = $ticketsTable->find()
-                ->select(['status', 'count' => $ticketsTable->find()->func()->count('*')])
-                ->where(['assignee_id' => $userId, 'status IN' => TicketConstants::OPEN_STATUSES])
-                ->groupBy(['status'])
-                ->all()
-                ->combine('status', 'count')
-                ->toArray();
+            $agentStatusCounts = $service->getAgentStatusCounts($userId);
         }
 
         $counts = [
