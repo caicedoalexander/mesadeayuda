@@ -431,4 +431,43 @@ Cerrados:
 Plan de implementación: `docs/superpowers/plans/2026-05-08-ticket-service-split.md`.
 Diseño: `docs/superpowers/specs/2026-05-08-ticket-service-split-design.md`.
 
-**Pendientes restantes:** medios 5.1–5.7.
+**Pendientes restantes:** medios 5.1, 5.2, 5.3, 5.5, 5.6 (5.4 y 5.7 cerrados en Anexo 5).
+
+### Anexo 5 — Cierre fase 3 riesgo (2026-05-08)
+
+Cerrados:
+
+- **5.4 ✅** Mass-assignment de `Ticket::assignee_id` cerrado (`_accessible: false`). Autorización defense in depth:
+  - **Controller:** `TicketActionsTrait::assignTicket` y `TicketBulkTrait::bulkAssignTickets` chequean `AuthorizationService::isAssignmentDisabled($actor)` antes de delegar al service. UX: flash error + redirect inmediato.
+  - **Service:** `TicketPipelineService::assign` recibe `$actor` (opcional, retro-compatible) e invoca el mismo chequeo + `Ticket::canBeAssignedTo($targetUser)` como invariante. Lanza `UnauthorizedAssignmentException` (en `src/Service/Exception/`) ante violación.
+  - **Casos cubiertos:** POST directo desde rol no-staff (controller + service), bulk assign no autorizado (controller aborta lote), ticket locked / target inactivo / target no-staff (service por entidad), `patchEntity` futuro con `assignee_id` (entity rechaza).
+  - **DI:** `TicketPipelineService::__construct` acepta `?AuthorizationService $authService = null` (patrón SGI ya adoptado).
+
+- **5.7 ✅** Tabla comparativa de tipos de FK (lectura de `config/Migrations/20260430213127_Initial.php`):
+
+  | Tabla origen | Columna FK | Tipo FK | Tabla destino | Tipo PK destino | Coincide |
+  |---|---|---|---|---|---|
+  | `attachments` | `uploaded_by` | integer, signed=false, limit=null, NOT NULL | `users.id` | integer, signed=false, limit=null | ✅ |
+  | `attachments` | `ticket_id` | integer, signed=false, limit=null, NOT NULL | `tickets.id` | integer, signed=false, limit=null | ✅ |
+  | `attachments` | `comment_id` | integer, signed=false, limit=null, NULL | `ticket_comments.id` | integer, signed=false, limit=null | ✅ |
+  | `ticket_comments` | `ticket_id` | integer, signed=false, limit=null, NOT NULL | `tickets.id` | integer, signed=false, limit=null | ✅ |
+  | `ticket_comments` | `user_id` | integer, signed=false, limit=null, NOT NULL | `users.id` | integer, signed=false, limit=null | ✅ |
+  | `ticket_followers` | `ticket_id` | integer, signed=false, limit=null, NOT NULL | `tickets.id` | integer, signed=false, limit=null | ✅ |
+  | `ticket_followers` | `user_id` | integer, signed=false, limit=null, NOT NULL | `users.id` | integer, signed=false, limit=null | ✅ |
+  | `ticket_history` | `ticket_id` | integer, signed=false, limit=null, NOT NULL | `tickets.id` | integer, signed=false, limit=null | ✅ |
+  | `ticket_history` | `changed_by` | integer, signed=false, limit=null, NOT NULL | `users.id` | integer, signed=false, limit=null | ✅ |
+  | `tickets` | `requester_id` | integer, signed=false, limit=null, NOT NULL | `users.id` | integer, signed=false, limit=null | ✅ |
+  | `tickets` | `assignee_id` | integer, signed=false, limit=null, NULL | `users.id` | integer, signed=false, limit=null | ✅ |
+  | `tickets_tags` | `ticket_id` | integer, signed=false, limit=null, NOT NULL | `tickets.id` | integer, signed=false, limit=null | ✅ |
+  | `tickets_tags` | `tag_id` | integer, signed=false, limit=null, NOT NULL | `tags.id` | integer, signed=false, limit=null | ✅ |
+
+  **Resultado:** todos los pares FK/PK coinciden en tipo, signedness y limit. Cerrado ✅.
+
+  **Nota:** `users.organization_id` (línea 780 de la migration) declara la columna pero no hay `addForeignKey` que la enlace a `organizations` — consistente con la remoción del módulo Organizaciones (CLAUDE.md). Es columna huérfana sin constraint, no un mismatch de tipo. Su limpieza queda fuera de este alcance.
+
+**Diferidos a fase posterior:**
+- 5.5 (config tipada) — requiere decisión arquitectónica (Value Object `SystemConfig` vs. inyección de `SettingsService`); toca múltiples servicios.
+- 5.1 (domain events), 5.2 (tests mínimos), 5.3, 5.6.
+
+Plan ejecutado: `docs/superpowers/plans/2026-05-08-audit-fase3-riesgo.md`.
+Diseño: `docs/superpowers/specs/2026-05-08-audit-fase3-riesgo-design.md`.
