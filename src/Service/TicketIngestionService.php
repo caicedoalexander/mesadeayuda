@@ -3,11 +3,14 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Domain\Event\TicketCreated;
 use App\Model\Entity\Ticket;
 use App\Model\Entity\TicketComment;
 use App\Model\Entity\User;
 use App\Service\Dto\SystemConfig;
 use App\Service\Traits\HtmlSanitizerTrait;
+use Cake\Event\EventManager;
+use Cake\Event\EventManagerInterface;
 use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
 use Exception;
@@ -24,20 +27,24 @@ class TicketIngestionService
     private TicketAttachmentService $attachments;
     private TicketNotificationService $notifications;
     private SystemConfig $config;
+    private EventManagerInterface $eventManager;
 
     /**
      * @param \App\Service\Dto\SystemConfig|null $config System configuration VO
      * @param \App\Service\TicketAttachmentService|null $attachments Optional injected attachment service
      * @param \App\Service\TicketNotificationService|null $notifications Optional injected notification service
+     * @param \Cake\Event\EventManagerInterface|null $eventManager Optional injected event manager
      */
     public function __construct(
         ?SystemConfig $config = null,
         ?TicketAttachmentService $attachments = null,
         ?TicketNotificationService $notifications = null,
+        ?EventManagerInterface $eventManager = null,
     ) {
         $this->config = $config ?? SystemConfig::empty();
         $this->attachments = $attachments ?? new TicketAttachmentService();
         $this->notifications = $notifications ?? new TicketNotificationService($this->config);
+        $this->eventManager = $eventManager ?? EventManager::instance();
     }
 
     /**
@@ -130,8 +137,12 @@ class TicketIngestionService
             $this->attachments->processEmailAttachments($ticket, $emailData['attachments'], $user->id);
         }
 
-        // Send creation notifications (Email + WhatsApp)
-        $this->notifications->dispatchCreationNotifications($ticket);
+        // Dispatch domain event — TicketNotificationListener handles notifications.
+        $this->eventManager->dispatch(new TicketCreated(
+            ticketId: (int)$ticket->id,
+            requesterId: (int)$ticket->requester_id,
+            source: 'email',
+        ));
 
         // Send n8n webhook for AI tag assignment (lazy loaded only when creating tickets)
         try {

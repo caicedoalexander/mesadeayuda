@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Domain\Event\TicketAssigned;
+use App\Domain\Event\TicketStatusChanged;
 use App\Model\Entity\Ticket;
 use App\Model\Entity\User;
 use App\Service\Dto\SystemConfig;
@@ -10,6 +12,8 @@ use App\Service\Exception\InvalidStatusTransitionException;
 use App\Service\Exception\UnauthorizedAssignmentException;
 use App\Service\Traits\TicketHistoryLoggerTrait;
 use Cake\Datasource\EntityInterface;
+use Cake\Event\EventManager;
+use Cake\Event\EventManagerInterface;
 use Cake\I18n\FrozenTime;
 use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
@@ -29,6 +33,7 @@ class TicketPipelineService
     private TicketNotificationService $notifications;
     private AuthorizationService $authService;
     private SystemConfig $config;
+    private EventManagerInterface $eventManager;
 
     /**
      * @param \App\Service\Dto\SystemConfig|null $config System configuration VO
@@ -36,6 +41,7 @@ class TicketPipelineService
      * @param \App\Service\TicketAttachmentService|null $attachments Optional injected attachment service
      * @param \App\Service\TicketNotificationService|null $notifications Optional injected notification service
      * @param \App\Service\AuthorizationService|null $authService Optional injected authorization service
+     * @param \Cake\Event\EventManagerInterface|null $eventManager Optional injected event manager
      */
     public function __construct(
         ?SystemConfig $config = null,
@@ -43,12 +49,14 @@ class TicketPipelineService
         ?TicketAttachmentService $attachments = null,
         ?TicketNotificationService $notifications = null,
         ?AuthorizationService $authService = null,
+        ?EventManagerInterface $eventManager = null,
     ) {
         $this->config = $config ?? SystemConfig::empty();
         $this->comments = $comments ?? new TicketCommentService($this->config);
         $this->attachments = $attachments ?? new TicketAttachmentService();
         $this->notifications = $notifications ?? new TicketNotificationService($this->config);
         $this->authService = $authService ?? new AuthorizationService();
+        $this->eventManager = $eventManager ?? EventManager::instance();
     }
 
     /**
@@ -184,7 +192,12 @@ class TicketPipelineService
         $this->comments->addComment($entity->id, $userId, $systemComment, 'internal', true);
 
         if ($sendNotifications) {
-            $this->notifications->sendStatusChangeEmail($entity, $oldStatus, $newStatus);
+            $this->eventManager->dispatch(new TicketStatusChanged(
+                ticketId: (int)$entity->id,
+                oldStatus: $oldStatus,
+                newStatus: $newStatus,
+                actorId: $userId,
+            ));
         }
 
         return true;
@@ -265,6 +278,13 @@ class TicketPipelineService
         );
 
         $this->comments->addComment($entity->id, $userId, "Asignado a {$newAssigneeName}", 'internal', true);
+
+        $this->eventManager->dispatch(new TicketAssigned(
+            ticketId: (int)$entity->id,
+            assigneeId: $normalizedAssigneeId,
+            previousAssigneeId: $oldAssigneeId,
+            actorId: $userId,
+        ));
 
         return true;
     }
