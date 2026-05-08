@@ -5,7 +5,7 @@ namespace App\Controller\Trait;
 
 use App\Constants\CacheConstants;
 use App\Constants\TicketConstants;
-use App\Service\TicketService;
+use App\Service\TicketPipelineService;
 use Cake\Cache\Cache;
 use Cake\ORM\Table;
 
@@ -36,7 +36,7 @@ trait TicketServiceInitializerTrait
     protected function initializeTicketSystemServices(): void
     {
         $this->initializeServices([
-            'ticketService' => TicketService::class,
+            'ticketPipeline' => TicketPipelineService::class,
         ]);
     }
 
@@ -82,13 +82,13 @@ trait TicketServiceInitializerTrait
     // region: TicketSystemController helpers
 
     /**
-     * @return array{table: \Cake\ORM\Table, service: ?\App\Service\TicketService, displayName: string, tableName: string, foreignKey: string, 0: \Cake\ORM\Table, 1: ?\App\Service\TicketService, 2: string}
+     * @return array{table: \Cake\ORM\Table, service: ?\App\Service\TicketPipelineService, displayName: string, tableName: string, foreignKey: string, 0: \Cake\ORM\Table, 1: ?\App\Service\TicketPipelineService, 2: string}
      */
     private function getEntityComponents(): array
     {
         $components = [
             'table' => $this->Tickets ?? $this->fetchTable('Tickets'),
-            'service' => $this->ticketService ?? null,
+            'service' => $this->ticketPipeline ?? null,
             'displayName' => 'Ticket',
             'tableName' => 'Tickets',
             'foreignKey' => 'ticket_id',

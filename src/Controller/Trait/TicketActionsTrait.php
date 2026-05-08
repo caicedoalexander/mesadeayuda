@@ -56,7 +56,7 @@ trait TicketActionsTrait
         $this->request->allowMethod(['post']);
 
         $tagId = (int)$this->request->getData('tag_id');
-        $result = $this->ticketService->addTag((int)$id, $tagId);
+        $result = $this->ticketPipeline->addTag((int)$id, $tagId);
 
         $this->Flash->{$result['success'] ? 'success' : ($result['message'] === 'Esta etiqueta ya está agregada.' ? 'warning' : 'error')}($result['message']);
 
@@ -71,7 +71,7 @@ trait TicketActionsTrait
     {
         $this->request->allowMethod(['post', 'delete']);
 
-        $result = $this->ticketService->removeTag((int)$id, (int)$tagId);
+        $result = $this->ticketPipeline->removeTag((int)$id, (int)$tagId);
 
         $this->Flash->{$result['success'] ? 'success' : 'error'}($result['message']);
 
@@ -86,7 +86,7 @@ trait TicketActionsTrait
         $this->request->allowMethod(['post']);
 
         $userId = (int)$this->request->getData('user_id');
-        $result = $this->ticketService->addFollower((int)$id, $userId);
+        $result = $this->ticketPipeline->addFollower((int)$id, $userId);
 
         $this->Flash->{$result['success'] ? 'success' : ($result['message'] === 'Este usuario ya está siguiendo el ticket.' ? 'warning' : 'error')}($result['message']);
 

@@ -10,7 +10,7 @@ use App\Controller\Trait\TicketHistoryTrait;
 use App\Controller\Trait\TicketListingTrait;
 use App\Controller\Trait\TicketServiceInitializerTrait;
 use App\Controller\Trait\TicketViewTrait;
-use App\Service\TicketService;
+use App\Service\TicketPipelineService;
 use App\Service\Traits\GenericAttachmentTrait;
 use Cake\Event\EventInterface;
 
@@ -20,7 +20,7 @@ use Cake\Event\EventInterface;
  * Composes six region traits under App\Controller\Trait. Each trait owns
  * a cohesive slice of the ticket workflow (initialization, listing, view,
  * single-entity actions, bulk operations, history). The controller itself
- * only wires up auth/CSRF and exposes the shared TicketService property.
+ * only wires up auth/CSRF and exposes the shared TicketPipelineService property.
  *
  * @property \App\Model\Table\TicketsTable $Tickets
  */
@@ -34,7 +34,7 @@ class TicketsController extends AppController
     use TicketBulkTrait;
     use TicketHistoryTrait;
 
-    private TicketService $ticketService;
+    private TicketPipelineService $ticketPipeline;
 
     /**
      * @param \Cake\Event\EventInterface<\Cake\Controller\Controller> $event Event
