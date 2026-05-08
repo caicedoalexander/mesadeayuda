@@ -1,0 +1,22 @@
+/* Badges para tickets — extraido de StatusHelper inline (audit 4.4) */
+/* Colores derivados de TicketConstants::STATUS_COLORS y PRIORITY_COLORS */
+
+.badge-status,
+.badge-priority {
+    color: white;
+    border-radius: 8px;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-status-nuevo     { background-color: #ffc107; }
+.badge-status-abierto   { background-color: #dc3545; }
+.badge-status-pendiente { background-color: #0d6efd; }
+.badge-status-resuelto  { background-color: #198754; }
+
+.badge-priority-baja    { background-color: #6c757d; }
+.badge-priority-media   { background-color: #0dcaf0; }
+.badge-priority-alta    { background-color: #ffc107; }
+.badge-priority-urgente { background-color: #dc3545; }

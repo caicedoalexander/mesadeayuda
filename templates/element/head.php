@@ -20,7 +20,7 @@
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 
     <!-- Custom Styles -->
-    <?= $this->Html->css(['styles']) ?>
+    <?= $this->Html->css(['styles', 'badges']) ?>
 
     <!-- jQuery (required for Select2) -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>

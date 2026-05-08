@@ -9,7 +9,7 @@ use App\Constants\RoleConstants;
  * Authorization Service
  *
  * Centralizes role-based authorization checks that were previously
- * scattered across view helpers (TicketHelper, UserHelper).
+ * scattered across view helpers (UserHelper).
  */
 class AuthorizationService
 {

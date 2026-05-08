@@ -9,14 +9,15 @@ use Cake\View\Helper;
 /**
  * Status Helper
  *
- * Thin layer over TicketConstants. Renders inline-styled badges
- * (deprecated; replace with view elements in next cycle — Alto 4.4 audit).
+ * Thin layer over TicketConstants. Defers HTML rendering to
+ * templates/element/tickets/{status,priority}_badge.php with CSS classes
+ * defined in webroot/css/badges.css.
  */
 class StatusHelper extends Helper
 {
     /**
      * @param string $priority Priority key
-     * @return string Hex color
+     * @return string Hex color (kept for non-badge consumers)
      */
     public function priorityColor(string $priority): string
     {
@@ -34,7 +35,7 @@ class StatusHelper extends Helper
 
     /**
      * @param string $status Status key
-     * @return string Hex color
+     * @return string Hex color (kept for non-badge consumers)
      */
     public function statusColor(string $status): string
     {
@@ -58,25 +59,13 @@ class StatusHelper extends Helper
      */
     public function statusBadge(string $status, array $options = []): string
     {
-        $style = 'background-color: %s; color: white; border-radius: 8px; '
-            . 'padding: 0.35rem 0.65rem; font-size: 0.75rem; '
-            . 'font-weight: 600; text-transform: uppercase;';
-        $badge = sprintf(
-            '<span class="badge" style="' . $style . '">%s</span>',
-            h($this->statusColor($status)),
-            h($this->statusLabel($status)),
-        );
+        $key = strtolower($status);
 
-        $url = $options['url'] ?? null;
-        if ($url) {
-            return $this->getView()->Html->link(
-                $badge,
-                $url,
-                ['escape' => false, 'class' => 'text-decoration-none'],
-            );
-        }
-
-        return $badge;
+        return $this->getView()->element('tickets/status_badge', [
+            'status' => $key,
+            'label' => $this->statusLabel($key),
+            'url' => $options['url'] ?? null,
+        ]);
     }
 
     /**
@@ -86,24 +75,12 @@ class StatusHelper extends Helper
      */
     public function priorityBadge(string $priority, array $options = []): string
     {
-        $style = 'background-color: %s; color: white; border-radius: 8px; '
-            . 'padding: 0.35rem 0.65rem; font-size: 0.75rem; '
-            . 'font-weight: 600; text-transform: uppercase;';
-        $badge = sprintf(
-            '<span class="badge" style="' . $style . '">%s</span>',
-            h($this->priorityColor($priority)),
-            h($this->priorityLabel($priority)),
-        );
+        $key = strtolower($priority);
 
-        $url = $options['url'] ?? null;
-        if ($url) {
-            return $this->getView()->Html->link(
-                $badge,
-                $url,
-                ['escape' => false, 'class' => 'text-decoration-none'],
-            );
-        }
-
-        return $badge;
+        return $this->getView()->element('tickets/priority_badge', [
+            'priority' => $key,
+            'label' => $this->priorityLabel($key),
+            'url' => $options['url'] ?? null,
+        ]);
     }
 }

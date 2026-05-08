@@ -3,7 +3,6 @@
  * @var \App\View\AppView $this
  * @var iterable<\App\Model\Entity\Ticket> $tickets
  * @var \App\View\Helper\StatusHelper $Status
- * @var \App\View\Helper\TicketHelper $Ticket
  * @var \App\View\Helper\TimeHumanHelper $TimeHuman
  */
 $this->assign('title', 'Tickets');
@@ -104,7 +103,7 @@ $userId = $user ? $user->get('id') : null;
                                     style="min-width: 300px; max-width: 300px;">
                                     <?= $this->Html->link(
                                         h($ticket->subject),
-                                        $this->Ticket->getViewUrl($ticket),
+                                        ['action' => 'view', $ticket->id],
                                         ['style' => 'text-decoration: none; color: var(--gray-900); font-size: 14px;']
                                     ) ?>
                                 </td>
