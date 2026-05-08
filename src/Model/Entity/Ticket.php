@@ -58,7 +58,7 @@ class Ticket extends Entity
         'status' => false,
         'priority' => true,
         'requester_id' => false,
-        'assignee_id' => true,
+        'assignee_id' => false,
         'channel' => false,
         'source_email' => false,
         'created' => false,
