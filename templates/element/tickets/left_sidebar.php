@@ -4,7 +4,7 @@
         <div class="p-3">
         <?php
         // Check if ticket is locked (in final status)
-        $isLocked = $isLocked ?? in_array($ticket->status, ['resuelto', 'convertido']);
+        $isLocked = $isLocked ?? in_array($ticket->status, \App\Constants\TicketConstants::RESOLVED_STATUSES, true);
         ?>
         <section class="mb-3">
             <h3 class="fs-6 fw-semibold mb-3">Información del Ticket</h3>

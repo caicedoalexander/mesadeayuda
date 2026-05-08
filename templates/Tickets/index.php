@@ -38,7 +38,6 @@ $userId = $user ? $user->get('id') : null;
                     'abiertos' => 'Tickets abiertos',
                     'pendientes' => 'Tickets pendientes',
                     'resueltos' => 'Tickets resueltos',
-                    'convertidos' => 'Tickets convertidos',
                     'mis_tickets' => 'Mis tickets',
                 ];
                 echo $titles[$view] ?? 'Tickets';
@@ -119,7 +118,7 @@ $userId = $user ? $user->get('id') : null;
 
                                 <td class="py-1 align-middle" style="max-width: 150px;">
                                     <?php
-                                    $isLocked = in_array($ticket->status, ['resuelto', 'convertido']);
+                                    $isLocked = in_array($ticket->status, \App\Constants\TicketConstants::RESOLVED_STATUSES, true);
                                     $isDisabled = $isAssignmentDisabled || $isLocked;
                                     ?>
                                     <?= $this->Form->create(null, ['url' => ['action' => 'assign', $ticket->id], 'class' => 'table-assign-form']) ?>

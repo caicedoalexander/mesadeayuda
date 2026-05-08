@@ -224,14 +224,14 @@ class TicketsTable extends Table
                 case 'sin_asignar':
                     $query->where([
                         'Tickets.assignee_id IS' => null,
-                        'Tickets.status NOT IN' => ['resuelto', 'convertido'],
+                        'Tickets.status NOT IN' => TicketConstants::RESOLVED_STATUSES,
                     ]);
                     break;
                 case 'mis_tickets':
                     if ($user) {
                         $query->where([
                             'Tickets.assignee_id' => $user->get('id'),
-                            'Tickets.status NOT IN' => ['resuelto', 'convertido'],
+                            'Tickets.status NOT IN' => TicketConstants::RESOLVED_STATUSES,
                         ]);
                     }
                     break;
@@ -239,12 +239,11 @@ class TicketsTable extends Table
                     if ($user) {
                         $query->where([
                             'Tickets.requester_id' => $user->get('id'),
-                            'Tickets.status !=' => 'convertido',
                         ]);
                     }
                     break;
                 case 'todos_sin_resolver':
-                    $query->where(['Tickets.status NOT IN' => ['resuelto', 'convertido']]);
+                    $query->where(['Tickets.status NOT IN' => TicketConstants::RESOLVED_STATUSES]);
                     break;
                 case 'pendientes':
                     $conditions = ['Tickets.status' => 'pendiente'];
@@ -273,13 +272,9 @@ class TicketsTable extends Table
                 case 'resueltos':
                     $query->where(['Tickets.status' => 'resuelto']);
                     break;
-                case 'convertidos':
-                    $query->where(['Tickets.status' => 'convertido']);
-                    break;
                 case 'recientes':
                     $query->where([
                         'Tickets.created >=' => date('Y-m-d', strtotime('-7 days')),
-                        'Tickets.status !=' => 'convertido',
                     ]);
                     break;
             }
@@ -298,10 +293,6 @@ class TicketsTable extends Table
                     'Requesters.email LIKE' => '%' . $search . '%',
                 ],
             ]);
-            // Exclude converted tickets from search unless explicitly viewing convertidos
-            if ($view !== 'convertidos') {
-                $query->where(['Tickets.status !=' => 'convertido']);
-            }
         }
 
         // Apply specific filters

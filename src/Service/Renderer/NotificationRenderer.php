@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Service\Renderer;
 
+use App\Constants\TicketConstants;
 use App\Model\Entity\Ticket;
 use Cake\Core\Configure;
 use Cake\I18n\DateTime;
@@ -56,20 +57,7 @@ class NotificationRenderer
      */
     public function getStatusLabel(string $status): string
     {
-        $labels = [
-            'nuevo' => 'Nuevo',
-            'abierto' => 'Abierto',
-            'pendiente' => 'Pendiente',
-            'resuelto' => 'Resuelto',
-            'cerrado' => 'Cerrado',
-            'en_revision' => 'En Revisión',
-            'en_proceso' => 'En Proceso',
-            'aprobado' => 'Aprobado',
-            'completado' => 'Completado',
-            'rechazado' => 'Rechazado',
-        ];
-
-        return $labels[$status] ?? ucfirst($status);
+        return TicketConstants::STATUS_LABELS[$status] ?? ucfirst($status);
     }
 
     /**

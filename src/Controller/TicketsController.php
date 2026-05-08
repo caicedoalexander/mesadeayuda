@@ -5,6 +5,7 @@ namespace App\Controller;
 
 use App\Constants\CacheConstants;
 use App\Constants\RoleConstants;
+use App\Constants\TicketConstants;
 use App\Model\Entity\Ticket;
 use App\Service\AuthorizationService;
 use App\Service\TicketService;
@@ -347,13 +348,16 @@ class TicketsController extends AppController
      */
     protected function getStatusConfig(): array
     {
-        return [
-            'nuevo' => ['icon' => 'bi-circle-fill', 'color' => '#ffc107', 'label' => 'Nuevo'],
-            'abierto' => ['icon' => 'bi-circle-fill', 'color' => '#dc3545', 'label' => 'Abierto'],
-            'pendiente' => ['icon' => 'bi-circle-fill', 'color' => '#0d6efd', 'label' => 'Pendiente'],
-            'resuelto' => ['icon' => 'bi-circle-fill', 'color' => '#198754', 'label' => 'Resuelto'],
-            'convertido' => ['icon' => 'bi-arrow-left-right', 'color' => '#6c757d', 'label' => 'Convertido'],
-        ];
+        $config = [];
+        foreach (TicketConstants::STATUSES as $status) {
+            $config[$status] = [
+                'icon' => TicketConstants::STATUS_ICONS[$status] ?? 'bi-circle-fill',
+                'color' => TicketConstants::STATUS_COLORS[$status] ?? '#6c757d',
+                'label' => TicketConstants::STATUS_LABELS[$status] ?? ucfirst($status),
+            ];
+        }
+
+        return $config;
     }
 
     /**
@@ -374,7 +378,7 @@ class TicketsController extends AppController
      */
     protected function getResolvedStatuses(): array
     {
-        return ['resuelto', 'convertido'];
+        return TicketConstants::RESOLVED_STATUSES;
     }
 
     /**
@@ -619,7 +623,6 @@ class TicketsController extends AppController
                 'abierto' => 'Abierto',
                 'pendiente' => 'Pendiente',
                 'resuelto' => 'Resuelto',
-                'cerrado' => 'Cerrado',
             ],
             default => [],
         };
@@ -657,10 +660,7 @@ class TicketsController extends AppController
         if (isset($config['beforeSet']) && is_callable($config['beforeSet'])) {
             $viewVars = $config['beforeSet']($entity, $viewVars);
         }
-        $allStatuses = $this->getStatusConfig();
-        $selectableStatuses = array_filter($allStatuses, function ($key) {
-            return $key !== 'convertido';
-        }, ARRAY_FILTER_USE_KEY);
+        $selectableStatuses = $this->getStatusConfig();
         $user = $this->Authentication->getIdentity();
         $authService = new AuthorizationService();
         $viewVars = array_merge($viewVars, [

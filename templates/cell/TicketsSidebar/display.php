@@ -76,14 +76,6 @@
                 ['class' => $view === 'resueltos' ? 'active' : '', 'escape' => false]
             ) ?>
         </li>
-
-        <li class="list-group-item">
-            <?= $this->Html->link(
-                '<span class="badge" style="background-color: #6c757d; color: white;">⇄</span>Convertidos <span class="count">' . $counts['convertidos'] . '</span>',
-                ['action' => 'index', '?' => ['view' => 'convertidos']],
-                ['class' => $view === 'convertidos' ? 'active' : '', 'escape' => false]
-            ) ?>
-        </li>
     </ul>
     </div>
 </div>

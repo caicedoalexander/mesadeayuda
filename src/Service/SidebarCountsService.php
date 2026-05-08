@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Constants\RoleConstants;
+use App\Constants\TicketConstants;
 use Cake\ORM\Locator\LocatorAwareTrait;
 
 /**
@@ -25,7 +26,7 @@ class SidebarCountsService
     public function getSidebarCounts(?string $userRole = null, ?int $userId = null): array
     {
         $table = $this->fetchTable('Tickets');
-        $resolvedStatuses = ['resuelto', 'convertido'];
+        $resolvedStatuses = TicketConstants::RESOLVED_STATUSES;
 
         $statusCounts = $table->find()
             ->select(['status', 'count' => $table->find()->func()->count('*')])

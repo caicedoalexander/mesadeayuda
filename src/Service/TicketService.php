@@ -648,9 +648,6 @@ class TicketService
         if ($newStatus === 'resuelto' && !$entity->resolved_at) {
             $entity->resolved_at = $now;
         }
-        if ($newStatus === 'cerrado' && isset($entity->closed_at) && !$entity->closed_at) {
-            $entity->closed_at = $now;
-        }
 
         if (!$table->save($entity)) {
             Log::error('Failed to change status', ['errors' => $entity->getErrors()]);
