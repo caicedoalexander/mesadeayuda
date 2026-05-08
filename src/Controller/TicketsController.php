@@ -8,6 +8,7 @@ use App\Constants\RoleConstants;
 use App\Constants\TicketConstants;
 use App\Model\Entity\Ticket;
 use App\Service\AuthorizationService;
+use App\Service\Exception\InvalidStatusTransitionException;
 use App\Service\TicketService;
 use App\Service\Traits\GenericAttachmentTrait;
 use Cake\Cache\Cache;
@@ -321,11 +322,6 @@ class TicketsController extends AppController
         return TicketConstants::RESOLVED_STATUSES;
     }
 
-    protected function isEntityLocked($entity): bool
-    {
-        return in_array($entity->status, $this->getResolvedStatuses(), true);
-    }
-
     // endregion
 
     // region: TicketSystemController helpers
@@ -588,7 +584,7 @@ class TicketsController extends AppController
             'statuses' => $selectableStatuses,
             'priorities' => $this->getPriorityConfig(),
             'resolvedStatuses' => $this->getResolvedStatuses(),
-            'isLocked' => $this->isEntityLocked($entity),
+            'isLocked' => $entity->isLocked(),
             'isAssignmentDisabled' => $authService->isAssignmentDisabled($user),
         ]);
         $this->set($viewVars);
@@ -653,10 +649,19 @@ class TicketsController extends AppController
         $entity = $components['table']->get($entityId);
         $entityName = $components['displayName'];
 
-        if ($this->isEntityLocked($entity)) {
+        if ($entity->isLocked()) {
             $this->Flash->error(__("No se puede modificar una {$entityName} en estado final."));
 
             return $this->redirect(['action' => $redirectAction]);
+        }
+
+        if ($assigneeId !== null) {
+            $assigneeUser = $this->fetchTable('Users')->get($assigneeId);
+            if (!$entity->canBeAssignedTo($assigneeUser)) {
+                $this->Flash->error(__('No es posible asignar este ticket a ese usuario.'));
+
+                return $this->redirect(['action' => $redirectAction]);
+            }
         }
 
         $result = $components['service']->assign($entity, $assigneeId, $userId);
@@ -686,17 +691,23 @@ class TicketsController extends AppController
         $entity = $components['table']->get($entityId);
         $entityName = $components['displayName'];
 
-        if ($this->isEntityLocked($entity)) {
+        if ($entity->isLocked()) {
             $this->Flash->error(__("No se puede modificar una {$entityName} en estado final."));
 
             return $this->redirect(['action' => $redirectAction]);
         }
 
-        $result = $components['service']->changeStatus($entity, $newStatus, $userId);
-        if ($result['success']) {
-            $this->Flash->success($result['message'] ?? __("Estado de {$entityName} actualizado."));
+        try {
+            $result = $components['service']->changeStatus($entity, $newStatus, $userId);
+        } catch (InvalidStatusTransitionException $e) {
+            $this->Flash->error(__('Transición de estado no permitida: {0}', [$e->getMessage()]));
+
+            return $this->redirect(['action' => $redirectAction]);
+        }
+        if ($result) {
+            $this->Flash->success(__("Estado de {$entityName} actualizado."));
         } else {
-            $this->Flash->error($result['message'] ?? __("Error al cambiar el estado de {$entityName}."));
+            $this->Flash->error(__("Error al cambiar el estado de {$entityName}."));
         }
 
         return $this->redirect(['action' => $redirectAction]);
@@ -719,7 +730,7 @@ class TicketsController extends AppController
         $entity = $components['table']->get($entityId);
         $entityName = $components['displayName'];
 
-        if ($this->isEntityLocked($entity)) {
+        if ($entity->isLocked()) {
             $this->Flash->error(__("No se puede modificar una {$entityName} en estado final."));
 
             return $this->redirect(['action' => $redirectAction]);

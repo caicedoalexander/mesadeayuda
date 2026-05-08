@@ -7,6 +7,7 @@ use App\Model\Entity\Attachment;
 use App\Model\Entity\Ticket;
 use App\Model\Entity\TicketComment;
 use App\Model\Entity\User;
+use App\Service\Exception\InvalidStatusTransitionException;
 use App\Service\Traits\GenericAttachmentTrait;
 use Cake\Datasource\EntityInterface;
 use Cake\I18n\FrozenTime;
@@ -640,6 +641,10 @@ class TicketService
 
         if ($oldStatus === $newStatus) {
             return true;
+        }
+
+        if ($entity instanceof Ticket && !$entity->canTransitionTo($newStatus)) {
+            throw InvalidStatusTransitionException::for($oldStatus, $newStatus);
         }
 
         $entity->status = $newStatus;

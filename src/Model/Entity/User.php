@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Model\Entity;
 
+use App\Constants\RoleConstants;
 use Authentication\PasswordHasher\DefaultPasswordHasher;
 use Cake\ORM\Entity;
 
@@ -83,5 +84,15 @@ class User extends Entity
         $hasher = new DefaultPasswordHasher();
 
         return $hasher->hash($password);
+    }
+
+    /**
+     * Whether the user is an admin or agent (staff role).
+     *
+     * @return bool
+     */
+    public function isStaff(): bool
+    {
+        return in_array($this->role, RoleConstants::STAFF_ROLES, true);
     }
 }

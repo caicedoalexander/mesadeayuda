@@ -69,6 +69,7 @@ The codebase follows a fat-service / thin-controller pattern on top of CakePHP:
 - **Sidebar counters**: `SidebarCountsService` produces the unread/unassigned counts displayed across the layout — reuse it instead of querying tables ad-hoc from views.
 - **Coding standard**: CakePHP CodeSniffer ruleset (`phpcs.xml`), with `SlevomatCodingStandard.TypeHints.ReturnTypeHint.MissingNativeTypeHint` excluded for `src/Controller/*` (controllers don't need return type hints; services and other classes do). Run `composer cs-fix` then `composer cs-check` before committing.
 - **Strict types**: every PHP file declares `declare(strict_types=1);`.
+- **Domain methods en `Ticket`**: la entidad expone predicados (`isResolved`, `isOpen`, `isNew`, `isPending`, `isLocked`, `hasAssignee`, `belongsTo`, `isAssignedTo`, `wasCreatedFromEmail`) y reglas de transición (`canTransitionTo`, `canBeAssignedTo`). Estos métodos son la fuente de verdad — controllers y services deben consumirlos en lugar de comparar `status` o `assignee_id` directamente. La matriz `Ticket::TRANSITIONS` define las transiciones legales del state machine; `TicketService::changeStatus` lanza `InvalidStatusTransitionException` si se viola. `User::isStaff()` agrupa el chequeo de roles admin/agent.
 
 ### Configuration & environment
 - Local config in `config/app_local.php` (gitignored; copy from `config/app_local.example.php`).
