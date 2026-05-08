@@ -1,0 +1,44 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    expose:
+      - "80"
+    volumes:
+      - app_logs:/var/www/html/logs
+      - app_tmp:/var/www/html/tmp
+      - app_uploads:/var/www/html/webroot/uploads
+    environment:
+      - DEBUG=${DEBUG:-false}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT:-3306}
+      - DB_DATABASE=${DB_DATABASE:-mesadeayuda}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - SECURITY_SALT=${SECURITY_SALT}
+      - TRUST_PROXY=${TRUST_PROXY:-true}
+      - FULL_BASE_URL=${FULL_BASE_URL}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mesadeayuda.rule=Host(`${APP_HOST}`)"
+      - "traefik.http.routers.mesadeayuda.entrypoints=websecure"
+      - "traefik.http.routers.mesadeayuda.tls.certresolver=letsencrypt"
+      - "traefik.http.services.mesadeayuda.loadbalancer.server.port=80"
+
+volumes:
+  app_logs:
+  app_tmp:
+  app_uploads:
