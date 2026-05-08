@@ -16,8 +16,9 @@ Workflow externo a este repositorio. Reemplaza al servicio `worker` (que corría
    - Method: `POST`
    - URL: `${FULL_BASE_URL}/webhooks/gmail/import`
      - Ejemplo: `https://mesa.copcsa.local/webhooks/gmail/import`
-   - Headers:
-     - `X-Webhook-Token: ={{ $env.GMAIL_WEBHOOK_TOKEN }}`
+   - Authentication: `Generic Credential Type` → `Header Auth`
+     - Credencial: ver punto 6.
+   - Headers (manuales, sin auth):
      - `Content-Type: application/json`
    - Body (JSON):
      ```json
@@ -26,8 +27,8 @@ Workflow externo a este repositorio. Reemplaza al servicio `worker` (que corría
    - Timeout: `300000` ms (5 minutos — debe ser ≥ `nginx fastcgi_read_timeout`).
    - Retry on fail: `0`. El servidor ya maneja deduplicación (lock + rate limit
      + `gmail_message_id` único), reintentar desde n8n solo amplifica ruido.
-   - Continue on fail: `ON`. Permite que la rama de error reaccione a 4xx/5xx
-     sin abortar el workflow.
+   - Continue on fail: `ON` (o equivalente: marcar `Never Error` en el nodo).
+     Permite que la rama de error reaccione a 4xx/5xx sin abortar el workflow.
 
 4. **IF**
    - Condición de éxito (rama TRUE):
@@ -51,13 +52,19 @@ Workflow externo a este repositorio. Reemplaza al servicio `worker` (que corría
      - `import_failed` (500): excepción no controlada en el servidor — revisar
        logs de la app.
 
-6. **Credencial / variable de entorno**
-   - El token va como variable de entorno `GMAIL_WEBHOOK_TOKEN` en el contenedor
-     de n8n. **Nunca hardcoded** en el nodo HTTP.
+6. **Credencial Header Auth**
+   - En n8n: `Credentials → New → Header Auth`.
+     - **Name:** `X-Webhook-Token`
+     - **Value:** plaintext del token.
+     - Guardar la credencial con un nombre identificable (p. ej. `Mesa de Ayuda
+       - Gmail Webhook Token`) y asignarla al nodo `HTTP Request`.
+   - **Nunca hardcoded** en el nodo (ni en headers, ni como expresión inline).
+     n8n cifra el valor en su almacenamiento de credenciales.
    - Para obtener el plaintext del token: UI `/admin/settings` → sección
      "Webhooks — Gmail Import" → botón "Mostrar / ocultar".
-   - Si se regenera el token desde la UI, actualizar la variable en n8n y
-     reiniciar el contenedor o forzar un reload.
+   - Si se regenera el token desde la UI, editar la credencial Header Auth en
+     n8n con el nuevo valor. **No requiere reiniciar el contenedor**: n8n
+     re-lee la credencial en cada ejecución.
 
 7. **Activar el workflow.**
 
