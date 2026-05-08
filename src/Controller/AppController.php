@@ -19,6 +19,7 @@ namespace App\Controller;
 use App\Constants\CacheConstants;
 use App\Constants\RoleConstants;
 use App\Constants\SettingKeys;
+use App\Model\Entity\User;
 use App\Service\Traits\SettingsEncryptionTrait;
 use Cake\Cache\Cache;
 use Cake\Controller\Controller;
@@ -99,7 +100,7 @@ class AppController extends Controller
 
         // Set layout based on user role
         $user = $identity?->getOriginalData();
-        if ($user instanceof \App\Model\Entity\User) {
+        if ($user instanceof User) {
             $role = $user->role;
             if ($role === RoleConstants::ROLE_ADMIN) {
                 $this->viewBuilder()->setLayout('admin');
@@ -144,7 +145,7 @@ class AppController extends Controller
         $identity = $this->Authentication->getIdentity();
         $user = $identity?->getOriginalData();
 
-        if (!$user instanceof \App\Model\Entity\User) {
+        if (!$user instanceof User) {
             return null; // Allow unauthenticated access (will be handled by Authentication plugin)
         }
 
