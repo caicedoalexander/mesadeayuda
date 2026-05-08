@@ -44,7 +44,10 @@ El orden no es negociable: cada paso prepara el siguiente. Si se trocea el contr
 1. Eliminar el parámetro `string $entityType` de las firmas.
 2. Eliminar los `match` y los `throw new InvalidArgumentException` para casos imposibles.
 3. Inlinar los valores del case `'ticket'` en cada método. Los helpers de una sola línea (p. ej. `getTagsTableName(): string => 'TicketTags'`) se inlinan en su único callsite y se borran.
-4. Renombrar `…Entity` → `…Ticket` o simplificar a `index`, `view`, `assign`, `bulkAssign` cuando el contexto del archivo lo deje claro.
+4. Renombrar:
+   - Métodos privados/protegidos `…Entity` que pierden el parámetro: simplificar a `index`, `view`, `assign`, `bulkAssign` (el archivo `TicketsController.php` ya define el contexto, no hace falta el sufijo `Ticket`).
+   - Helpers `getEntity*` / `…ForEntity` cuyo nombre dejaría de tener sentido: renombrar al concepto que realmente exponen (p. ej. `getStatusesForEntity` → `getStatuses`, `getDefaultUsersRoleFilter` queda igual).
+   - Si tras inlinar un helper queda en una sola línea, eliminarlo y usar el literal en el callsite.
 5. Sincronizar `CLAUDE.md` removiendo la nota sobre `$entityType` como abstracción pendiente.
 
 **Verificación manual:**
