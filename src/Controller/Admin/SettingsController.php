@@ -132,12 +132,10 @@ class SettingsController extends AppController
             }
         }
 
-        // Set redirect URI for OAuth2 flow (callback URL)
-        $config['redirect_uri'] = Router::url([
-            'controller' => 'Settings',
-            'action' => 'gmailAuth',
-            'prefix' => 'Admin',
-        ], true); // true = full URL with domain
+        // Set redirect URI for OAuth2 flow (callback URL).
+        // Use the dedicated /oauth/gmail/callback route (defined in config/routes.php)
+        // as the canonical redirect URI registered in Google Cloud Console.
+        $config['redirect_uri'] = Router::url('/oauth/gmail/callback', true);
 
         $gmailService = new GmailService($config);
 
