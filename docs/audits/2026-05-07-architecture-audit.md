@@ -374,3 +374,19 @@ Usa el cache config `_cake_core_` (CLI/bootstrap) para una key de runtime (`syst
 ---
 
 **Próximo paso recomendado.** Ejecutar primero los críticos 1–3 (3 horas, riesgo bajo, mucho beneficio en consistencia y claridad), luego decidir si seguir con los críticos 4–5 (mayor riesgo de regresión, requieren testing manual cuidadoso).
+
+---
+
+## Anexo — Cierre de críticos pendientes (2026-05-08)
+
+Críticos cerrados:
+
+- **3.2 ✅** TicketsController troceado en 6 traits bajo `src/Controller/Trait/` (`TicketServiceInitializerTrait`, `TicketListingTrait`, `TicketViewTrait`, `TicketActionsTrait`, `TicketBulkTrait`, `TicketHistoryTrait`). Controller pasó de ~1080 LOC a ~70 LOC.
+- **3.3 ✅** Abstracción `$entityType` eliminada por completo. Métodos renombrados a forma ticket-específica (`indexTicketList`, `viewTicket`, `assignTicket`, `changeTicketStatus`, `bulkAssignTickets`, etc.). Helpers internos (`getEntityComponents`, `getHistoryTable`, `getDefaultContain`, etc.) sin parámetros.
+- **3.5 ✅** Entidad `Ticket` enriquecida con predicados (`isResolved`, `isOpen`, `isNew`, `isPending`, `isLocked`, `hasAssignee`, `belongsTo`, `isAssignedTo`, `wasCreatedFromEmail`) y reglas de transición (`canTransitionTo`, `canBeAssignedTo`). Matriz `Ticket::TRANSITIONS` define el state machine; `TicketService::changeStatus` lanza `InvalidStatusTransitionException` en transición ilegal. Adicional: `User::isStaff()` agrega chequeo de roles.
+
+De paso se cerró el hallazgo **4.6** (carpeta `src/Controller/Component/` vacía eliminada).
+
+Detalles en `docs/superpowers/specs/2026-05-08-criticos-pendientes-auditoria-design.md` y plan asociado.
+
+**Pendientes próxima fase:** altos 4.1–4.8 (excepto 4.6 ya cerrado) y medios 5.1–5.7.
