@@ -3,18 +3,16 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
-use Cake\ORM\Query\SelectQuery;
+use App\Constants\TicketConstants;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
-use App\Utility\ValidationConstants;
 
 /**
  * TicketComments Model
  *
  * @property \App\Model\Table\TicketsTable&\Cake\ORM\Association\BelongsTo $Tickets
  * @property \App\Model\Table\UsersTable&\Cake\ORM\Association\BelongsTo $Users
- *
  * @method \App\Model\Entity\TicketComment newEmptyEntity()
  * @method \App\Model\Entity\TicketComment newEntity(array $data, array $options = [])
  * @method array<\App\Model\Entity\TicketComment> newEntities(array $data, array $options = [])
@@ -28,7 +26,6 @@ use App\Utility\ValidationConstants;
  * @method iterable<\App\Model\Entity\TicketComment>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\TicketComment> saveManyOrFail(iterable $entities, array $options = [])
  * @method iterable<\App\Model\Entity\TicketComment>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\TicketComment>|false deleteMany(iterable $entities, array $options = [])
  * @method iterable<\App\Model\Entity\TicketComment>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\TicketComment> deleteManyOrFail(iterable $entities, array $options = [])
- *
  * @mixin \Cake\ORM\Behavior\TimestampBehavior
  */
 class TicketCommentsTable extends Table
@@ -79,7 +76,7 @@ class TicketCommentsTable extends Table
             ->scalar('comment_type')
             ->maxLength('comment_type', 20)
             ->notEmptyString('comment_type')
-            ->inList('comment_type', ValidationConstants::TICKET_COMMENT_TYPES, 'Tipo de comentario no válido.');
+            ->inList('comment_type', TicketConstants::ALL_COMMENT_TYPES, 'Tipo de comentario no válido.');
 
         $validator
             ->scalar('body')

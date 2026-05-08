@@ -3,8 +3,10 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
+use App\Constants\CacheConstants;
+use App\Constants\RoleConstants;
 use App\Controller\AppController;
-use App\Utility\ValidationConstants;
+use Cake\Event\EventInterface;
 
 /**
  * EmailTemplates Controller (Admin)
@@ -14,13 +16,14 @@ use App\Utility\ValidationConstants;
  */
 class EmailTemplatesController extends AppController
 {
-    public function beforeFilter(\Cake\Event\EventInterface $event)
+    public function beforeFilter(EventInterface $event)
     {
         parent::beforeFilter($event);
 
         $user = $this->Authentication->getIdentity();
-        if (!$user || $user->get('role') !== ValidationConstants::ROLE_ADMIN) {
+        if (!$user || $user->get('role') !== RoleConstants::ROLE_ADMIN) {
             $this->Flash->error('Solo los administradores pueden acceder a esta sección.');
+
             return $this->redirect(['controller' => 'Tickets', 'action' => 'index', 'prefix' => false]);
         }
     }
@@ -37,6 +40,7 @@ class EmailTemplatesController extends AppController
 
             if ($templatesTable->save($template)) {
                 $this->Flash->success('Plantilla creada exitosamente.');
+
                 return $this->redirect(['action' => 'index']);
             } else {
                 $this->Flash->error('Error al crear la plantilla.');
@@ -60,6 +64,7 @@ class EmailTemplatesController extends AppController
 
             if ($templatesTable->save($template)) {
                 $this->Flash->success('Plantilla actualizada exitosamente.');
+
                 return $this->redirect(['action' => 'index']);
             } else {
                 $this->Flash->error('Error al actualizar la plantilla.');
@@ -85,7 +90,7 @@ class EmailTemplatesController extends AppController
             'created_date' => date('d/m/Y H:i'),
             'updated_date' => date('d/m/Y H:i'),
             'ticket_url' => 'http://localhost:8080/tickets/view/1',
-            'system_title' => ValidationConstants::DEFAULT_SYSTEM_TITLE,
+            'system_title' => CacheConstants::DEFAULT_SYSTEM_TITLE,
         ];
 
         $previewBody = $template->body_html;

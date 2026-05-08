@@ -3,10 +3,12 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use App\Utility\SettingKeys;
+use App\Constants\SettingKeys;
+use App\Model\Entity\Ticket;
 use Cake\I18n\FrozenTime;
 use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
+use Exception;
 
 /**
  * N8n Service
@@ -45,17 +47,19 @@ class N8nService
      * @param \App\Model\Entity\Ticket $ticket Created ticket entity
      * @return bool Success status
      */
-    public function sendTicketCreatedWebhook(\App\Model\Entity\Ticket $ticket): bool
+    public function sendTicketCreatedWebhook(Ticket $ticket): bool
     {
         // Check if n8n is enabled
         if (empty($this->config[SettingKeys::N8N_ENABLED]) || $this->config[SettingKeys::N8N_ENABLED] !== '1') {
             Log::debug('n8n integration is disabled');
+
             return false;
         }
 
         // Check webhook URL is configured
         if (empty($this->config[SettingKeys::N8N_WEBHOOK_URL])) {
             Log::warning('n8n webhook URL is not configured');
+
             return false;
         }
 
@@ -71,19 +75,22 @@ class N8nService
                     'ticket_id' => $ticket->id,
                     'ticket_number' => $ticket->ticket_number,
                 ]);
+
                 return true;
             } else {
                 Log::warning('n8n webhook failed', [
                     'ticket_id' => $ticket->id,
                     'error' => $response['error'] ?? 'Unknown error',
                 ]);
+
                 return false;
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('n8n webhook exception: ' . $e->getMessage(), [
                 'ticket_id' => $ticket->id,
                 'exception' => $e,
             ]);
+
             return false;
         }
     }
@@ -94,7 +101,7 @@ class N8nService
      * @param \App\Model\Entity\Ticket $ticket Ticket entity
      * @return array Webhook payload
      */
-    private function buildTicketPayload(\App\Model\Entity\Ticket $ticket): array
+    private function buildTicketPayload(Ticket $ticket): array
     {
         // Strip HTML for plain text version
         $descriptionPlain = strip_tags($ticket->description ?? '');
@@ -178,7 +185,7 @@ class N8nService
      */
     private function sendWebhook(string $url, array $payload): array
     {
-        $timeout = (int) ($this->config[SettingKeys::N8N_TIMEOUT] ?? 10);
+        $timeout = (int)($this->config[SettingKeys::N8N_TIMEOUT] ?? 10);
 
         $headers = [
             'Content-Type: application/json',
@@ -238,7 +245,7 @@ class N8nService
                     'message' => 'Error al conectar con n8n: ' . ($response['error'] ?? 'HTTP ' . ($response['http_code'] ?? 'unknown')),
                 ];
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return [
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage(),

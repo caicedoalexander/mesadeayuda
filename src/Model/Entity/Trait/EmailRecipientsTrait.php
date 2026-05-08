@@ -17,7 +17,7 @@ trait EmailRecipientsTrait
      * @param array|string|null $value Array of recipients or JSON string
      * @return string|null JSON string or null
      */
-    protected function _setEmailTo($value): ?string
+    protected function _setEmailTo(array|string|null $value): ?string
     {
         if (is_array($value)) {
             if (empty($value)) {
@@ -36,7 +36,7 @@ trait EmailRecipientsTrait
      * @param array|string|null $value Array of recipients or JSON string
      * @return string|null JSON string or null
      */
-    protected function _setEmailCc($value): ?string
+    protected function _setEmailCc(array|string|null $value): ?string
     {
         if (is_array($value)) {
             if (empty($value)) {

@@ -5,7 +5,7 @@ namespace App\Service;
 
 use App\Service\Dto\GmailImportResult;
 use App\Service\Exception\GmailNotConfiguredException;
-use App\Utility\SettingsEncryptionTrait;
+use App\Service\Traits\SettingsEncryptionTrait;
 use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
 use Throwable;

@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
-use Cake\ORM\Query\SelectQuery;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
@@ -13,7 +12,6 @@ use Cake\Validation\Validator;
  *
  * @property \App\Model\Table\TicketsTable&\Cake\ORM\Association\BelongsTo $Tickets
  * @property \App\Model\Table\TagsTable&\Cake\ORM\Association\BelongsTo $Tags
- *
  * @method \App\Model\Entity\TicketTag newEmptyEntity()
  * @method \App\Model\Entity\TicketTag newEntity(array $data, array $options = [])
  * @method array<\App\Model\Entity\TicketTag> newEntities(array $data, array $options = [])
@@ -27,7 +25,6 @@ use Cake\Validation\Validator;
  * @method iterable<\App\Model\Entity\TicketTag>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\TicketTag> saveManyOrFail(iterable $entities, array $options = [])
  * @method iterable<\App\Model\Entity\TicketTag>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\TicketTag>|false deleteMany(iterable $entities, array $options = [])
  * @method iterable<\App\Model\Entity\TicketTag>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\TicketTag> deleteManyOrFail(iterable $entities, array $options = [])
- *
  * @mixin \Cake\ORM\Behavior\TimestampBehavior
  */
 class TicketTagsTable extends Table

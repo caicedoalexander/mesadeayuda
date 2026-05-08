@@ -3,10 +3,13 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use App\Utility\SettingKeys;
-use App\Utility\ValidationConstants;
+use App\Constants\CacheConstants;
+use App\Constants\SettingKeys;
+use App\Service\Renderer\NotificationRenderer;
+use Cake\Datasource\EntityInterface;
 use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
+use Exception;
 
 /**
  * WhatsApp Service
@@ -20,7 +23,7 @@ class WhatsappService
     use Traits\ConfigResolutionTrait;
     use Traits\SecureHttpTrait;
 
-    private \App\Service\Renderer\NotificationRenderer $renderer;
+    private NotificationRenderer $renderer;
 
     /**
      * Resolved WhatsApp configuration (null = not yet resolved, false = disabled/invalid)
@@ -39,7 +42,7 @@ class WhatsappService
      */
     public function __construct(?array $systemConfig = null)
     {
-        $this->renderer = new \App\Service\Renderer\NotificationRenderer();
+        $this->renderer = new NotificationRenderer();
         $this->systemConfig = $systemConfig;
     }
 
@@ -64,12 +67,14 @@ class WhatsappService
 
             if ($settings === null) {
                 $this->config = false;
+
                 return null;
             }
 
             // Validate: enabled check
             if (empty($settings[SettingKeys::WHATSAPP_ENABLED]) || $settings[SettingKeys::WHATSAPP_ENABLED] !== '1') {
                 $this->config = false;
+
                 return null;
             }
 
@@ -81,16 +86,19 @@ class WhatsappService
             ) {
                 Log::warning('WhatsApp configuration incomplete');
                 $this->config = false;
+
                 return null;
             }
 
             $this->config = $settings;
+
             return $this->config;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to load WhatsApp configuration', [
                 'error' => $e->getMessage(),
             ]);
             $this->config = false;
+
             return null;
         }
     }
@@ -121,6 +129,7 @@ class WhatsappService
 
         if (!$config) {
             Log::info('WhatsApp is disabled or not configured, skipping notification');
+
             return false;
         }
 
@@ -146,6 +155,7 @@ class WhatsappService
                     'number' => $number,
                     'http_code' => $result['http_code'],
                 ]);
+
                 return true;
             } else {
                 Log::error('WhatsApp API error', [
@@ -153,13 +163,15 @@ class WhatsappService
                     'error' => $result['error'],
                     'number' => $number,
                 ]);
+
                 return false;
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to send WhatsApp message', [
                 'error' => $e->getMessage(),
                 'number' => $number,
             ]);
+
             return false;
         }
     }
@@ -170,13 +182,14 @@ class WhatsappService
      * @param \Cake\Datasource\EntityInterface $entity Ticket entity
      * @return bool Success status
      */
-    public function sendNewEntityNotification(\Cake\Datasource\EntityInterface $entity): bool
+    public function sendNewEntityNotification(EntityInterface $entity): bool
     {
         try {
             $config = $this->getConfig();
 
             if (!$config || empty($config[SettingKeys::WHATSAPP_TICKETS_NUMBER])) {
                 Log::info('WhatsApp tickets number not configured, skipping notification');
+
                 return false;
             }
 
@@ -184,11 +197,12 @@ class WhatsappService
             $message = $this->renderer->renderWhatsappNewTicket($entity);
 
             return $this->sendMessage($config[SettingKeys::WHATSAPP_TICKETS_NUMBER], $message);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to send WhatsApp ticket notification', [
                 'entity_id' => $entity->id,
                 'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
@@ -219,7 +233,7 @@ class WhatsappService
         $testMessage = "✅ Prueba de conexión - Evolution API\n\n" .
             "Este es un mensaje de prueba del módulo de Tickets.\n" .
             "Si recibes este mensaje, la integración está funcionando correctamente.\n\n" .
-            '_' . ValidationConstants::DEFAULT_SYSTEM_TITLE . " - Tickets_";
+            '_' . CacheConstants::DEFAULT_SYSTEM_TITLE . ' - Tickets_';
 
         $result = $this->sendMessage($config[SettingKeys::WHATSAPP_TICKETS_NUMBER], $testMessage);
 

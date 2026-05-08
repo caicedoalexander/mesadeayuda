@@ -3,9 +3,10 @@ declare(strict_types=1);
 
 namespace App\Service\Traits;
 
-use App\Utility\ValidationConstants;
+use App\Constants\CacheConstants;
 use Cake\Cache\Cache;
 use Cake\Log\Log;
+use Exception;
 
 /**
  * ConfigResolutionTrait
@@ -32,7 +33,7 @@ trait ConfigResolutionTrait
     protected function resolveSettingsBatch(
         string $presenceKey,
         string $serviceCacheKey,
-        array $requiredKeys
+        array $requiredKeys,
     ): array {
         // 1. From constructor systemConfig
         if ($this->systemConfig !== null && isset($this->systemConfig[$presenceKey])) {
@@ -40,7 +41,7 @@ trait ConfigResolutionTrait
         }
 
         // 2. From main settings cache (populated by AppController::beforeFilter)
-        $cachedConfig = Cache::read(ValidationConstants::CACHE_SETTINGS, ValidationConstants::CACHE_CONFIG);
+        $cachedConfig = Cache::read(CacheConstants::CACHE_SETTINGS, CacheConstants::CACHE_CONFIG);
         if ($cachedConfig && isset($cachedConfig[$presenceKey])) {
             return $cachedConfig;
         }
@@ -54,7 +55,7 @@ trait ConfigResolutionTrait
                 ->all()
                 ->combine('setting_key', 'setting_value')
                 ->toArray();
-        }, ValidationConstants::CACHE_CONFIG);
+        }, CacheConstants::CACHE_CONFIG);
     }
 
     /**
@@ -73,11 +74,11 @@ trait ConfigResolutionTrait
 
         // 2. From main settings cache
         try {
-            $cachedConfig = Cache::read(ValidationConstants::CACHE_SETTINGS, ValidationConstants::CACHE_CONFIG);
+            $cachedConfig = Cache::read(CacheConstants::CACHE_SETTINGS, CacheConstants::CACHE_CONFIG);
             if ($cachedConfig && isset($cachedConfig[$key])) {
                 return $cachedConfig[$key];
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Cache not available, fall through to DB
         }
 
@@ -89,7 +90,7 @@ trait ConfigResolutionTrait
                 ->first();
 
             return $setting ? $setting->setting_value : $default;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error("Failed to load setting '{$key}': " . $e->getMessage());
 
             return $default;

@@ -67,7 +67,7 @@ trait SecureHttpTrait
         return filter_var(
             $ip,
             FILTER_VALIDATE_IP,
-            FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+            FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE,
         ) === false;
     }
 
@@ -108,7 +108,7 @@ trait SecureHttpTrait
         curl_setopt($ch, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTPS);
 
         $response = curl_exec($ch);
-        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $error = curl_error($ch);
 
         if ($error) {

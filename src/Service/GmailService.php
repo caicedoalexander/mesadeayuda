@@ -3,15 +3,19 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use Google\Client as GoogleClient;
-use Google\Service\Gmail;
-use Google\Service\Gmail\Message;
-use App\Utility\SettingKeys;
-use App\Utility\SettingsEncryptionTrait;
-use App\Utility\ValidationConstants;
+use App\Constants\CacheConstants;
+use App\Constants\SettingKeys;
+use App\Service\Traits\SettingsEncryptionTrait;
 use Cake\Cache\Cache;
 use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
+use Exception;
+use Google\Client as GoogleClient;
+use Google\Service\Gmail;
+use Google\Service\Gmail\Message;
+use Google\Service\Gmail\MessagePart;
+use Google\Service\Gmail\ModifyMessageRequest;
+use RuntimeException;
 
 /**
  * Gmail Service
@@ -71,7 +75,7 @@ class GmailService
             }
 
             return $config;
-        }, ValidationConstants::CACHE_CONFIG);
+        }, CacheConstants::CACHE_CONFIG);
     }
 
     /**
@@ -120,11 +124,11 @@ class GmailService
 
                 if (isset($token['error'])) {
                     Log::error('OAuth token refresh failed', ['error' => $token]);
-                    throw new \RuntimeException('Gmail authentication failed: ' . ($token['error_description'] ?? $token['error']));
+                    throw new RuntimeException('Gmail authentication failed: ' . ($token['error_description'] ?? $token['error']));
                 }
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::error('Failed to refresh OAuth token: ' . $e->getMessage());
-                throw new \RuntimeException('Gmail authentication failed. Please re-authenticate in Admin Settings.');
+                throw new RuntimeException('Gmail authentication failed. Please re-authenticate in Admin Settings.');
             }
         }
     }
@@ -165,7 +169,7 @@ class GmailService
 
         if (isset($token['error'])) {
             Log::error('Gmail authentication error: ' . $token['error']);
-            throw new \RuntimeException('Failed to authenticate with Gmail: ' . $token['error']);
+            throw new RuntimeException('Failed to authenticate with Gmail: ' . $token['error']);
         }
 
         return $token;
@@ -199,8 +203,9 @@ class GmailService
             }
 
             return $messageIds;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Error fetching Gmail messages: ' . $e->getMessage());
+
             return [];
         }
     }
@@ -246,7 +251,7 @@ class GmailService
             $this->extractMessageParts($message->getPayload(), $data);
 
             return $data;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Error parsing Gmail message: ' . $e->getMessage());
             throw $e;
         }
@@ -259,7 +264,7 @@ class GmailService
      * @param array &$data Reference to data array to populate
      * @return void
      */
-    private function extractMessageParts($payload, array &$data): void
+    private function extractMessageParts(MessagePart $payload, array &$data): void
     {
         $mimeType = $payload->getMimeType();
         $parts = $payload->getParts();
@@ -273,7 +278,6 @@ class GmailService
             $textContent = base64_decode(strtr($body->getData(), '-_', '+/'));
             $data['body_text'] = empty($data['body_text']) ? $textContent : $data['body_text'] . "\n" . $textContent;
         }
-
 
         // Handle attachments
         $filename = $payload->getFilename();
@@ -334,7 +338,7 @@ class GmailService
             $attachment = $service->users_messages_attachments->get('me', $messageId, $attachmentId);
 
             return base64_decode(strtr($attachment->getData(), '-_', '+/'));
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Error downloading Gmail attachment: ' . $e->getMessage());
             throw $e;
         }
@@ -350,14 +354,15 @@ class GmailService
     {
         try {
             $service = $this->getService();
-            $mods = new \Google\Service\Gmail\ModifyMessageRequest();
+            $mods = new ModifyMessageRequest();
             $mods->setRemoveLabelIds(['UNREAD']);
 
             $service->users_messages->modify('me', $messageId, $mods);
 
             return true;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Error marking Gmail message as read: ' . $e->getMessage());
+
             return false;
         }
     }
@@ -465,8 +470,9 @@ class GmailService
                 ->first();
 
             return $setting ? (string)($setting->setting_value ?? '') : '';
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to load system email: ' . $e->getMessage());
+
             return '';
         }
     }
@@ -480,17 +486,18 @@ class GmailService
      * @param array $attachments Array of attachment file paths
      * @return bool Success status
      */
+
     /**
      * Send email via Gmail API
      *
-     * @param string|array $to Recipient email or array of recipients ['email' => 'name', ...]
+     * @param array|string $to Recipient email or array of recipients ['email' => 'name', ...]
      * @param string $subject Subject
      * @param string $htmlBody HTML body
      * @param array $attachments Array of file paths
      * @param array $options Additional options: 'from', 'cc', 'bcc', 'replyTo'
      * @return bool Success status
      */
-    public function sendEmail($to, string $subject, string $htmlBody, array $attachments = [], array $options = []): bool
+    public function sendEmail(string|array $to, string $subject, string $htmlBody, array $attachments = [], array $options = []): bool
     {
         try {
             $service = $this->getService();
@@ -510,12 +517,13 @@ class GmailService
             $service->users_messages->send('me', $message);
 
             return true;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Error sending Gmail message: ' . $e->getMessage(), [
                 'to' => is_array($to) ? implode(', ', array_keys($to)) : $to,
                 'subject' => $subject,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
@@ -544,7 +552,7 @@ class GmailService
     /**
      * Create MIME message for sending
      *
-     * @param string|array $to Recipient(s)
+     * @param array|string $to Recipient(s)
      * @param string $subject Subject
      * @param string $htmlBody HTML body
      * @param array $attachments Attachments (file paths)
@@ -552,7 +560,7 @@ class GmailService
      * @param array $options Additional options (from, cc, bcc, replyTo, headers)
      * @return string MIME message
      */
-    private function createMimeMessage($to, string $subject, string $htmlBody, array $attachments, string $boundary, array $options = []): string
+    private function createMimeMessage(string|array $to, string $subject, string $htmlBody, array $attachments, string $boundary, array $options = []): string
     {
         // Build From header
         if (!empty($options['from'])) {
@@ -560,13 +568,13 @@ class GmailService
                 // ['email' => 'name']
                 $fromEmail = array_keys($options['from'])[0];
                 $fromName = $options['from'][$fromEmail];
-                $message = "From: " . $this->encodeEmailHeader($fromName, $fromEmail) . "\r\n";
+                $message = 'From: ' . $this->encodeEmailHeader($fromName, $fromEmail) . "\r\n";
             } else {
                 $sanitizedFrom = str_replace(["\r", "\n"], '', (string)$options['from']);
                 $message = "From: {$sanitizedFrom}\r\n";
             }
         } else {
-            $message = "";
+            $message = '';
         }
 
         // Build To header
@@ -581,7 +589,7 @@ class GmailService
                     $toList[] = $this->encodeEmailHeader($name, $email);
                 }
             }
-            $message .= "To: " . implode(', ', $toList) . "\r\n";
+            $message .= 'To: ' . implode(', ', $toList) . "\r\n";
         } else {
             $sanitizedTo = str_replace(["\r", "\n"], '', (string)$to);
             $message .= "To: {$sanitizedTo}\r\n";
@@ -598,7 +606,7 @@ class GmailService
                         $ccList[] = $this->encodeEmailHeader($name, $email);
                     }
                 }
-                $message .= "Cc: " . implode(', ', $ccList) . "\r\n";
+                $message .= 'Cc: ' . implode(', ', $ccList) . "\r\n";
             } else {
                 $sanitizedCc = str_replace(["\r", "\n"], '', (string)$options['cc']);
                 $message .= "Cc: {$sanitizedCc}\r\n";
@@ -616,7 +624,7 @@ class GmailService
                         $bccList[] = $this->encodeEmailHeader($name, $email);
                     }
                 }
-                $message .= "Bcc: " . implode(', ', $bccList) . "\r\n";
+                $message .= 'Bcc: ' . implode(', ', $bccList) . "\r\n";
             } else {
                 $sanitizedBcc = str_replace(["\r", "\n"], '', (string)$options['bcc']);
                 $message .= "Bcc: {$sanitizedBcc}\r\n";
@@ -641,7 +649,7 @@ class GmailService
 
         // Sanitize and encode subject for UTF-8 characters (RFC 2047)
         $sanitizedSubject = str_replace(["\r", "\n"], '', $subject);
-        $message .= "Subject: " . mb_encode_mimeheader($sanitizedSubject, 'UTF-8') . "\r\n";
+        $message .= 'Subject: ' . mb_encode_mimeheader($sanitizedSubject, 'UTF-8') . "\r\n";
         $message .= "MIME-Version: 1.0\r\n";
         $message .= "Content-Type: multipart/mixed; boundary=\"{$boundary}\"\r\n\r\n";
 

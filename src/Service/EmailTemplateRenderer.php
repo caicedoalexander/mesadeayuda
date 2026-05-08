@@ -3,11 +3,13 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Constants\CacheConstants;
+use App\Constants\SettingKeys;
+use App\Model\Entity\EmailTemplate;
 use App\Service\Traits\ConfigResolutionTrait;
-use App\Utility\SettingKeys;
-use App\Utility\ValidationConstants;
 use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
+use Exception;
 
 /**
  * EmailTemplateRenderer
@@ -20,7 +22,9 @@ class EmailTemplateRenderer
     use LocatorAwareTrait;
     use ConfigResolutionTrait;
 
-    /** @var array<string, \App\Model\Entity\EmailTemplate|null> In-memory template cache */
+    /**
+     * @var array<string, \App\Model\Entity\EmailTemplate|null> In-memory template cache
+     */
     private array $templateCache = [];
     private bool $preloaded = false;
     private ?array $systemConfig = null;
@@ -55,7 +59,7 @@ class EmailTemplateRenderer
             }
 
             $this->preloaded = true;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('EmailTemplateRenderer: Failed to preload templates: ' . $e->getMessage());
         }
     }
@@ -66,7 +70,7 @@ class EmailTemplateRenderer
      * @param string $templateKey Template key
      * @return \App\Model\Entity\EmailTemplate|null
      */
-    public function getTemplate(string $templateKey): ?\App\Model\Entity\EmailTemplate
+    public function getTemplate(string $templateKey): ?EmailTemplate
     {
         if (isset($this->templateCache[$templateKey])) {
             return $this->templateCache[$templateKey];
@@ -113,6 +117,7 @@ class EmailTemplateRenderer
         $template = $this->getTemplate($templateKey);
         if (!$template) {
             Log::error("EmailTemplateRenderer: Template not found: {$templateKey}");
+
             return null;
         }
 
@@ -130,7 +135,7 @@ class EmailTemplateRenderer
     public function getSystemVariables(): array
     {
         return [
-            'system_title' => $this->resolveSettingValue(SettingKeys::SYSTEM_TITLE, ValidationConstants::DEFAULT_SYSTEM_TITLE),
+            'system_title' => $this->resolveSettingValue(SettingKeys::SYSTEM_TITLE, CacheConstants::DEFAULT_SYSTEM_TITLE),
             'current_year' => date('Y'),
         ];
     }

@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use Exception;
+
 /**
  * Health Check Controller
  *
@@ -41,7 +43,7 @@ class HealthController extends AppController
         $status = [
             'status' => 'healthy',
             'timestamp' => date('Y-m-d H:i:s'),
-            'checks' => []
+            'checks' => [],
         ];
 
         // Check 1: PHP is running (implicit - we're here)
@@ -59,7 +61,7 @@ class HealthController extends AppController
             $settingsCount = $settingsTable->find()->count();
             $status['checks']['system_settings'] = 'ok';
             $status['checks']['system_settings_count'] = $settingsCount;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Database not ready yet (migrations pending) - not fatal for health check
             $status['checks']['database'] = 'not_ready';
             $status['checks']['database_message'] = 'Migrations may be pending';

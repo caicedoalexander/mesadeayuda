@@ -3,11 +3,19 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Model\Entity\Attachment;
 use App\Model\Entity\Ticket;
+use App\Model\Entity\TicketComment;
+use App\Model\Entity\User;
+use App\Service\Traits\GenericAttachmentTrait;
 use Cake\Datasource\EntityInterface;
 use Cake\I18n\FrozenTime;
 use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
+use Exception;
+use HTMLPurifier;
+use HTMLPurifier_Config;
+use Psr\Http\Message\UploadedFileInterface;
 
 /**
  * Ticket Service
@@ -21,7 +29,7 @@ use Cake\ORM\Locator\LocatorAwareTrait;
 class TicketService
 {
     use LocatorAwareTrait;
-    use \App\Service\Traits\GenericAttachmentTrait;
+    use GenericAttachmentTrait;
 
     private EmailService $emailService;
     private WhatsappService $whatsappService;
@@ -44,13 +52,14 @@ class TicketService
     /**
      * Get N8nService instance (lazy loading)
      *
-     * @return N8nService
+     * @return \App\Service\N8nService
      */
     private function getN8nService(): N8nService
     {
         if ($this->n8nService === null) {
             $this->n8nService = new N8nService($this->systemConfig);
         }
+
         return $this->n8nService;
     }
 
@@ -60,7 +69,7 @@ class TicketService
      * @param array $emailData Parsed email data from GmailService
      * @return \App\Model\Entity\Ticket|null Created ticket or null on failure
      */
-    public function createFromEmail(array $emailData): ?\App\Model\Entity\Ticket
+    public function createFromEmail(array $emailData): ?Ticket
     {
         $ticketsTable = $this->fetchTable('Tickets');
         $usersTable = $this->fetchTable('Users');
@@ -73,6 +82,7 @@ class TicketService
 
             if ($existing) {
                 Log::info('Ticket already exists for Gmail message: ' . $emailData['gmail_message_id']);
+
                 return $existing;
             }
         }
@@ -87,6 +97,7 @@ class TicketService
 
         if (!$user) {
             Log::error('Failed to create user for email: ' . $fromEmail);
+
             return null;
         }
 
@@ -126,7 +137,7 @@ class TicketService
             'ticket_number' => true, 'gmail_message_id' => true, 'gmail_thread_id' => true,
             'status' => true, 'requester_id' => true, 'channel' => true, 'source_email' => true,
         ]]);
-        assert($ticket instanceof \App\Model\Entity\Ticket);
+        assert($ticket instanceof Ticket);
 
         // Set email recipients directly (bypass marshalling to avoid validation issues)
         $ticket->email_to = !empty($emailData['email_to']) ? $emailData['email_to'] : null;
@@ -134,6 +145,7 @@ class TicketService
 
         if (!$ticketsTable->save($ticket)) {
             Log::error('Failed to save ticket', ['errors' => $ticket->getErrors()]);
+
             return null;
         }
 
@@ -148,7 +160,7 @@ class TicketService
         // Send n8n webhook for AI tag assignment (lazy loaded only when creating tickets)
         try {
             $this->getN8nService()->sendTicketCreatedWebhook($ticket);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::warning('n8n webhook failed (non-blocking): ' . $e->getMessage());
             // Don't block ticket creation if webhook fails
         }
@@ -169,7 +181,7 @@ class TicketService
      * @param array $emailData Parsed email data from GmailService
      * @return \App\Model\Entity\TicketComment|null Created comment or null
      */
-    public function createCommentFromEmail(\App\Model\Entity\Ticket $ticket, array $emailData): ?\App\Model\Entity\TicketComment
+    public function createCommentFromEmail(Ticket $ticket, array $emailData): ?TicketComment
     {
         $ticketCommentsTable = $this->fetchTable('TicketComments');
 
@@ -185,6 +197,7 @@ class TicketService
                 'ticket_number' => $ticket->ticket_number,
                 'from_email' => $fromEmail,
             ]);
+
             return null;
         }
 
@@ -192,6 +205,7 @@ class TicketService
         $user = $this->findOrCreateUser($fromEmail, $fromName);
         if (!$user) {
             Log::error('Failed to create user for email comment', ['email' => $fromEmail]);
+
             return null;
         }
 
@@ -224,7 +238,7 @@ class TicketService
         ], ['accessibleFields' => [
             'user_id' => true, 'is_system_comment' => true, 'gmail_message_id' => true, 'sent_as_email' => true,
         ]]);
-        assert($comment instanceof \App\Model\Entity\TicketComment);
+        assert($comment instanceof TicketComment);
 
         // Save comment, return null on failure
         if (!$ticketCommentsTable->save($comment)) {
@@ -232,6 +246,7 @@ class TicketService
                 'ticket_id' => $ticket->id,
                 'errors' => $comment->getErrors(),
             ]);
+
             return null;
         }
 
@@ -260,7 +275,7 @@ class TicketService
      * @param string $name User name
      * @return \App\Model\Entity\User|null
      */
-    private function findOrCreateUser(string $email, string $name): ?\App\Model\Entity\User
+    private function findOrCreateUser(string $email, string $name): ?User
     {
         $usersTable = $this->fetchTable('Users');
 
@@ -290,14 +305,16 @@ class TicketService
             'password' => null,
             'is_active' => true,
         ], ['accessibleFields' => ['role' => true, 'is_active' => true]]);
-        assert($user instanceof \App\Model\Entity\User);
+        assert($user instanceof User);
 
         if ($usersTable->save($user)) {
             Log::info('Auto-created user from email', ['email' => $email, 'name' => $name]);
+
             return $user;
         }
 
         Log::error('Failed to create user', ['email' => $email, 'errors' => $user->getErrors()]);
+
         return null;
     }
 
@@ -308,7 +325,7 @@ class TicketService
      * @param string $email Email address to check
      * @return bool True if email is authorized
      */
-    private function isEmailInTicketRecipients(\App\Model\Entity\Ticket $ticket, string $email): bool
+    private function isEmailInTicketRecipients(Ticket $ticket, string $email): bool
     {
         // Normalize email for case-insensitive comparison
         $normalizedEmail = strtolower(trim($email));
@@ -338,7 +355,7 @@ class TicketService
         if (!isset($ticket->requester)) {
             $ticketsTable = $this->fetchTable('Tickets');
             $ticket = $ticketsTable->get($ticket->id, [
-                'contain' => ['Requesters']
+                'contain' => ['Requesters'],
             ]);
         }
 
@@ -358,9 +375,9 @@ class TicketService
      * @param int|null $commentId Optional comment ID to associate attachments with
      * @return void
      */
-    private function processEmailAttachments(\Cake\Datasource\EntityInterface $ticket, array $attachments, int $userId, ?int $commentId = null): void
+    private function processEmailAttachments(EntityInterface $ticket, array $attachments, int $userId, ?int $commentId = null): void
     {
-        assert($ticket instanceof \App\Model\Entity\Ticket);
+        assert($ticket instanceof Ticket);
         $gmailService = new GmailService(GmailService::loadConfigFromDatabase());
 
         foreach ($attachments as $attachmentData) {
@@ -373,7 +390,7 @@ class TicketService
                 // Download attachment from Gmail
                 $content = $gmailService->downloadAttachment(
                     $ticket->gmail_message_id,
-                    $attachmentData['attachment_id']
+                    $attachmentData['attachment_id'],
                 );
 
                 // Save attachment using GenericAttachmentTrait
@@ -383,9 +400,9 @@ class TicketService
                     $content,
                     $attachmentData['mime_type'],
                     $commentId,
-                    $userId
+                    $userId,
                 );
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::error('Failed to process attachment', [
                     'ticket_id' => $ticket->id,
                     'filename' => $attachmentData['filename'],
@@ -405,19 +422,20 @@ class TicketService
      * @return \App\Model\Entity\Attachment|null
      */
     public function saveUploadedFile(
-        \App\Model\Entity\Ticket|int $ticket,
-        \Psr\Http\Message\UploadedFileInterface $file,
+        Ticket|int $ticket,
+        UploadedFileInterface $file,
         ?int $commentId = null,
-        ?int $userId = null
-    ): ?\App\Model\Entity\Attachment {
+        ?int $userId = null,
+    ): ?Attachment {
         if (is_int($ticket)) {
             $ticketsTable = $this->fetchTable('Tickets');
             $ticket = $ticketsTable->get($ticket);
         }
-        assert($ticket instanceof \App\Model\Entity\Ticket);
+        assert($ticket instanceof Ticket);
 
         $result = $this->saveGenericUploadedFile($ticket, $file, $commentId, $userId);
-        assert($result instanceof \App\Model\Entity\Attachment || $result === null);
+        assert($result instanceof Attachment || $result === null);
+
         return $result;
     }
 
@@ -593,14 +611,14 @@ class TicketService
      */
     private function sanitizeHtml(string $html): string
     {
-        $config = \HTMLPurifier_Config::createDefault();
+        $config = HTMLPurifier_Config::createDefault();
         $config->set('HTML.Allowed', 'p,br,b,i,u,strong,em,a[href],ul,ol,li,blockquote,h1,h2,h3,h4,h5,h6,img[src|alt|width|height],table,thead,tbody,tr,td,th,span,div,pre,code,hr');
         $config->set('HTML.TargetBlank', true);
         $config->set('URI.AllowedSchemes', ['http' => true, 'https' => true, 'mailto' => true]);
         $config->set('Attr.AllowedFrameTargets', ['_blank']);
         $config->set('Cache.DefinitionImpl', null);
 
-        $purifier = new \HTMLPurifier($config);
+        $purifier = new HTMLPurifier($config);
 
         return $purifier->purify($html);
     }
@@ -611,11 +629,11 @@ class TicketService
      * Change ticket status.
      */
     public function changeStatus(
-        \Cake\Datasource\EntityInterface $entity,
+        EntityInterface $entity,
         string $newStatus,
         ?int $userId = null,
         ?string $comment = null,
-        bool $sendNotifications = true
+        bool $sendNotifications = true,
     ): bool {
         $table = $this->fetchTable('Tickets');
         $oldStatus = $entity->status;
@@ -636,6 +654,7 @@ class TicketService
 
         if (!$table->save($entity)) {
             Log::error('Failed to change status', ['errors' => $entity->getErrors()]);
+
             return false;
         }
 
@@ -647,7 +666,7 @@ class TicketService
             $oldStatus,
             $newStatus,
             $userId,
-            "Estado cambiado de '{$oldStatus}' a '{$newStatus}'"
+            "Estado cambiado de '{$oldStatus}' a '{$newStatus}'",
         );
 
         $systemComment = $comment ?? "El estado cambió de '{$oldStatus}' a '{$newStatus}'";
@@ -656,7 +675,7 @@ class TicketService
         if ($sendNotifications) {
             try {
                 $this->emailService->sendEntityStatusChangeNotification($entity, $oldStatus, $newStatus);
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::error('Failed to send status change email notification: ' . $e->getMessage());
             }
         }
@@ -678,17 +697,17 @@ class TicketService
         string $type = 'public',
         bool $isSystem = false,
         ?array $emailTo = null,
-        ?array $emailCc = null
-    ): ?\Cake\Datasource\EntityInterface {
+        ?array $emailCc = null,
+    ): ?EntityInterface {
         $commentsTable = $this->fetchTable('TicketComments');
 
-        $config = \HTMLPurifier_Config::createDefault();
+        $config = HTMLPurifier_Config::createDefault();
         $config->set('HTML.Allowed', 'p,br,b,i,u,strong,em,a[href],ul,ol,li,blockquote,h1,h2,h3,h4,h5,h6,img[src|alt|width|height],table,thead,tbody,tr,td,th,span,div,pre,code,hr');
         $config->set('HTML.TargetBlank', true);
         $config->set('URI.AllowedSchemes', ['http' => true, 'https' => true, 'mailto' => true]);
         $config->set('Attr.AllowedFrameTargets', ['_blank']);
         $config->set('Cache.DefinitionImpl', null);
-        $purifier = new \HTMLPurifier($config);
+        $purifier = new HTMLPurifier($config);
         $sanitizedBody = $purifier->purify($body);
 
         $data = [
@@ -714,6 +733,7 @@ class TicketService
 
         if (!$commentsTable->save($comment)) {
             Log::error('Failed to add comment', ['errors' => $comment->getErrors()]);
+
             return null;
         }
 
@@ -724,15 +744,15 @@ class TicketService
      * Assign ticket to a user.
      */
     public function assign(
-        \Cake\Datasource\EntityInterface $entity,
+        EntityInterface $entity,
         ?int $assigneeId,
-        ?int $userId = null
+        ?int $userId = null,
     ): bool {
         $table = $this->fetchTable('Tickets');
         $usersTable = $this->fetchTable('Users');
 
         $oldAssigneeId = $entity->assignee_id;
-        $entity->assignee_id = ($assigneeId === 0 || $assigneeId === '0') ? null : $assigneeId;
+        $entity->assignee_id = $assigneeId === 0 || $assigneeId === '0' ? null : $assigneeId;
 
         if (!$table->save($entity)) {
             $errors = $entity->getErrors();
@@ -740,6 +760,7 @@ class TicketService
             Log::error("Assignment details - New assignee: {$assigneeId}, Old assignee: {$oldAssigneeId}");
             Log::error('Validation errors: ' . print_r($errors, true));
             Log::error('Dirty fields: ' . print_r($entity->getDirty(), true));
+
             return false;
         }
 
@@ -763,7 +784,7 @@ class TicketService
             $oldAssigneeName,
             $newAssigneeName,
             $userId,
-            "Asignado a {$newAssigneeName}"
+            "Asignado a {$newAssigneeName}",
         );
 
         $this->addComment($entity->id, $userId, "Asignado a {$newAssigneeName}", 'internal', true);
@@ -775,9 +796,9 @@ class TicketService
      * Change ticket priority.
      */
     public function changePriority(
-        \Cake\Datasource\EntityInterface $entity,
+        EntityInterface $entity,
         string $newPriority,
-        ?int $userId = null
+        ?int $userId = null,
     ): bool {
         $table = $this->fetchTable('Tickets');
         $oldPriority = $entity->priority;
@@ -790,6 +811,7 @@ class TicketService
 
         if (!$table->save($entity)) {
             Log::error('Failed to change priority', ['errors' => $entity->getErrors()]);
+
             return false;
         }
 
@@ -801,7 +823,7 @@ class TicketService
             $oldPriority,
             $newPriority,
             $userId,
-            "Prioridad cambiada de '{$oldPriority}' a '{$newPriority}'"
+            "Prioridad cambiada de '{$oldPriority}' a '{$newPriority}'",
         );
 
         $this->addComment(
@@ -809,7 +831,7 @@ class TicketService
             $userId,
             "Prioridad cambiada de '{$oldPriority}' a '{$newPriority}'",
             'internal',
-            true
+            true,
         );
 
         return true;
@@ -826,7 +848,7 @@ class TicketService
         ?string $oldValue,
         ?string $newValue,
         ?int $userId = null,
-        ?string $description = null
+        ?string $description = null,
     ): void {
         $historyTable = $this->fetchTable($tableName);
 
@@ -857,7 +879,7 @@ class TicketService
         string $commentType,
         bool $hasStatusChange,
         array $emailTo = [],
-        array $emailCc = []
+        array $emailCc = [],
     ): void {
         $hasPublicComment = $hasComment && $commentType === 'public';
 
@@ -941,12 +963,12 @@ class TicketService
     public function dispatchCreationNotifications(
         EntityInterface $entity,
         bool $sendEmail = true,
-        bool $sendWhatsapp = true
+        bool $sendWhatsapp = true,
     ): void {
         if ($sendEmail) {
             try {
                 $this->emailService->sendNewEntityNotification($entity);
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::error('Failed to send ticket creation email', [
                     'error' => $e->getMessage(),
                     'entity_id' => $entity->id,
@@ -957,7 +979,7 @@ class TicketService
         if ($sendWhatsapp) {
             try {
                 $this->whatsappService->sendNewEntityNotification($entity);
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::error('Failed to send ticket creation WhatsApp', [
                     'error' => $e->getMessage(),
                     'entity_id' => $entity->id,
@@ -975,7 +997,7 @@ class TicketService
     public function dispatchUpdateNotifications(
         EntityInterface $entity,
         string $notificationType,
-        array $context = []
+        array $context = [],
     ): void {
         try {
             switch ($notificationType) {
@@ -983,7 +1005,7 @@ class TicketService
                     $this->emailService->sendEntityStatusChangeNotification(
                         $entity,
                         $context['old_status'] ?? '',
-                        $context['new_status'] ?? ''
+                        $context['new_status'] ?? '',
                     );
                     break;
 
@@ -992,7 +1014,7 @@ class TicketService
                         $entity,
                         $context['comment'] ?? null,
                         $context['additional_to'] ?? [],
-                        $context['additional_cc'] ?? []
+                        $context['additional_cc'] ?? [],
                     );
                     break;
 
@@ -1003,14 +1025,14 @@ class TicketService
                         $context['old_status'] ?? '',
                         $context['new_status'] ?? '',
                         $context['additional_to'] ?? [],
-                        $context['additional_cc'] ?? []
+                        $context['additional_cc'] ?? [],
                     );
                     break;
 
                 default:
                     Log::warning("Unknown notification type: {$notificationType}");
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error("Failed to send ticket {$notificationType} email", [
                 'error' => $e->getMessage(),
                 'entity_id' => $entity->id,

@@ -3,16 +3,20 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
+use App\Constants\RoleConstants;
+use App\Constants\SettingKeys;
 use App\Controller\AppController;
 use App\Service\GmailService;
+use App\Service\N8nService;
+use App\Service\ProfileImageService;
 use App\Service\SettingsService;
 use App\Service\WhatsappService;
-use App\Utility\SettingKeys;
-use App\Utility\ValidationConstants;
 use Cake\Cache\Cache;
+use Cake\Event\EventInterface;
 use Cake\Http\Response;
 use Cake\Log\Log;
 use Cake\Routing\Router;
+use Exception;
 
 /**
  * Settings Controller
@@ -38,7 +42,7 @@ class SettingsController extends AppController
      * @param \Cake\Event\EventInterface<\Cake\Controller\Controller> $event Event.
      * @return \Cake\Http\Response|null|void
      */
-    public function beforeFilter(\Cake\Event\EventInterface $event)
+    public function beforeFilter(EventInterface $event)
     {
         parent::beforeFilter($event);
 
@@ -48,8 +52,9 @@ class SettingsController extends AppController
         ]);
 
         $user = $this->Authentication->getIdentity();
-        if (!$user || $user->get('role') !== ValidationConstants::ROLE_ADMIN) {
+        if (!$user || $user->get('role') !== RoleConstants::ROLE_ADMIN) {
             $this->Flash->error('Solo los administradores pueden acceder a esta sección.');
+
             return $this->redirect(['controller' => 'Tickets', 'action' => 'index', 'prefix' => false]);
         }
     }
@@ -91,6 +96,7 @@ class SettingsController extends AppController
             }
 
             $this->Flash->success('Configuración guardada exitosamente.');
+
             return $this->redirect(['action' => 'index']);
         }
 
@@ -127,7 +133,7 @@ class SettingsController extends AppController
         }
 
         // Set redirect URI for OAuth2 flow (callback URL)
-        $config['redirect_uri'] = \Cake\Routing\Router::url([
+        $config['redirect_uri'] = Router::url([
             'controller' => 'Settings',
             'action' => 'gmailAuth',
             'prefix' => 'Admin',
@@ -166,15 +172,17 @@ class SettingsController extends AppController
                 }
 
                 return $this->redirect(['action' => 'index']);
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 $this->Flash->error('Error en la autorización: ' . $e->getMessage());
                 Log::error('Gmail OAuth error: ' . $e->getMessage());
+
                 return $this->redirect(['action' => 'index']);
             }
         }
 
         // No code, redirect to Google authorization URL
         $authUrl = $gmailService->getAuthUrl();
+
         return $this->redirect($authUrl);
     }
 
@@ -191,7 +199,7 @@ class SettingsController extends AppController
 
             $this->Flash->success('Conexión exitosa. Se encontraron ' . count($messages) . ' mensajes no leídos.');
             Log::info('Gmail connection test successful', ['message_count' => count($messages)]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->Flash->error('Error al conectar con Gmail: ' . $e->getMessage());
             Log::error('Gmail connection test failed: ' . $e->getMessage());
         }
@@ -230,7 +238,7 @@ class SettingsController extends AppController
         $required = ['client_id', 'client_secret', 'redirect_uris'];
         if (!is_array($root) || array_diff($required, array_keys($root))) {
             $this->Flash->error(
-                'El JSON debe contener client_id, client_secret y redirect_uris bajo "web" o "installed".'
+                'El JSON debe contener client_id, client_secret y redirect_uris bajo "web" o "installed".',
             );
 
             return $this->redirect(['action' => 'index']);
@@ -277,7 +285,7 @@ class SettingsController extends AppController
         $usersTable = $this->fetchTable('Users');
 
         $users = $this->paginate($usersTable->find()
-            ->where(['Users.role IN' => ValidationConstants::STAFF_ROLES])
+            ->where(['Users.role IN' => RoleConstants::STAFF_ROLES])
             ->orderBy(['Users.created' => 'DESC']));
 
         $this->set(compact('users'));
@@ -289,7 +297,7 @@ class SettingsController extends AppController
      * @param string|null $id User id
      * @return \Cake\Http\Response|null|void Renders view
      */
-    public function editUser($id = null)
+    public function editUser(?string $id = null)
     {
         $usersTable = $this->fetchTable('Users');
         $user = $usersTable->get($id);
@@ -300,13 +308,14 @@ class SettingsController extends AppController
             // Handle profile image upload
             $profileImageFile = $this->request->getUploadedFile('profile_image_upload');
             if ($profileImageFile && $profileImageFile->getError() === UPLOAD_ERR_OK) {
-                $result = (new \App\Service\ProfileImageService())->saveProfileImage((int) $user->id, $profileImageFile);
+                $result = (new ProfileImageService())->saveProfileImage((int)$user->id, $profileImageFile);
 
                 if ($result['success']) {
                     $data['profile_image'] = $result['filename'];
                 } else {
                     $this->Flash->error($result['message']);
                     $this->set(compact('user'));
+
                     return;
                 }
             }
@@ -316,6 +325,7 @@ class SettingsController extends AppController
                 if ($data['new_password'] !== $data['confirm_password']) {
                     $this->Flash->error('Las contraseñas no coinciden.');
                     $this->set(compact('user'));
+
                     return;
                 }
                 // Set password field to new_password value
@@ -334,6 +344,7 @@ class SettingsController extends AppController
 
             if ($usersTable->save($user)) {
                 $this->Flash->success('Usuario actualizado exitosamente.');
+
                 return $this->redirect(['action' => 'users']);
             } else {
                 $this->Flash->error('Error al actualizar el usuario.');
@@ -387,6 +398,7 @@ class SettingsController extends AppController
 
                 if ($usersTable->save($user)) {
                     $this->Flash->success('Usuario creado exitosamente.');
+
                     return $this->redirect(['action' => 'users']);
                 } else {
                     $this->Flash->error('Error al crear el usuario.');
@@ -403,7 +415,7 @@ class SettingsController extends AppController
      * @param string|null $id User id
      * @return \Cake\Http\Response|null|void Redirects back
      */
-    public function deactivateUser($id = null)
+    public function deactivateUser(?string $id = null)
     {
         $this->request->allowMethod(['post']);
 
@@ -427,7 +439,7 @@ class SettingsController extends AppController
      * @param string|null $id User id
      * @return \Cake\Http\Response|null|void Redirects back
      */
-    public function activateUser($id = null)
+    public function activateUser(?string $id = null)
     {
         $this->request->allowMethod(['post']);
 
@@ -499,7 +511,7 @@ class SettingsController extends AppController
         $this->request->allowMethod(['get']);
         $this->viewBuilder()->setClassName('Json');
 
-        $n8nService = new \App\Service\N8nService();
+        $n8nService = new N8nService();
         $result = $n8nService->testConnection();
 
         $this->set([

@@ -81,6 +81,7 @@ class User extends Entity
         }
 
         $hasher = new DefaultPasswordHasher();
+
         return $hasher->hash($password);
     }
 }

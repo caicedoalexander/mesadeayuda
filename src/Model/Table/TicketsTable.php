@@ -3,11 +3,13 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
+use App\Constants\RoleConstants;
+use App\Constants\TicketConstants;
+use App\Service\NumberGenerationService;
 use Cake\ORM\Query\SelectQuery;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
-use App\Utility\ValidationConstants;
 
 /**
  * Tickets Model
@@ -18,7 +20,6 @@ use App\Utility\ValidationConstants;
  * @property \App\Model\Table\TicketCommentsTable&\Cake\ORM\Association\HasMany $TicketComments
  * @property \App\Model\Table\TicketFollowersTable&\Cake\ORM\Association\HasMany $TicketFollowers
  * @property \App\Model\Table\TicketTagsTable&\Cake\ORM\Association\HasMany $TicketTags
- *
  * @method \App\Model\Entity\Ticket newEmptyEntity()
  * @method \App\Model\Entity\Ticket newEntity(array $data, array $options = [])
  * @method array<\App\Model\Entity\Ticket> newEntities(array $data, array $options = [])
@@ -32,7 +33,6 @@ use App\Utility\ValidationConstants;
  * @method iterable<\App\Model\Entity\Ticket>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Ticket> saveManyOrFail(iterable $entities, array $options = [])
  * @method iterable<\App\Model\Entity\Ticket>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Ticket>|false deleteMany(iterable $entities, array $options = [])
  * @method iterable<\App\Model\Entity\Ticket>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Ticket> deleteManyOrFail(iterable $entities, array $options = [])
- *
  * @mixin \Cake\ORM\Behavior\TimestampBehavior
  */
 class TicketsTable extends Table
@@ -128,13 +128,13 @@ class TicketsTable extends Table
             ->scalar('status')
             ->maxLength('status', 20)
             ->notEmptyString('status')
-            ->inList('status', ValidationConstants::TICKET_STATUSES, 'Estado no válido.');
+            ->inList('status', TicketConstants::STATUSES, 'Estado no válido.');
 
         $validator
             ->scalar('priority')
             ->maxLength('priority', 20)
             ->notEmptyString('priority')
-            ->inList('priority', ValidationConstants::PRIORITIES, 'Prioridad no válida.');
+            ->inList('priority', TicketConstants::PRIORITIES, 'Prioridad no válida.');
 
         $validator
             ->integer('requester_id')
@@ -179,8 +179,8 @@ class TicketsTable extends Table
             $rules->existsIn(['assignee_id'], 'Assignees'),
             [
                 'errorField' => 'assignee_id',
-                'allowNullableNulls' => true
-            ]
+                'allowNullableNulls' => true,
+            ],
         );
 
         return $rules;
@@ -193,7 +193,7 @@ class TicketsTable extends Table
      */
     public function generateTicketNumber(): string
     {
-        return (new \App\Service\NumberGenerationService())->generate();
+        return (new NumberGenerationService())->generate();
     }
 
     /**
@@ -215,8 +215,8 @@ class TicketsTable extends Table
         $userId = $user ? $user->get('id') : null;
 
         // Determine if user is agent (filter by assigned tickets for certain views)
-        $isAgent = $userRole === ValidationConstants::ROLE_AGENT;
-        $isAdmin = $userRole === ValidationConstants::ROLE_ADMIN;
+        $isAgent = $userRole === RoleConstants::ROLE_AGENT;
+        $isAdmin = $userRole === RoleConstants::ROLE_ADMIN;
 
         // Apply view-based filters (if no search is active)
         if (empty($filters['search'])) {
@@ -224,14 +224,14 @@ class TicketsTable extends Table
                 case 'sin_asignar':
                     $query->where([
                         'Tickets.assignee_id IS' => null,
-                        'Tickets.status NOT IN' => ['resuelto', 'convertido']
+                        'Tickets.status NOT IN' => ['resuelto', 'convertido'],
                     ]);
                     break;
                 case 'mis_tickets':
                     if ($user) {
                         $query->where([
                             'Tickets.assignee_id' => $user->get('id'),
-                            'Tickets.status NOT IN' => ['resuelto', 'convertido']
+                            'Tickets.status NOT IN' => ['resuelto', 'convertido'],
                         ]);
                     }
                     break;
@@ -239,7 +239,7 @@ class TicketsTable extends Table
                     if ($user) {
                         $query->where([
                             'Tickets.requester_id' => $user->get('id'),
-                            'Tickets.status !=' => 'convertido'
+                            'Tickets.status !=' => 'convertido',
                         ]);
                     }
                     break;
@@ -279,7 +279,7 @@ class TicketsTable extends Table
                 case 'recientes':
                     $query->where([
                         'Tickets.created >=' => date('Y-m-d', strtotime('-7 days')),
-                        'Tickets.status !=' => 'convertido'
+                        'Tickets.status !=' => 'convertido',
                     ]);
                     break;
             }
@@ -296,7 +296,7 @@ class TicketsTable extends Table
                     'Tickets.source_email LIKE' => '%' . $search . '%',
                     'Requesters.name LIKE' => '%' . $search . '%',
                     'Requesters.email LIKE' => '%' . $search . '%',
-                ]
+                ],
             ]);
             // Exclude converted tickets from search unless explicitly viewing convertidos
             if ($view !== 'convertidos') {

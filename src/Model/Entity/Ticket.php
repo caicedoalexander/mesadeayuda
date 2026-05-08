@@ -70,5 +70,4 @@ class Ticket extends Entity
         'ticket_followers' => false,
         'ticket_tags' => false,
     ];
-
 }

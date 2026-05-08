@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use App\Utility\ValidationConstants;
+use App\Constants\RoleConstants;
 use Cake\ORM\Locator\LocatorAwareTrait;
 
 /**
@@ -39,7 +39,7 @@ class SidebarCountsService
             ->count();
 
         $myItems = null;
-        if ($userRole === ValidationConstants::ROLE_AGENT && $userId) {
+        if ($userRole === RoleConstants::ROLE_AGENT && $userId) {
             $myItems = $table->find()
                 ->where(['assignee_id' => $userId, 'status NOT IN' => $resolvedStatuses])
                 ->count();

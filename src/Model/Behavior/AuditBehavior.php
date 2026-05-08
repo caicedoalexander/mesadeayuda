@@ -3,7 +3,9 @@ declare(strict_types=1);
 
 namespace App\Model\Behavior;
 
+use Cake\Datasource\EntityInterface;
 use Cake\ORM\Behavior;
+use RuntimeException;
 
 /**
  * AuditBehavior
@@ -44,13 +46,13 @@ class AuditBehavior extends Behavior
         ?string $oldValue,
         ?string $newValue,
         ?int $userId = null,
-        ?string $description = null
-    ) {
+        ?string $description = null,
+    ): EntityInterface|false {
         $table = $this->table();
         $foreignKey = $this->getConfig('foreignKey');
 
         if (!$foreignKey) {
-            throw new \RuntimeException('AuditBehavior requires foreignKey config');
+            throw new RuntimeException('AuditBehavior requires foreignKey config');
         }
 
         $description = $description ?? "Campo '{$fieldName}' cambiado de '{$oldValue}' a '{$newValue}'";

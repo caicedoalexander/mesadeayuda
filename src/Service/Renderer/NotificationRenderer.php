@@ -3,8 +3,10 @@ declare(strict_types=1);
 
 namespace App\Service\Renderer;
 
+use App\Model\Entity\Ticket;
 use Cake\Core\Configure;
 use Cake\I18n\DateTime;
+use DateTimeInterface;
 
 /**
  * Notification Renderer
@@ -20,7 +22,7 @@ class NotificationRenderer
      * @param \DateTimeInterface|string|null $date Date to format
      * @return string Formatted date
      */
-    public function formatDate($date): string
+    public function formatDate(DateTimeInterface|string|null $date): string
     {
         if ($date === null) {
             return '-';
@@ -42,6 +44,7 @@ class NotificationRenderer
     public function getTicketUrl(int $id): string
     {
         $baseUrl = Configure::read('App.fullBaseUrl', 'http://localhost:8765');
+
         return $baseUrl . '/tickets/view/' . $id;
     }
 
@@ -124,7 +127,7 @@ class NotificationRenderer
      * @param \App\Model\Entity\Ticket $ticket Ticket entity
      * @return string Message text
      */
-    public function renderWhatsappNewTicket(\App\Model\Entity\Ticket $ticket): string
+    public function renderWhatsappNewTicket(Ticket $ticket): string
     {
         $priorityLabels = ['baja' => 'Baja', 'media' => 'Media', 'alta' => 'Alta', 'urgente' => 'Urgente'];
         $priorityLabel = $priorityLabels[$ticket->priority] ?? ucfirst($ticket->priority);
@@ -140,7 +143,6 @@ class NotificationRenderer
             "*Prioridad:* {$priorityLabel}\n" .
             "*Canal:* {$channelLabel}\n" .
             "*Fecha:* {$this->formatDate($ticket->created)}\n\n" .
-            "— _Mesa de Ayuda_";
+            '— _Mesa de Ayuda_';
     }
-
 }

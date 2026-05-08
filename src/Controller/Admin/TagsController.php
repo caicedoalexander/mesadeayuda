@@ -3,8 +3,9 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
+use App\Constants\RoleConstants;
 use App\Controller\AppController;
-use App\Utility\ValidationConstants;
+use Cake\Event\EventInterface;
 
 /**
  * Tags Controller (Admin)
@@ -14,13 +15,14 @@ use App\Utility\ValidationConstants;
  */
 class TagsController extends AppController
 {
-    public function beforeFilter(\Cake\Event\EventInterface $event)
+    public function beforeFilter(EventInterface $event)
     {
         parent::beforeFilter($event);
 
         $user = $this->Authentication->getIdentity();
-        if (!$user || $user->get('role') !== ValidationConstants::ROLE_ADMIN) {
+        if (!$user || $user->get('role') !== RoleConstants::ROLE_ADMIN) {
             $this->Flash->error('Solo los administradores pueden acceder a esta sección.');
+
             return $this->redirect(['controller' => 'Tickets', 'action' => 'index', 'prefix' => false]);
         }
     }
@@ -37,6 +39,7 @@ class TagsController extends AppController
 
             if ($tagsTable->save($tag)) {
                 $this->Flash->success('Etiqueta creada exitosamente.');
+
                 return $this->redirect(['action' => 'index']);
             } else {
                 $this->Flash->error('Error al crear la etiqueta.');
@@ -50,7 +53,7 @@ class TagsController extends AppController
                 'Tags.color',
                 'Tags.is_active',
                 'Tags.created',
-                'ticket_count' => $tagsTable->find()->func()->count('TicketTags.ticket_id')
+                'ticket_count' => $tagsTable->find()->func()->count('TicketTags.ticket_id'),
             ])
             ->leftJoinWith('TicketTags')
             ->groupBy(['Tags.id'])
@@ -73,6 +76,7 @@ class TagsController extends AppController
 
             if ($tagsTable->save($tag)) {
                 $this->Flash->success('Etiqueta creada exitosamente.');
+
                 return $this->redirect(['action' => 'index']);
             } else {
                 $this->Flash->error('Error al crear la etiqueta.');
@@ -95,6 +99,7 @@ class TagsController extends AppController
 
             if ($tagsTable->save($tag)) {
                 $this->Flash->success('Etiqueta actualizada exitosamente.');
+
                 return $this->redirect(['action' => 'index']);
             } else {
                 $this->Flash->error('Error al actualizar la etiqueta.');

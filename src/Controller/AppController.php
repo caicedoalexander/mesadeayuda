@@ -16,10 +16,14 @@ declare(strict_types=1);
  */
 namespace App\Controller;
 
-use App\Utility\SettingKeys;
-use App\Utility\SettingsEncryptionTrait;
-use App\Utility\ValidationConstants;
+use App\Constants\CacheConstants;
+use App\Constants\RoleConstants;
+use App\Constants\SettingKeys;
+use App\Service\Traits\SettingsEncryptionTrait;
+use Cake\Cache\Cache;
 use Cake\Controller\Controller;
+use Cake\Event\EventInterface;
+use Cake\Http\Response;
 
 /**
  * Application Controller
@@ -33,6 +37,7 @@ use Cake\Controller\Controller;
 class AppController extends Controller
 {
     use SettingsEncryptionTrait;
+
     /**
      * Initialization hook method.
      *
@@ -58,7 +63,7 @@ class AppController extends Controller
      * @param \Cake\Event\EventInterface<\Cake\Controller\Controller> $event Event.
      * @return \Cake\Http\Response|null|void
      */
-    public function beforeFilter(\Cake\Event\EventInterface $event)
+    public function beforeFilter(EventInterface $event)
     {
         parent::beforeFilter($event);
 
@@ -67,7 +72,7 @@ class AppController extends Controller
         $this->set('currentUser', $user);
 
         // Load system settings with cache (1 hour TTL)
-        $systemConfig = \Cake\Cache\Cache::remember(ValidationConstants::CACHE_SETTINGS, function () {
+        $systemConfig = Cache::remember(CacheConstants::CACHE_SETTINGS, function () {
             $systemSettingsTable = $this->fetchTable('SystemSettings');
             $settings = $systemSettingsTable->find()
                 ->select(['setting_key', 'setting_value'])
@@ -80,7 +85,7 @@ class AppController extends Controller
 
             // Decrypt sensitive values automatically
             return $this->processSettings($config);
-        }, ValidationConstants::CACHE_CONFIG);
+        }, CacheConstants::CACHE_CONFIG);
 
         // Filter out sensitive settings before passing to views
         $sensitiveKeys = [
@@ -90,16 +95,16 @@ class AppController extends Controller
         ];
         $safeConfig = array_diff_key($systemConfig, array_flip($sensitiveKeys));
         $this->set('systemConfig', $safeConfig);
-        $this->set('systemTitle', $systemConfig[SettingKeys::SYSTEM_TITLE] ?? ValidationConstants::DEFAULT_SYSTEM_TITLE);
+        $this->set('systemTitle', $systemConfig[SettingKeys::SYSTEM_TITLE] ?? CacheConstants::DEFAULT_SYSTEM_TITLE);
 
         // Set layout based on user role
         if ($user) {
             $role = $user->get('role');
-            if ($role === ValidationConstants::ROLE_ADMIN) {
+            if ($role === RoleConstants::ROLE_ADMIN) {
                 $this->viewBuilder()->setLayout('admin');
-            } elseif ($role === ValidationConstants::ROLE_AGENT) {
+            } elseif ($role === RoleConstants::ROLE_AGENT) {
                 $this->viewBuilder()->setLayout('agent');
-            } elseif ($role === ValidationConstants::ROLE_SERVICIO_CLIENTE) {
+            } elseif ($role === RoleConstants::ROLE_SERVICIO_CLIENTE) {
                 $this->viewBuilder()->setLayout('servicio_cliente');
             } else {
                 $this->viewBuilder()->setLayout('requester');
@@ -116,9 +121,9 @@ class AppController extends Controller
     protected function getDefaultRedirectForRole(string $role): array
     {
         $roleRedirects = [
-            ValidationConstants::ROLE_AGENT => ['controller' => 'Tickets', 'action' => 'index', '?' => ['view' => 'mis_tickets']],
-            ValidationConstants::ROLE_REQUESTER => ['controller' => 'Tickets', 'action' => 'index', '?' => ['view' => 'mis_tickets']],
-            ValidationConstants::ROLE_ADMIN => ['controller' => 'Tickets', 'action' => 'index'],
+            RoleConstants::ROLE_AGENT => ['controller' => 'Tickets', 'action' => 'index', '?' => ['view' => 'mis_tickets']],
+            RoleConstants::ROLE_REQUESTER => ['controller' => 'Tickets', 'action' => 'index', '?' => ['view' => 'mis_tickets']],
+            RoleConstants::ROLE_ADMIN => ['controller' => 'Tickets', 'action' => 'index'],
         ];
 
         return $roleRedirects[$role] ?? ['controller' => 'Tickets', 'action' => 'index'];
@@ -133,7 +138,7 @@ class AppController extends Controller
      * @param string $moduleName Module name for error message (e.g., 'tickets')
      * @return \Cake\Http\Response|null Redirect response if not allowed, null if access granted
      */
-    protected function redirectByRole(array $allowedRoles, string $moduleName): ?\Cake\Http\Response
+    protected function redirectByRole(array $allowedRoles, string $moduleName): ?Response
     {
         $user = $this->Authentication->getIdentity();
 

@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
-use Cake\ORM\Query\SelectQuery;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
@@ -15,7 +14,6 @@ use Cake\Validation\Validator;
  *
  * @property \App\Model\Table\TicketsTable&\Cake\ORM\Association\BelongsTo $Tickets
  * @property \App\Model\Table\UsersTable&\Cake\ORM\Association\BelongsTo $Users
- *
  * @method \App\Model\Entity\TicketHistory newEmptyEntity()
  * @method \App\Model\Entity\TicketHistory newEntity(array $data, array $options = [])
  * @method array<\App\Model\Entity\TicketHistory> newEntities(array $data, array $options = [])
@@ -29,7 +27,6 @@ use Cake\Validation\Validator;
  * @method iterable<\App\Model\Entity\TicketHistory>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\TicketHistory> saveManyOrFail(iterable $entities, array $options = [])
  * @method iterable<\App\Model\Entity\TicketHistory>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\TicketHistory>|false deleteMany(iterable $entities, array $options = [])
  * @method iterable<\App\Model\Entity\TicketHistory>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\TicketHistory> deleteManyOrFail(iterable $entities, array $options = [])
- *
  * @mixin \Cake\ORM\Behavior\TimestampBehavior
  */
 class TicketHistoryTable extends Table
@@ -52,8 +49,8 @@ class TicketHistoryTable extends Table
             'events' => [
                 'Model.beforeSave' => [
                     'created' => 'new',
-                ]
-            ]
+                ],
+            ],
         ]);
 
         $this->addBehavior('Audit', ['foreignKey' => 'ticket_id']);
@@ -122,5 +119,4 @@ class TicketHistoryTable extends Table
 
         return $rules;
     }
-
 }

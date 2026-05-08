@@ -3,11 +3,19 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Constants\CacheConstants;
+use App\Constants\SettingKeys;
+use App\Model\Entity\EmailTemplate;
+use App\Model\Entity\User;
+use App\Service\Renderer\NotificationRenderer;
 use App\Service\Traits\GenericAttachmentTrait;
-use App\Utility\SettingKeys;
-use App\Utility\ValidationConstants;
-use Cake\ORM\Locator\LocatorAwareTrait;
+use App\View\Helper\UserHelper;
+use Cake\Datasource\EntityInterface;
 use Cake\Log\Log;
+use Cake\ORM\Locator\LocatorAwareTrait;
+use Cake\Routing\Router;
+use Cake\View\View;
+use Exception;
 
 /**
  * Email Service
@@ -30,14 +38,14 @@ class EmailService
     private const ATTACHMENTS_PROPERTY = 'attachments';
     private const COMMENT_FOREIGN_KEY = 'comment_id';
 
-    private \App\Service\Renderer\NotificationRenderer $renderer;
+    private NotificationRenderer $renderer;
     private EmailTemplateRenderer $templateRenderer;
     private ?array $systemConfig = null;
     private ?GmailService $gmailService = null;
 
     public function __construct(?array $systemConfig = null)
     {
-        $this->renderer = new \App\Service\Renderer\NotificationRenderer();
+        $this->renderer = new NotificationRenderer();
         $this->templateRenderer = new EmailTemplateRenderer($systemConfig);
         $this->systemConfig = $systemConfig;
     }
@@ -52,7 +60,7 @@ class EmailService
         return $this->templateRenderer->getSystemVariables();
     }
 
-    public function sendNewEntityNotification(\Cake\Datasource\EntityInterface $entity): bool
+    public function sendNewEntityNotification(EntityInterface $entity): bool
     {
         $ticketsTable = $this->fetchTable(self::ENTITY_TABLE);
         $entity = $ticketsTable->get($entity->id, contain: ['Requesters']);
@@ -67,29 +75,29 @@ class EmailService
         return $this->sendGenericTemplateEmail('nuevo_ticket', $entity, [], [], $additionalTo, $additionalCc);
     }
 
-    public function sendEntityStatusChangeNotification(\Cake\Datasource\EntityInterface $entity, string $oldStatus, string $newStatus): bool
+    public function sendEntityStatusChangeNotification(EntityInterface $entity, string $oldStatus, string $newStatus): bool
     {
         $entityTable = $this->fetchTable(self::ENTITY_TABLE);
         $entity = $entityTable->get($entity->id, contain: self::ENTITY_CONTAIN);
 
-        $assigneeName = (isset($entity->assignee) && $entity->assignee) ? $entity->assignee->name : 'No asignado';
+        $assigneeName = isset($entity->assignee) && $entity->assignee ? $entity->assignee->name : 'No asignado';
 
         return $this->sendGenericTemplateEmail('ticket_estado', $entity, [
             'status_change_section' => $this->renderer->renderStatusChangeHtml($oldStatus, $newStatus, $assigneeName),
         ]);
     }
 
-    public function sendEntityCommentNotification(\Cake\Datasource\EntityInterface $entity, \Cake\Datasource\EntityInterface $comment, array $additionalTo = [], array $additionalCc = []): bool
+    public function sendEntityCommentNotification(EntityInterface $entity, EntityInterface $comment, array $additionalTo = [], array $additionalCc = []): bool
     {
         return $this->sendCommentBasedNotification('nuevo_comentario', $entity, $comment, null, null, $additionalTo, $additionalCc);
     }
 
-    public function sendEntityResponseNotification(\Cake\Datasource\EntityInterface $entity, \Cake\Datasource\EntityInterface $comment, string $oldStatus, string $newStatus, array $additionalTo = [], array $additionalCc = []): bool
+    public function sendEntityResponseNotification(EntityInterface $entity, EntityInterface $comment, string $oldStatus, string $newStatus, array $additionalTo = [], array $additionalCc = []): bool
     {
         return $this->sendCommentBasedNotification('ticket_respuesta', $entity, $comment, $oldStatus, $newStatus, $additionalTo, $additionalCc);
     }
 
-    private function getTemplate(string $templateKey): ?\App\Model\Entity\EmailTemplate
+    private function getTemplate(string $templateKey): ?EmailTemplate
     {
         return $this->templateRenderer->getTemplate($templateKey);
     }
@@ -111,7 +119,7 @@ class EmailService
     private function sendEmail(string $to, string $subject, string $body, array $attachments = [], array $additionalTo = [], array $additionalCc = []): bool
     {
         try {
-            $systemTitle = $this->getSettingValue(SettingKeys::SYSTEM_TITLE, ValidationConstants::DEFAULT_SYSTEM_TITLE);
+            $systemTitle = $this->getSettingValue(SettingKeys::SYSTEM_TITLE, CacheConstants::DEFAULT_SYSTEM_TITLE);
             $fromEmail = $this->getSettingValue(SettingKeys::GMAIL_USER_EMAIL, 'noreply@localhost');
 
             $toRecipients = [$to => $to];
@@ -160,25 +168,26 @@ class EmailService
             }
 
             return $result;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to send email via Gmail API', [
                 'to' => $to,
                 'subject' => $subject,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
+
             return false;
         }
     }
 
     private function sendCommentBasedNotification(
         string $templateKey,
-        \Cake\Datasource\EntityInterface $entity,
-        \Cake\Datasource\EntityInterface $comment,
+        EntityInterface $entity,
+        EntityInterface $comment,
         ?string $oldStatus,
         ?string $newStatus,
         array $additionalTo = [],
-        array $additionalCc = []
+        array $additionalCc = [],
     ): bool {
         try {
             $entityTable = $this->fetchTable(self::ENTITY_TABLE);
@@ -199,6 +208,7 @@ class EmailService
             $template = $this->getTemplate($templateKey);
             if (!$template) {
                 Log::error("Email template not found: {$templateKey}");
+
                 return false;
             }
 
@@ -207,12 +217,12 @@ class EmailService
 
             $variables = array_merge(
                 $this->getSystemVariables(),
-                $this->buildCommentVariables($entity, $comment, $author, $agentProfileImageUrl, $commentAttachments)
+                $this->buildCommentVariables($entity, $comment, $author, $agentProfileImageUrl, $commentAttachments),
             );
 
             if ($oldStatus !== null && $newStatus !== null) {
                 $hasStatusChange = ($oldStatus !== $newStatus);
-                $assigneeName = (isset($entity->assignee) && $entity->assignee) ? $entity->assignee->name : 'No asignado';
+                $assigneeName = isset($entity->assignee) && $entity->assignee ? $entity->assignee->name : 'No asignado';
                 $variables['status_change_section'] = $hasStatusChange
                     ? $this->renderer->renderStatusChangeHtml($oldStatus, $newStatus, $assigneeName)
                     : '';
@@ -223,23 +233,24 @@ class EmailService
             $recipientEmail = $entity->requester->email ?? '';
 
             return $this->sendEmail($recipientEmail, $subject, $body, $commentAttachments, $additionalTo, $additionalCc);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to send ticket comment notification', [
                 'entity_id' => $entity->id,
                 'comment_id' => $comment->id,
                 'template' => $templateKey,
                 'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
 
     private function buildCommentVariables(
-        \Cake\Datasource\EntityInterface $entity,
-        \Cake\Datasource\EntityInterface $comment,
+        EntityInterface $entity,
+        EntityInterface $comment,
         string $author,
         string $agentProfileImageUrl,
-        array $commentAttachments
+        array $commentAttachments,
     ): array {
         return [
             'subject' => $entity->subject,
@@ -254,19 +265,19 @@ class EmailService
         ];
     }
 
-    private function getAgentProfileImageUrl(?\App\Model\Entity\User $user): string
+    private function getAgentProfileImageUrl(?User $user): string
     {
-        $userHelper = new \App\View\Helper\UserHelper($this->getView());
-        $url = ($user && $user->profile_image)
+        $userHelper = new UserHelper($this->getView());
+        $url = $user && $user->profile_image
             ? $userHelper->profileImage($user->profile_image)
             : $userHelper->defaultAvatar();
 
         return $this->getAbsoluteUrl($url);
     }
 
-    private function getView(): \Cake\View\View
+    private function getView(): View
     {
-        return new \Cake\View\View();
+        return new View();
     }
 
     private function getAbsoluteUrl(string $relativeUrl): string
@@ -279,7 +290,7 @@ class EmailService
             return $relativeUrl;
         }
 
-        $baseUrl = rtrim(\Cake\Routing\Router::url('/', true), '/');
+        $baseUrl = rtrim(Router::url('/', true), '/');
 
         if (!str_starts_with($relativeUrl, '/')) {
             $relativeUrl = '/' . $relativeUrl;
@@ -314,11 +325,11 @@ class EmailService
 
     private function sendGenericTemplateEmail(
         string $templateKey,
-        \Cake\Datasource\EntityInterface $entity,
+        EntityInterface $entity,
         array $extraVariables = [],
         array $attachments = [],
         array $additionalTo = [],
-        array $additionalCc = []
+        array $additionalCc = [],
     ): bool {
         try {
             $table = $this->fetchTable(self::ENTITY_TABLE);
@@ -327,6 +338,7 @@ class EmailService
             $template = $this->getTemplate($templateKey);
             if (!$template) {
                 Log::error("Email template not found: {$templateKey}");
+
                 return false;
             }
 
@@ -339,7 +351,7 @@ class EmailService
                     'created_date' => $this->renderer->formatDate($entity->created),
                     'ticket_url' => $this->renderer->getTicketUrl($entity->id),
                 ],
-                $extraVariables
+                $extraVariables,
             );
 
             $subject = $this->replaceVariables($template->subject, $variables);
@@ -347,13 +359,13 @@ class EmailService
             $recipientEmail = $entity->requester->email ?? '';
 
             return $this->sendEmail($recipientEmail, $subject, $body, $attachments, $additionalTo, $additionalCc);
-
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to send ticket email', [
                 'template' => $templateKey,
                 'entity_id' => $entity->id,
                 'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }

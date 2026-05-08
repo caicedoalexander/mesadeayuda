@@ -509,7 +509,7 @@ $this->assign('title', 'Configuración');
             <h3>Credenciales OAuth de Gmail (client_secret.json)</h3>
         </div>
 
-        <?php $clientSecretConfigured = !empty($settings[\App\Utility\SettingKeys::GMAIL_CLIENT_SECRET_JSON] ?? ''); ?>
+        <?php $clientSecretConfigured = !empty($settings[\App\Constants\SettingKeys::GMAIL_CLIENT_SECRET_JSON] ?? ''); ?>
 
         <div class="alert alert-info">
             <i class="bi bi-info-circle"></i>

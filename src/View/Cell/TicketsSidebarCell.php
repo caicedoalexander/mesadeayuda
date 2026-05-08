@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 namespace App\View\Cell;
 
+use App\Constants\RoleConstants;
 use App\Service\SidebarCountsService;
-use App\Utility\ValidationConstants;
 use Cake\ORM\Locator\LocatorAwareTrait;
 use Cake\View\Cell;
 
@@ -31,7 +31,7 @@ class TicketsSidebarCell extends Cell
         $data = $service->getSidebarCounts($userRole, $userId);
         $statusCounts = $data['statusCounts'];
 
-        $isAgent = $userRole === ValidationConstants::ROLE_AGENT;
+        $isAgent = $userRole === RoleConstants::ROLE_AGENT;
 
         // For agents: count status-specific tickets assigned to them
         $agentStatusCounts = [];

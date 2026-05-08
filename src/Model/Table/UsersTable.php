@@ -3,8 +3,7 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
-use App\Utility\ValidationConstants;
-use Cake\ORM\Query\SelectQuery;
+use App\Constants\RoleConstants;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
@@ -14,7 +13,6 @@ use Cake\Validation\Validator;
  *
  * @property \App\Model\Table\TicketCommentsTable&\Cake\ORM\Association\HasMany $TicketComments
  * @property \App\Model\Table\TicketFollowersTable&\Cake\ORM\Association\HasMany $TicketFollowers
- *
  * @method \App\Model\Entity\User newEmptyEntity()
  * @method \App\Model\Entity\User newEntity(array $data, array $options = [])
  * @method array<\App\Model\Entity\User> newEntities(array $data, array $options = [])
@@ -28,7 +26,6 @@ use Cake\Validation\Validator;
  * @method iterable<\App\Model\Entity\User>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\User> saveManyOrFail(iterable $entities, array $options = [])
  * @method iterable<\App\Model\Entity\User>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\User>|false deleteMany(iterable $entities, array $options = [])
  * @method iterable<\App\Model\Entity\User>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\User> deleteManyOrFail(iterable $entities, array $options = [])
- *
  * @mixin \Cake\ORM\Behavior\TimestampBehavior
  */
 class UsersTable extends Table
@@ -81,9 +78,9 @@ class UsersTable extends Table
                         return true;
                     }
 
-                    return (bool) preg_match('/[A-Z]/', $value) &&
-                        (bool) preg_match('/[a-z]/', $value) &&
-                        (bool) preg_match('/[0-9]/', $value);
+                    return (bool)preg_match('/[A-Z]/', $value) &&
+                        (bool)preg_match('/[a-z]/', $value) &&
+                        (bool)preg_match('/[0-9]/', $value);
                 },
                 'message' => 'La contraseña debe contener al menos una mayúscula, una minúscula y un número.',
             ])
@@ -110,7 +107,7 @@ class UsersTable extends Table
             ->scalar('role')
             ->maxLength('role', 50)
             ->notEmptyString('role')
-            ->inList('role', ValidationConstants::ROLES, 'Rol no válido');
+            ->inList('role', RoleConstants::ROLES, 'Rol no válido');
 
         $validator
             ->boolean('is_active')
@@ -137,5 +134,4 @@ class UsersTable extends Table
 
         return $rules;
     }
-
 }

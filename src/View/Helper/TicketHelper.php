@@ -19,7 +19,7 @@ class TicketHelper extends Helper
      * @param object $ticket Ticket entity
      * @return array URL array for Html helper
      */
-    public function getViewUrl($ticket): array
+    public function getViewUrl(object $ticket): array
     {
         return ['action' => 'view', $ticket->id];
     }

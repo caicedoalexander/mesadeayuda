@@ -3,7 +3,10 @@ declare(strict_types=1);
 
 namespace App\Utility;
 
+use Cake\Log\Log;
 use Cake\Utility\Security;
+use Exception;
+use RuntimeException;
 
 /**
  * Settings Encryption Trait
@@ -89,7 +92,8 @@ trait SettingsEncryptionTrait
         $encryptedValue = base64_decode($base64Value, true);
 
         if ($encryptedValue === false) {
-            \Cake\Log\Log::error('Failed to base64 decode setting: ' . $key);
+            Log::error('Failed to base64 decode setting: ' . $key);
+
             return '';
         }
 
@@ -102,10 +106,11 @@ trait SettingsEncryptionTrait
             }
 
             return (string)$decrypted;
-        } catch (\Exception $e) {
-            \Cake\Log\Log::error('Failed to decrypt setting: ' . $key, [
-                'error' => $e->getMessage()
+        } catch (Exception $e) {
+            Log::error('Failed to decrypt setting: ' . $key, [
+                'error' => $e->getMessage(),
             ]);
+
             return '';
         }
     }
@@ -123,8 +128,8 @@ trait SettingsEncryptionTrait
         $salt = Security::getSalt();
 
         if (empty($salt)) {
-            throw new \RuntimeException(
-                'Security.salt is not configured. Please set SECURITY_SALT environment variable.'
+            throw new RuntimeException(
+                'Security.salt is not configured. Please set SECURITY_SALT environment variable.',
             );
         }
 

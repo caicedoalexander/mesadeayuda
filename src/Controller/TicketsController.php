@@ -3,11 +3,22 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Constants\CacheConstants;
+use App\Constants\RoleConstants;
+use App\Model\Entity\Ticket;
 use App\Service\AuthorizationService;
 use App\Service\TicketService;
 use App\Service\Traits\GenericAttachmentTrait;
-use App\Utility\ValidationConstants;
+use Cake\Cache\Cache;
+use Cake\Datasource\Exception\RecordNotFoundException;
+use Cake\Event\EventInterface;
+use Cake\Http\Exception\NotFoundException;
 use Cake\Http\Response;
+use Cake\Log\Log;
+use Cake\ORM\Table;
+use Exception;
+use InvalidArgumentException;
+use RuntimeException;
 
 /**
  * Tickets Controller
@@ -28,7 +39,7 @@ class TicketsController extends AppController
      * @param \Cake\Event\EventInterface<\Cake\Controller\Controller> $event Event
      * @return \Cake\Http\Response|null|void
      */
-    public function beforeFilter(\Cake\Event\EventInterface $event)
+    public function beforeFilter(EventInterface $event)
     {
         parent::beforeFilter($event);
 
@@ -41,7 +52,7 @@ class TicketsController extends AppController
         ]);
 
         // Allow admin, agent, and requester roles for Tickets module
-        return $this->redirectByRole([ValidationConstants::ROLE_ADMIN, ValidationConstants::ROLE_AGENT, ValidationConstants::ROLE_REQUESTER], 'tickets');
+        return $this->redirectByRole([RoleConstants::ROLE_ADMIN, RoleConstants::ROLE_AGENT, RoleConstants::ROLE_REQUESTER], 'tickets');
     }
 
     /**
@@ -58,6 +69,7 @@ class TicketsController extends AppController
         // Initialize all ticket system services using trait
         $this->initializeTicketSystemServices();
     }
+
     /**
      * Index method - List tickets with filters
      *
@@ -67,7 +79,7 @@ class TicketsController extends AppController
     {
         $this->indexEntity('ticket', [
             'filterParams' => [],
-            'specialRedirects' => function($request, $user, $userRole) {
+            'specialRedirects' => function ($request, $user, $userRole) {
                 // Handle Gmail OAuth callback redirect
                 $code = $request->getQuery('code');
                 if ($code) {
@@ -75,8 +87,9 @@ class TicketsController extends AppController
                         'controller' => 'Settings',
                         'action' => 'gmailAuth',
                         'prefix' => 'Admin',
-                        '?' => ['code' => $code]
+                        '?' => ['code' => $code],
                     ]);
+
                     return true; // Indicate redirect happened
                 }
 
@@ -92,14 +105,14 @@ class TicketsController extends AppController
      * @return \Cake\Http\Response|null|void Renders view
      * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
      */
-    public function view($id = null)
+    public function view(?string $id = null)
     {
         return $this->viewEntity('ticket', (int)$id, [
             'lazyLoadHistory' => true, // PERFORMANCE FIX: Load history via AJAX
-            'permissionCheck' => function($ticket) {
+            'permissionCheck' => function ($ticket) {
                 return $this->_checkTicketViewPermission($ticket);
             },
-            'beforeSet' => function($ticket, $viewVars) {
+            'beforeSet' => function ($ticket, $viewVars) {
                 // Get all tags for selection
                 $tags = $this->fetchTable('Tags')->find('list')->toArray();
 
@@ -114,7 +127,7 @@ class TicketsController extends AppController
      * @param \App\Model\Entity\Ticket $ticket Ticket entity
      * @return \Cake\Http\Response|null Redirect response if no permission, null if allowed
      */
-    private function _checkTicketViewPermission($ticket)
+    private function _checkTicketViewPermission(Ticket $ticket)
     {
         $user = $this->Authentication->getIdentity();
         if (!$user) {
@@ -127,6 +140,7 @@ class TicketsController extends AppController
         // Requester can only view their own tickets
         if ($userRole === 'requester' && $ticket->requester_id !== $userId) {
             $this->Flash->error('No tienes permiso para ver este ticket.');
+
             return $this->redirect(['action' => 'index']);
         }
 
@@ -139,9 +153,9 @@ class TicketsController extends AppController
      * @param string|null $id Ticket id
      * @return \Cake\Http\Response|null|void Redirects back to ticket view
      */
-    public function addComment($id = null)
+    public function addComment(?string $id = null)
     {
-        return $this->addEntityComment('ticket', (int) $id);
+        return $this->addEntityComment('ticket', (int)$id);
     }
 
     /**
@@ -150,9 +164,9 @@ class TicketsController extends AppController
      * @param string|null $id Ticket id
      * @return \Cake\Http\Response|null|void Redirects back
      */
-    public function assign($id = null)
+    public function assign(?string $id = null)
     {
-        return $this->assignEntity('ticket', (int) $id, $this->request->getData('assignee_id'));
+        return $this->assignEntity('ticket', (int)$id, $this->request->getData('assignee_id'));
     }
 
     /**
@@ -161,9 +175,9 @@ class TicketsController extends AppController
      * @param string|null $id Ticket id
      * @return \Cake\Http\Response|null|void Redirects back
      */
-    public function changeStatus($id = null)
+    public function changeStatus(?string $id = null)
     {
-        return $this->changeEntityStatus('ticket', (int) $id, $this->request->getData('status'));
+        return $this->changeEntityStatus('ticket', (int)$id, $this->request->getData('status'));
     }
 
     /**
@@ -172,9 +186,9 @@ class TicketsController extends AppController
      * @param string|null $id Ticket id
      * @return \Cake\Http\Response|null|void Redirects back
      */
-    public function changePriority($id = null)
+    public function changePriority(?string $id = null)
     {
-        return $this->changeEntityPriority('ticket', (int) $id, $this->request->getData('priority'));
+        return $this->changeEntityPriority('ticket', (int)$id, $this->request->getData('priority'));
     }
 
     /**
@@ -183,12 +197,12 @@ class TicketsController extends AppController
      * @param string|null $id Ticket id
      * @return \Cake\Http\Response|null|void Redirects back
      */
-    public function addTag($id = null)
+    public function addTag(?string $id = null)
     {
         $this->request->allowMethod(['post']);
 
-        $tagId = (int) $this->request->getData('tag_id');
-        $result = $this->ticketService->addTag((int) $id, $tagId);
+        $tagId = (int)$this->request->getData('tag_id');
+        $result = $this->ticketService->addTag((int)$id, $tagId);
 
         $this->Flash->{$result['success'] ? 'success' : ($result['message'] === 'Esta etiqueta ya está agregada.' ? 'warning' : 'error')}($result['message']);
 
@@ -202,11 +216,11 @@ class TicketsController extends AppController
      * @param string|null $tagId Tag id
      * @return \Cake\Http\Response|null|void Redirects back
      */
-    public function removeTag($id = null, $tagId = null)
+    public function removeTag(?string $id = null, ?string $tagId = null)
     {
         $this->request->allowMethod(['post', 'delete']);
 
-        $result = $this->ticketService->removeTag((int) $id, (int) $tagId);
+        $result = $this->ticketService->removeTag((int)$id, (int)$tagId);
 
         $this->Flash->{$result['success'] ? 'success' : 'error'}($result['message']);
 
@@ -219,12 +233,12 @@ class TicketsController extends AppController
      * @param string|null $id Ticket id
      * @return \Cake\Http\Response|null|void Redirects back
      */
-    public function addFollower($id = null)
+    public function addFollower(?string $id = null)
     {
         $this->request->allowMethod(['post']);
 
-        $userId = (int) $this->request->getData('user_id');
-        $result = $this->ticketService->addFollower((int) $id, $userId);
+        $userId = (int)$this->request->getData('user_id');
+        $result = $this->ticketService->addFollower((int)$id, $userId);
 
         $this->Flash->{$result['success'] ? 'success' : ($result['message'] === 'Este usuario ya está siguiendo el ticket.' ? 'warning' : 'error')}($result['message']);
 
@@ -277,9 +291,9 @@ class TicketsController extends AppController
      * @param string|null $id Attachment id
      * @return \Cake\Http\Response File download response
      */
-    public function downloadAttachment($id = null)
+    public function downloadAttachment(?string $id = null)
     {
-        return $this->downloadEntityAttachment('ticket', (int) $id);
+        return $this->downloadEntityAttachment('ticket', (int)$id);
     }
 
     /**
@@ -289,7 +303,7 @@ class TicketsController extends AppController
      * @param string|null $id Ticket id
      * @return void JSON response
      */
-    public function history($id = null)
+    public function history(?string $id = null)
     {
         $this->historyEntity('ticket', (int)$id);
     }
@@ -304,7 +318,7 @@ class TicketsController extends AppController
      */
     protected function initializeServices(array $serviceMap): void
     {
-        $systemConfig = \Cake\Cache\Cache::read(ValidationConstants::CACHE_SETTINGS, ValidationConstants::CACHE_CONFIG);
+        $systemConfig = Cache::read(CacheConstants::CACHE_SETTINGS, CacheConstants::CACHE_CONFIG);
 
         foreach ($serviceMap as $propertyName => $serviceClass) {
             $this->{$propertyName} = new $serviceClass($systemConfig);
@@ -391,7 +405,7 @@ class TicketsController extends AppController
                 'tableName' => 'Tickets',
                 'foreignKey' => 'ticket_id',
             ],
-            default => throw new \InvalidArgumentException("Invalid entity type: {$entityType}"),
+            default => throw new InvalidArgumentException("Invalid entity type: {$entityType}"),
         };
 
         return array_merge($components, [
@@ -407,11 +421,11 @@ class TicketsController extends AppController
      * @param string $entityType 'ticket'
      * @return \Cake\ORM\Table History table instance
      */
-    private function getHistoryTable(string $entityType): \Cake\ORM\Table
+    private function getHistoryTable(string $entityType): Table
     {
         return match ($entityType) {
             'ticket' => $this->fetchTable('TicketHistory'),
-            default => throw new \InvalidArgumentException("Invalid entity type: {$entityType}"),
+            default => throw new InvalidArgumentException("Invalid entity type: {$entityType}"),
         };
     }
 
@@ -499,7 +513,7 @@ class TicketsController extends AppController
             'filterDateFrom',
             'filterDateTo',
             'sortField',
-            'sortDirection'
+            'sortDirection',
         );
         foreach ($config['filterParams'] as $paramName => $queryKey) {
             $filterVarName = 'filter' . ucfirst($paramName);
@@ -541,6 +555,7 @@ class TicketsController extends AppController
     private function getValidSortFields(string $entityType): array
     {
         $common = ['created', 'modified', 'status', 'priority', 'subject'];
+
         return match ($entityType) {
             'ticket' => array_merge($common, ['ticket_number']),
             default => $common,
@@ -576,13 +591,14 @@ class TicketsController extends AppController
         if ($entityType === 'ticket') {
             $data['tags'] = $this->fetchTable('Tags')->find()->toArray();
         }
+
         return $data;
     }
 
     private function getDefaultUsersRoleFilter(string $entityType): ?array
     {
         return match ($entityType) {
-            'ticket' => [ValidationConstants::ROLE_ADMIN, ValidationConstants::ROLE_AGENT],
+            'ticket' => [RoleConstants::ROLE_ADMIN, RoleConstants::ROLE_AGENT],
             default => null,
         };
     }
@@ -613,7 +629,7 @@ class TicketsController extends AppController
 
     // region: View
 
-    protected function viewEntity(string $entityType, int $id, array $config = []): ?\Cake\Http\Response
+    protected function viewEntity(string $entityType, int $id, array $config = []): ?Response
     {
         $components = $this->getEntityComponents($entityType);
         $tableName = $components['tableName'];
@@ -642,7 +658,7 @@ class TicketsController extends AppController
             $viewVars = $config['beforeSet']($entity, $viewVars);
         }
         $allStatuses = $this->getStatusConfig();
-        $selectableStatuses = array_filter($allStatuses, function($key) {
+        $selectableStatuses = array_filter($allStatuses, function ($key) {
             return $key !== 'convertido';
         }, ARRAY_FILTER_USE_KEY);
         $user = $this->Authentication->getIdentity();
@@ -655,6 +671,7 @@ class TicketsController extends AppController
             'isAssignmentDisabled' => $authService->isAssignmentDisabled($user),
         ]);
         $this->set($viewVars);
+
         return null;
     }
 
@@ -679,18 +696,19 @@ class TicketsController extends AppController
             if ($historyAssoc) {
                 $contain[$historyAssoc] = [
                     'Users',
-                    'sort' => [$historyAssoc . '.created' => 'DESC']
+                    'sort' => [$historyAssoc . '.created' => 'DESC'],
                 ];
             }
         }
+
         return $contain;
     }
 
     private function getDefaultAgentsRoleFilter(string $entityType): array
     {
         return match ($entityType) {
-            'ticket' => [ValidationConstants::ROLE_ADMIN, ValidationConstants::ROLE_AGENT],
-            default => [ValidationConstants::ROLE_ADMIN, ValidationConstants::ROLE_AGENT],
+            'ticket' => [RoleConstants::ROLE_ADMIN, RoleConstants::ROLE_AGENT],
+            default => [RoleConstants::ROLE_ADMIN, RoleConstants::ROLE_AGENT],
         };
     }
 
@@ -710,7 +728,7 @@ class TicketsController extends AppController
         string $entityType,
         int $entityId,
         $assigneeId,
-        string $redirectAction = 'index'
+        string $redirectAction = 'index',
     ): Response {
         $this->request->allowMethod(['post', 'put']);
         $assigneeId = $this->normalizeAssigneeId($assigneeId);
@@ -740,7 +758,7 @@ class TicketsController extends AppController
         string $entityType,
         int $entityId,
         string $newStatus,
-        string $redirectAction = 'index'
+        string $redirectAction = 'index',
     ): Response {
         $this->request->allowMethod(['post', 'put']);
         $userId = $this->getCurrentUserId();
@@ -769,7 +787,7 @@ class TicketsController extends AppController
         string $entityType,
         int $entityId,
         string $newPriority,
-        string $redirectAction = 'index'
+        string $redirectAction = 'index',
     ): Response {
         $this->request->allowMethod(['post', 'put']);
         $userId = $this->getCurrentUserId();
@@ -824,7 +842,7 @@ class TicketsController extends AppController
         $filePath = $this->getFullPath($attachment);
 
         if (!$filePath || !file_exists($filePath)) {
-            throw new \Cake\Http\Exception\NotFoundException('Archivo no encontrado.');
+            throw new NotFoundException('Archivo no encontrado.');
         }
 
         return $this->response
@@ -836,7 +854,7 @@ class TicketsController extends AppController
     {
         $user = $this->Authentication->getIdentity();
         if (!$user) {
-            throw new \RuntimeException('No authenticated user');
+            throw new RuntimeException('No authenticated user');
         }
 
         return (int)$user->get('id');
@@ -882,9 +900,9 @@ class TicketsController extends AppController
                 $entity = $table->get($entityId);
                 $service->assign($entity, $agentId, $userId);
                 $successCount++;
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 $errorCount++;
-                \Cake\Log\Log::error("Error in bulk assign {$entityType} {$entityId}: " . $e->getMessage());
+                Log::error("Error in bulk assign {$entityType} {$entityId}: " . $e->getMessage());
             }
         }
         if ($successCount > 0) {
@@ -920,15 +938,15 @@ class TicketsController extends AppController
                         $oldPriority,
                         $newPriority,
                         $userId,
-                        "Prioridad cambiada de {$oldPriority} a {$newPriority}"
+                        "Prioridad cambiada de {$oldPriority} a {$newPriority}",
                     );
                     $successCount++;
                 } else {
                     $errorCount++;
                 }
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 $errorCount++;
-                \Cake\Log\Log::error("Error in bulk priority change {$entityType} {$entityId}: " . $e->getMessage());
+                Log::error("Error in bulk priority change {$entityType} {$entityId}: " . $e->getMessage());
             }
         }
         if ($successCount > 0) {
@@ -945,7 +963,7 @@ class TicketsController extends AppController
     {
         $this->request->allowMethod(['post']);
         $entityIds = array_map('intval', explode(',', $this->request->getData('entity_ids') ?? $this->request->getData('ticket_ids') ?? ''));
-        $tagId = (int) $this->request->getData('tag_id');
+        $tagId = (int)$this->request->getData('tag_id');
         [, , $entityName] = $this->getEntityComponents($entityType);
         $tagsTableName = $this->getTagsTableName($entityType);
         $tagsTable = $this->fetchTable($tagsTableName);
@@ -956,12 +974,12 @@ class TicketsController extends AppController
             try {
                 $exists = $tagsTable->exists([
                     $foreignKey => $entityId,
-                    'tag_id' => $tagId
+                    'tag_id' => $tagId,
                 ]);
                 if (!$exists) {
                     $entityTag = $tagsTable->newEntity([
                         $foreignKey => $entityId,
-                        'tag_id' => $tagId
+                        'tag_id' => $tagId,
                     ]);
                     if ($tagsTable->save($entityTag)) {
                         $successCount++;
@@ -971,9 +989,9 @@ class TicketsController extends AppController
                 } else {
                     $successCount++;
                 }
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 $errorCount++;
-                \Cake\Log\Log::error("Error in bulk tag add {$entityType} {$entityId}: " . $e->getMessage());
+                Log::error("Error in bulk tag add {$entityType} {$entityId}: " . $e->getMessage());
             }
         }
         if ($successCount > 0) {
@@ -1001,9 +1019,9 @@ class TicketsController extends AppController
                 } else {
                     $errorCount++;
                 }
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 $errorCount++;
-                \Cake\Log\Log::error("Error in bulk delete {$entityType} {$entityId}: " . $e->getMessage());
+                Log::error("Error in bulk delete {$entityType} {$entityId}: " . $e->getMessage());
             }
         }
         if ($successCount > 0) {
@@ -1035,6 +1053,7 @@ class TicketsController extends AppController
                 $this->set('error', 'No autenticado');
                 $this->viewBuilder()->setOption('serialize', ['error']);
                 $this->response = $this->response->withStatus(401);
+
                 return;
             }
             $components = $this->getEntityComponents($entityType);
@@ -1047,6 +1066,7 @@ class TicketsController extends AppController
                 $this->set('error', 'No tienes permiso para ver este historial');
                 $this->viewBuilder()->setOption('serialize', ['error']);
                 $this->response = $this->response->withStatus(403);
+
                 return;
             }
             $historyTable = $this->getHistoryTable($entityType);
@@ -1082,13 +1102,13 @@ class TicketsController extends AppController
             }
             $this->set('history', $formattedHistory);
             $this->viewBuilder()->setOption('serialize', ['history']);
-        } catch (\Cake\Datasource\Exception\RecordNotFoundException $e) {
-            \Cake\Log\Log::warning(ucfirst($entityType) . ' not found for history: ' . $id);
+        } catch (RecordNotFoundException $e) {
+            Log::warning(ucfirst($entityType) . ' not found for history: ' . $id);
             $this->set('error', ucfirst($entityType) . ' no encontrado');
             $this->viewBuilder()->setOption('serialize', ['error']);
             $this->response = $this->response->withStatus(404);
-        } catch (\Exception $e) {
-            \Cake\Log\Log::error('Error loading ' . $entityType . ' history: ' . $e->getMessage(), [
+        } catch (Exception $e) {
+            Log::error('Error loading ' . $entityType . ' history: ' . $e->getMessage(), [
                 $entityType . '_id' => $id,
                 'exception' => $e,
             ]);

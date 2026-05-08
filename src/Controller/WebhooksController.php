@@ -3,10 +3,10 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Constants\SettingKeys;
 use App\Service\Exception\GmailNotConfiguredException;
 use App\Service\GmailImportService;
 use App\Service\SettingsService;
-use App\Utility\SettingKeys;
 use Cake\Cache\Cache;
 use Cake\Controller\Controller;
 use Cake\Http\Response;

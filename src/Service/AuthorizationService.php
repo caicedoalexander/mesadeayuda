@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use App\Utility\ValidationConstants;
+use App\Constants\RoleConstants;
 
 /**
  * Authorization Service
@@ -19,7 +19,7 @@ class AuthorizationService
      * @param mixed $user User identity object or array
      * @return bool True if assignment should be disabled
      */
-    public function isAssignmentDisabled($user): bool
+    public function isAssignmentDisabled(mixed $user): bool
     {
         if (!$user) {
             return true;
@@ -27,6 +27,6 @@ class AuthorizationService
 
         $userRole = is_object($user) ? ($user->role ?? $user->get('role')) : ($user['role'] ?? null);
 
-        return !in_array($userRole, [ValidationConstants::ROLE_ADMIN, ValidationConstants::ROLE_AGENT], true);
+        return !in_array($userRole, [RoleConstants::ROLE_ADMIN, RoleConstants::ROLE_AGENT], true);
     }
 }

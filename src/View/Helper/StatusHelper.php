@@ -67,7 +67,7 @@ class StatusHelper extends Helper
         $badge = sprintf(
             '<span class="badge" style="background-color: %s; color: white; border-radius: 8px; padding: 0.35rem 0.65rem; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">%s</span>',
             h($this->statusColor($status)),
-            h($this->statusLabel($status))
+            h($this->statusLabel($status)),
         );
 
         $url = $options['url'] ?? null;
@@ -83,7 +83,7 @@ class StatusHelper extends Helper
         $badge = sprintf(
             '<span class="badge" style="background-color: %s; color: white; border-radius: 8px; padding: 0.35rem 0.65rem; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">%s</span>',
             h($this->priorityColor($priority)),
-            h($this->priorityLabel($priority))
+            h($this->priorityLabel($priority)),
         );
 
         $url = $options['url'] ?? null;
