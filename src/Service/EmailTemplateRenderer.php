@@ -14,8 +14,14 @@ use Exception;
 /**
  * EmailTemplateRenderer
  *
- * Loads email templates from database, caches them in-memory,
- * and renders them by replacing {{variable}} placeholders.
+ * **Layer:** template loader + string renderer.
+ *
+ * Loads email templates from the `email_templates` table, caches them
+ * in-memory and renders them by replacing {{variable}} placeholders.
+ *
+ * For domain-specific formatting (dates, status labels, attachments
+ * HTML, WhatsApp message text), use {@see \App\Service\Renderer\NotificationRenderer}
+ * instead.
  */
 class EmailTemplateRenderer
 {

@@ -12,8 +12,14 @@ use DateTimeInterface;
 /**
  * Notification Renderer
  *
- * Responsible for formatting data and generating content for notifications
- * (Email HTML snippets and WhatsApp text messages).
+ * **Layer:** domain formatter for notifications.
+ *
+ * Formats values (dates, URLs, status labels) and renders HTML/text
+ * fragments (attachment lists, status-change blocks, WhatsApp messages)
+ * used to fill template variables.
+ *
+ * Does NOT load or render full email templates — for that, use
+ * {@see \App\Service\EmailTemplateRenderer}.
  */
 class NotificationRenderer
 {
