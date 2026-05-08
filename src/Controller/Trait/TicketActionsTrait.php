@@ -8,7 +8,7 @@ use App\Service\Exception\InvalidStatusTransitionException;
 use App\Service\Exception\UnauthorizedAssignmentException;
 use Cake\Http\Exception\NotFoundException;
 use Cake\Http\Response;
-use RuntimeException;
+use LogicException;
 
 /**
  * Single-entity action region for TicketsController:
@@ -275,7 +275,7 @@ trait TicketActionsTrait
     {
         $user = $this->Authentication->getIdentity();
         if (!$user) {
-            throw new RuntimeException('No authenticated user');
+            throw new LogicException('No authenticated user');
         }
 
         return (int)$user->get('id');
