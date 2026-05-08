@@ -46,7 +46,16 @@ The codebase follows a fat-service / thin-controller pattern on top of CakePHP:
 
   Las reglas de dominio (estados válidos, transiciones, reasignación) viven en la entidad `Ticket` (`isLocked`, `canTransitionTo`, `canBeAssignedTo`) y son consumidas desde los traits. El parámetro `$entityType` heredado del módulo Compras fue eliminado en mayo 2026.
 - **`src/Controller/Admin/`** — `Admin` route prefix (Settings, EmailTemplates, Tags). Las credenciales OAuth de Gmail (`client_secret.json`) se pegan como texto en `/admin/settings` y se guardan cifradas en `system_settings.gmail_client_secret_json` — no se sube ningún archivo.
-- **`src/Service/`** — Business logic. Domain service `TicketService`, integrations (`GmailService`, `EmailService`, `WhatsappService`, `N8nService`), cross-cutting helpers (`SidebarCountsService`, `NumberGenerationService`, `EmailTemplateRenderer`, `SettingsService`, `AuthorizationService`, `ProfileImageService`). Reusable mixin logic lives in `src/Service/Traits/`: `ConfigResolutionTrait`, `GenericAttachmentTrait`, `SecureHttpTrait`, `SettingsEncryptionTrait` (consumed by `AppController` and `GmailImportService` for transparent encryption of sensitive `system_settings` keys). Attachments are stored on local disk under `webroot/uploads/`.
+- **`src/Service/`** — Business logic. Domain services agrupados por responsabilidad:
+  - `TicketIngestionService` — creación de tickets/comentarios desde fuentes externas (Gmail).
+  - `TicketPipelineService` — transiciones de estado, asignación, prioridad, tags, followers, `handleResponse`.
+  - `TicketCommentService` — comentarios manuales con sanitización HTML.
+  - `TicketAttachmentService` — uploads y procesamiento de adjuntos.
+  - `TicketNotificationService` — despacho email + WhatsApp + n8n.
+
+  Integraciones (`GmailService`, `EmailService`, `WhatsappService`, `N8nService`), cross-cutting helpers (`SidebarCountsService`, `NumberGenerationService`, `EmailTemplateRenderer`, `SettingsService`, `AuthorizationService`, `ProfileImageService`). Reusable mixin logic en `src/Service/Traits/`: `ConfigResolutionTrait`, `GenericAttachmentTrait`, `SecureHttpTrait`, `SettingsEncryptionTrait` (consumed by `AppController` and `GmailImportService` for transparent encryption of sensitive `system_settings` keys), `HtmlSanitizerTrait`, `TicketHistoryLoggerTrait`. Attachments are stored on local disk under `webroot/uploads/`.
+
+  **DI patrón:** los servicios de dominio aceptan dependencias opcionales por constructor (`?Service $svc = null`) con default a instanciación interna; esto habilita testing futuro sin romper callers actuales.
 - **`src/Constants/`** — final classes con constantes de dominio. **Nunca hardcodear strings o IDs de dominio**; referenciar estas clases. Archivos:
   - `TicketConstants` — estados de ticket, prioridades, tipos de comentario, labels y colores de presentación.
   - `RoleConstants` — roles de usuario y atajo `STAFF_ROLES`.
@@ -77,7 +86,7 @@ The codebase follows a fat-service / thin-controller pattern on top of CakePHP:
 - **Sidebar counters**: `SidebarCountsService` produces the unread/unassigned counts displayed across the layout — reuse it instead of querying tables ad-hoc from views.
 - **Coding standard**: CakePHP CodeSniffer ruleset (`phpcs.xml`), with `SlevomatCodingStandard.TypeHints.ReturnTypeHint.MissingNativeTypeHint` excluded for `src/Controller/*` (controllers don't need return type hints; services and other classes do). Run `composer cs-fix` then `composer cs-check` before committing.
 - **Strict types**: every PHP file declares `declare(strict_types=1);`.
-- **Domain methods en `Ticket`**: la entidad expone predicados (`isResolved`, `isOpen`, `isNew`, `isPending`, `isLocked`, `hasAssignee`, `belongsTo`, `isAssignedTo`, `wasCreatedFromEmail`) y reglas de transición (`canTransitionTo`, `canBeAssignedTo`). Estos métodos son la fuente de verdad — controllers y services deben consumirlos en lugar de comparar `status` o `assignee_id` directamente. La matriz `Ticket::TRANSITIONS` define las transiciones legales del state machine; `TicketService::changeStatus` lanza `InvalidStatusTransitionException` si se viola. `User::isStaff()` agrupa el chequeo de roles admin/agent.
+- **Domain methods en `Ticket`**: la entidad expone predicados (`isResolved`, `isOpen`, `isNew`, `isPending`, `isLocked`, `hasAssignee`, `belongsTo`, `isAssignedTo`, `wasCreatedFromEmail`) y reglas de transición (`canTransitionTo`, `canBeAssignedTo`). Estos métodos son la fuente de verdad — controllers y services deben consumirlos en lugar de comparar `status` o `assignee_id` directamente. La matriz `Ticket::TRANSITIONS` define las transiciones legales del state machine; `TicketPipelineService::changeStatus` lanza `InvalidStatusTransitionException` si se viola. `User::isStaff()` agrupa el chequeo de roles admin/agent.
 
 ### Configuration & environment
 - Local config in `config/app_local.php` (gitignored; copy from `config/app_local.example.php`).

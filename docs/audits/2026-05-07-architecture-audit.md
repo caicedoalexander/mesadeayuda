@@ -23,7 +23,7 @@
 
 ---
 
-## 2. Estructura de directorios — comparación SGI vs. Mesa de Ayuda
+## 2. Estructura de directorios — comparación SGI vs. Mesa de Ayudaffci yypq jldn xmsq
 
 | Elemento | SGI (referencia) | Mesa de Ayuda | Estado |
 |---|---|---|---|
@@ -412,3 +412,23 @@ Cerrados en plan `docs/superpowers/plans/2026-05-08-audit-fase2-altos.md` (subse
 - **4.8 ✅** Auditado: todos los call-sites que persisten en `system_settings` pasan por `SettingsService::saveSetting()` que invalida 4 keys. Deuda residual documentada: `CacheConstants::CACHE_CONFIG` apunta a `_cake_core_` (cache de bootstrap), idealmente runtime data debería vivir en un cache config dedicado — queda para fase 3.
 
 **Pendientes:** altos **4.1** (trocear `TicketService` 1046 LOC) y **4.3** (DI explícita en servicios refactorizados) — diferidos a sesión dedicada por riesgo de regresión y necesidad de smoke manual extensivo. Más medios 5.1–5.7.
+
+### Anexo 4 — Cierre altos 4.1 y 4.3 (2026-05-08)
+
+Cerrados:
+
+- **4.1 ✅** `TicketService` (1046 LOC) reemplazado por 5 servicios cohesivos:
+  - `TicketIngestionService` (Gmail → ticket/comment)
+  - `TicketPipelineService` (assign, changeStatus, changePriority, tags, followers, handleResponse)
+  - `TicketCommentService` (addComment + HTML sanitization)
+  - `TicketAttachmentService` (uploads, email attachments)
+  - `TicketNotificationService` (email + WhatsApp + n8n dispatch)
+
+  Helpers compartidos: `Service/Traits/TicketHistoryLoggerTrait`, `Service/Traits/HtmlSanitizerTrait`. Eliminación del archivo legacy `TicketService.php` queda condicionada al smoke manual final.
+
+- **4.3 ✅** Constructores con DI explícita (patrón SGI): `?array $systemConfig`, `?EmailService`, `?WhatsappService`, `?N8nService`, y servicios pares según composición. Defaults a `new` interno para no romper callers existentes; mockables cuando exista `tests/`.
+
+Plan de implementación: `docs/superpowers/plans/2026-05-08-ticket-service-split.md`.
+Diseño: `docs/superpowers/specs/2026-05-08-ticket-service-split-design.md`.
+
+**Pendientes restantes:** medios 5.1–5.7.
