@@ -98,8 +98,9 @@ class AppController extends Controller
         $this->set('systemTitle', $systemConfig[SettingKeys::SYSTEM_TITLE] ?? CacheConstants::DEFAULT_SYSTEM_TITLE);
 
         // Set layout based on user role
-        if ($user) {
-            $role = $user->get('role');
+        $user = $identity?->getOriginalData();
+        if ($user instanceof \App\Model\Entity\User) {
+            $role = $user->role;
             if ($role === RoleConstants::ROLE_ADMIN) {
                 $this->viewBuilder()->setLayout('admin');
             } elseif ($role === RoleConstants::ROLE_AGENT) {
@@ -140,13 +141,14 @@ class AppController extends Controller
      */
     protected function redirectByRole(array $allowedRoles, string $moduleName): ?Response
     {
-        $user = $this->Authentication->getIdentity();
+        $identity = $this->Authentication->getIdentity();
+        $user = $identity?->getOriginalData();
 
-        if (!$user) {
+        if (!$user instanceof \App\Model\Entity\User) {
             return null; // Allow unauthenticated access (will be handled by Authentication plugin)
         }
 
-        $role = $user->get('role');
+        $role = $user->role;
 
         // Check if user role is allowed
         if (in_array($role, $allowedRoles, true)) {
