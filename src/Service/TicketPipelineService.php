@@ -5,6 +5,7 @@ namespace App\Service;
 
 use App\Model\Entity\Ticket;
 use App\Model\Entity\User;
+use App\Service\Dto\SystemConfig;
 use App\Service\Exception\InvalidStatusTransitionException;
 use App\Service\Exception\UnauthorizedAssignmentException;
 use App\Service\Traits\TicketHistoryLoggerTrait;
@@ -27,26 +28,26 @@ class TicketPipelineService
     private TicketAttachmentService $attachments;
     private TicketNotificationService $notifications;
     private AuthorizationService $authService;
-    private ?array $systemConfig;
+    private SystemConfig $config;
 
     /**
-     * @param array|null $systemConfig System settings snapshot
+     * @param \App\Service\Dto\SystemConfig|null $config System configuration VO
      * @param \App\Service\TicketCommentService|null $comments Optional injected comment service
      * @param \App\Service\TicketAttachmentService|null $attachments Optional injected attachment service
      * @param \App\Service\TicketNotificationService|null $notifications Optional injected notification service
      * @param \App\Service\AuthorizationService|null $authService Optional injected authorization service
      */
     public function __construct(
-        ?array $systemConfig = null,
+        ?SystemConfig $config = null,
         ?TicketCommentService $comments = null,
         ?TicketAttachmentService $attachments = null,
         ?TicketNotificationService $notifications = null,
         ?AuthorizationService $authService = null,
     ) {
-        $this->systemConfig = $systemConfig;
-        $this->comments = $comments ?? new TicketCommentService($systemConfig);
+        $this->config = $config ?? SystemConfig::empty();
+        $this->comments = $comments ?? new TicketCommentService($this->config);
         $this->attachments = $attachments ?? new TicketAttachmentService();
-        $this->notifications = $notifications ?? new TicketNotificationService($systemConfig);
+        $this->notifications = $notifications ?? new TicketNotificationService($this->config);
         $this->authService = $authService ?? new AuthorizationService();
     }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Service\Dto\GmailImportResult;
+use App\Service\Dto\SystemConfig;
 use App\Service\Exception\GmailNotConfiguredException;
 use App\Service\Traits\SettingsEncryptionTrait;
 use Cake\Log\Log;
@@ -45,7 +46,7 @@ final class GmailImportService
 
         return new self(
             new GmailService($config),
-            new TicketIngestionService(self::loadSystemSettings()),
+            new TicketIngestionService(SystemConfig::fromSettingsArray(self::loadSystemSettings())),
         );
     }
 

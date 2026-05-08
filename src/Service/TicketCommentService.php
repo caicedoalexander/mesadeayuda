@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Service\Dto\SystemConfig;
 use App\Service\Traits\HtmlSanitizerTrait;
 use Cake\Datasource\EntityInterface;
 use Cake\Log\Log;
@@ -20,9 +21,9 @@ class TicketCommentService
     use HtmlSanitizerTrait;
 
     /**
-     * @param array|null $systemConfig Accepted for symmetry with sibling services; not used today.
+     * @param \App\Service\Dto\SystemConfig|null $config Accepted for symmetry with sibling services; not used today.
      */
-    public function __construct(?array $systemConfig = null)
+    public function __construct(?SystemConfig $config = null)
     {
     }
 

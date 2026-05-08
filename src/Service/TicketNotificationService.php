@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Service\Dto\SystemConfig;
 use Cake\Datasource\EntityInterface;
 use Cake\Log\Log;
 use Exception;
@@ -16,23 +17,23 @@ class TicketNotificationService
     private EmailService $emailService;
     private WhatsappService $whatsappService;
     private ?N8nService $n8nService;
-    private ?array $systemConfig;
+    private SystemConfig $config;
 
     /**
-     * @param array|null $systemConfig System settings snapshot
+     * @param \App\Service\Dto\SystemConfig|null $config System configuration VO
      * @param \App\Service\EmailService|null $emailService Optional injected email service
      * @param \App\Service\WhatsappService|null $whatsappService Optional injected WhatsApp service
      * @param \App\Service\N8nService|null $n8nService Optional injected n8n service (lazy default)
      */
     public function __construct(
-        ?array $systemConfig = null,
+        ?SystemConfig $config = null,
         ?EmailService $emailService = null,
         ?WhatsappService $whatsappService = null,
         ?N8nService $n8nService = null,
     ) {
-        $this->systemConfig = $systemConfig;
-        $this->emailService = $emailService ?? new EmailService($systemConfig);
-        $this->whatsappService = $whatsappService ?? new WhatsappService($systemConfig);
+        $this->config = $config ?? SystemConfig::empty();
+        $this->emailService = $emailService ?? new EmailService($this->config);
+        $this->whatsappService = $whatsappService ?? new WhatsappService($this->config);
         $this->n8nService = $n8nService;
     }
 
@@ -44,7 +45,7 @@ class TicketNotificationService
     public function getN8nService(): N8nService
     {
         if ($this->n8nService === null) {
-            $this->n8nService = new N8nService($this->systemConfig);
+            $this->n8nService = new N8nService($this->config);
         }
 
         return $this->n8nService;

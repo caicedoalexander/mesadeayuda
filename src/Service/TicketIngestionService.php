@@ -6,6 +6,7 @@ namespace App\Service;
 use App\Model\Entity\Ticket;
 use App\Model\Entity\TicketComment;
 use App\Model\Entity\User;
+use App\Service\Dto\SystemConfig;
 use App\Service\Traits\HtmlSanitizerTrait;
 use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
@@ -22,21 +23,21 @@ class TicketIngestionService
 
     private TicketAttachmentService $attachments;
     private TicketNotificationService $notifications;
-    private ?array $systemConfig;
+    private SystemConfig $config;
 
     /**
-     * @param array|null $systemConfig System settings snapshot
+     * @param \App\Service\Dto\SystemConfig|null $config System configuration VO
      * @param \App\Service\TicketAttachmentService|null $attachments Optional injected attachment service
      * @param \App\Service\TicketNotificationService|null $notifications Optional injected notification service
      */
     public function __construct(
-        ?array $systemConfig = null,
+        ?SystemConfig $config = null,
         ?TicketAttachmentService $attachments = null,
         ?TicketNotificationService $notifications = null,
     ) {
-        $this->systemConfig = $systemConfig;
+        $this->config = $config ?? SystemConfig::empty();
         $this->attachments = $attachments ?? new TicketAttachmentService();
-        $this->notifications = $notifications ?? new TicketNotificationService($systemConfig);
+        $this->notifications = $notifications ?? new TicketNotificationService($this->config);
     }
 
     /**
