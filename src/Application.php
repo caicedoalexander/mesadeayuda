@@ -16,14 +16,20 @@ declare(strict_types=1);
  */
 namespace App;
 
+use App\Constants\CacheConstants;
+use App\Listener\TicketNotificationListener;
+use App\Service\Dto\SystemConfig;
+use App\Service\TicketNotificationService;
 use Authentication\AuthenticationService;
 use Authentication\AuthenticationServiceInterface;
 use Authentication\AuthenticationServiceProviderInterface;
 use Authentication\Middleware\AuthenticationMiddleware;
+use Cake\Cache\Cache;
 use Cake\Core\Configure;
 use Cake\Core\ContainerInterface;
 use Cake\Datasource\FactoryLocator;
 use Cake\Error\Middleware\ErrorHandlerMiddleware;
+use Cake\Event\EventManager;
 use Cake\Http\BaseApplication;
 use Cake\Http\Middleware\BodyParserMiddleware;
 use Cake\Http\Middleware\CsrfProtectionMiddleware;
@@ -58,6 +64,22 @@ class Application extends BaseApplication implements AuthenticationServiceProvid
             // The bake plugin requires fallback table classes to work properly
             FactoryLocator::add('Table', (new TableLocator())->allowFallbackClass(false));
         }
+
+        $this->registerDomainEventListeners();
+    }
+
+    /**
+     * Register listeners for domain events on the global EventManager.
+     *
+     * @return void
+     */
+    private function registerDomainEventListeners(): void
+    {
+        $raw = Cache::read(CacheConstants::CACHE_SETTINGS, CacheConstants::CACHE_CONFIG);
+        $config = SystemConfig::fromSettingsArray(is_array($raw) ? $raw : null);
+
+        $notifications = new TicketNotificationService($config);
+        EventManager::instance()->on(new TicketNotificationListener($notifications));
     }
 
     /**
