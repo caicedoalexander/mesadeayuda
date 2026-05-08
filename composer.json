@@ -47,6 +47,8 @@
         "post-install-cmd": "App\\Console\\Installer::postInstall",
         "post-create-project-cmd": "App\\Console\\Installer::postInstall",
         "cs-check": "phpcs --colors -p",
-        "cs-fix": "phpcbf --colors -p"
+        "cs-fix": "phpcbf --colors -p",
+        "test": "phpunit",
+        "test-coverage": "phpunit --coverage-html coverage"
     }
 }

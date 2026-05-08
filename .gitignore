@@ -27,6 +27,7 @@ Thumbs.db
 # PHPUnit
 .phpunit.cache
 tests.sqlite
+coverage/
 # vim
 *~
 *.swp
