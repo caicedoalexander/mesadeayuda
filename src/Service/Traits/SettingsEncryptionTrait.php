@@ -4,10 +4,10 @@ declare(strict_types=1);
 namespace App\Service\Traits;
 
 use App\Constants\SettingKeys;
+use App\Service\Exception\SettingsEncryptionException;
 use Cake\Log\Log;
 use Cake\Utility\Security;
 use Exception;
-use RuntimeException;
 
 /**
  * Settings Encryption Trait
@@ -111,14 +111,14 @@ trait SettingsEncryptionTrait
      * Get encryption key from app configuration
      *
      * @return string Encryption key
-     * @throws \RuntimeException If Security.salt is not configured
+     * @throws \App\Service\Exception\SettingsEncryptionException If Security.salt is not configured
      */
     private function getEncryptionKey(): string
     {
         $salt = Security::getSalt();
 
         if (empty($salt)) {
-            throw new RuntimeException(
+            throw new SettingsEncryptionException(
                 'Security.salt is not configured. Please set SECURITY_SALT environment variable.',
             );
         }
