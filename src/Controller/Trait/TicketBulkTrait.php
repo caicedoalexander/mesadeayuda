@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Controller\Trait;
 
+use App\Service\AuthorizationService;
+use App\Service\Exception\UnauthorizedAssignmentException;
 use Cake\Http\Response;
 use Cake\Log\Log;
 use Exception;
@@ -59,16 +61,29 @@ trait TicketBulkTrait
         $entityIds = array_map('intval', explode(',', $this->request->getData('entity_ids') ?? $this->request->getData('ticket_ids') ?? ''));
         $agentId = $this->request->getData('agent_id') ?? $this->request->getData('assignee_id');
         $agentId = $this->normalizeAssigneeId($agentId);
-        $user = $this->Authentication->getIdentity();
-        $userId = $user ? $user->get('id') : 1;
+        $actor = $this->Authentication->getIdentity();
+        $userId = $actor ? (int)$actor->get('id') : 1;
         [$table, $service, $entityName] = $this->getEntityComponents();
+
+        // Early actor guard: abort whole batch if actor cannot assign
+        $authService = new AuthorizationService();
+        if ($authService->isAssignmentDisabled($actor)) {
+            $this->Flash->error(__('No tienes permisos para asignar tickets.'));
+
+            return $this->redirect(['action' => 'index']);
+        }
+
         $successCount = 0;
         $errorCount = 0;
+        $unauthorizedCount = 0;
         foreach ($entityIds as $entityId) {
             try {
                 $entity = $table->get($entityId);
-                $service->assign($entity, $agentId, $userId);
+                $service->assign($entity, $agentId, $userId, $actor);
                 $successCount++;
+            } catch (UnauthorizedAssignmentException $e) {
+                $unauthorizedCount++;
+                Log::warning("Bulk assign blocked for ticket {$entityId}: " . $e->getMessage());
             } catch (Exception $e) {
                 $errorCount++;
                 Log::error("Error in bulk assign ticket {$entityId}: " . $e->getMessage());
@@ -76,6 +91,9 @@ trait TicketBulkTrait
         }
         if ($successCount > 0) {
             $this->Flash->success(__("{$successCount} {$entityName}(s) asignado(s) correctamente."));
+        }
+        if ($unauthorizedCount > 0) {
+            $this->Flash->warning(__("{$unauthorizedCount} {$entityName}(s) no se asignaron por reglas de autorización (lockeado, usuario inactivo o no-staff)."));
         }
         if ($errorCount > 0) {
             $this->Flash->error(__("{$errorCount} {$entityName}(s) no pudieron ser asignados."));
