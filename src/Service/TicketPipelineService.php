@@ -1,0 +1,436 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Service;
+
+use App\Model\Entity\Ticket;
+use App\Service\Exception\InvalidStatusTransitionException;
+use App\Service\Traits\TicketHistoryLoggerTrait;
+use Cake\Datasource\EntityInterface;
+use Cake\I18n\FrozenTime;
+use Cake\Log\Log;
+use Cake\ORM\Locator\LocatorAwareTrait;
+
+/**
+ * Orchestrates ticket pipeline operations: status transitions, assignment,
+ * priority changes, tags, followers, and the combined handleResponse flow
+ * (comment + status + uploads + notifications).
+ */
+class TicketPipelineService
+{
+    use LocatorAwareTrait;
+    use TicketHistoryLoggerTrait;
+
+    private TicketCommentService $comments;
+    private TicketAttachmentService $attachments;
+    private TicketNotificationService $notifications;
+    private ?array $systemConfig;
+
+    /**
+     * @param array|null $systemConfig System settings snapshot
+     * @param \App\Service\TicketCommentService|null $comments Optional injected comment service
+     * @param \App\Service\TicketAttachmentService|null $attachments Optional injected attachment service
+     * @param \App\Service\TicketNotificationService|null $notifications Optional injected notification service
+     */
+    public function __construct(
+        ?array $systemConfig = null,
+        ?TicketCommentService $comments = null,
+        ?TicketAttachmentService $attachments = null,
+        ?TicketNotificationService $notifications = null,
+    ) {
+        $this->systemConfig = $systemConfig;
+        $this->comments = $comments ?? new TicketCommentService($systemConfig);
+        $this->attachments = $attachments ?? new TicketAttachmentService();
+        $this->notifications = $notifications ?? new TicketNotificationService($systemConfig);
+    }
+
+    /**
+     * Handle a complete response (comment + status change + files + notifications).
+     *
+     * @param int $entityId Ticket ID
+     * @param int $userId User performing the response
+     * @param array $data Request data (comment_body, comment_type, status, email_to, email_cc)
+     * @param array $files Uploaded files
+     * @return array Result with 'success' (bool), 'message' (string), 'entity' (mixed)
+     */
+    public function handleResponse(int $entityId, int $userId, array $data, array $files): array
+    {
+        $commentBody = $data['comment_body'] ?? $data['body'] ?? '';
+        $commentType = $data['comment_type'] ?? 'public';
+        $newStatus = $data['status'] ?? null;
+
+        $emailTo = $this->decodeEmailRecipients($data['email_to'] ?? null);
+        $emailCc = $this->decodeEmailRecipients($data['email_cc'] ?? null);
+
+        Log::debug('Response email recipients', [
+            'raw_email_to' => $data['email_to'] ?? null,
+            'raw_email_cc' => $data['email_cc'] ?? null,
+            'decoded_email_to' => $emailTo,
+            'decoded_email_cc' => $emailCc,
+        ]);
+
+        $hasComment = !empty(trim($commentBody));
+
+        $entity = $this->fetchTable('Tickets')->get($entityId);
+        assert($entity instanceof Ticket);
+
+        $oldStatus = $entity->status;
+        $hasStatusChange = $newStatus && $newStatus !== $oldStatus;
+
+        if (!$hasComment && !$hasStatusChange) {
+            return [
+                'success' => false,
+                'message' => 'Debes escribir un comentario o cambiar el estado.',
+                'entity' => $entity,
+            ];
+        }
+
+        $comment = null;
+        $uploadedCount = 0;
+
+        if ($hasComment) {
+            $comment = $this->comments->addComment($entityId, $userId, $commentBody, $commentType, false, $emailTo, $emailCc);
+
+            if (!$comment) {
+                return [
+                    'success' => false,
+                    'message' => 'Error al agregar el comentario.',
+                    'entity' => $entity,
+                ];
+            }
+
+            if (!empty($files['attachments'])) {
+                foreach ($files['attachments'] as $file) {
+                    if ($file->getError() === UPLOAD_ERR_OK) {
+                        $result = $this->attachments->saveUploadedFile($entity, $file, $comment->id, $userId);
+                        if ($result) {
+                            $uploadedCount++;
+                        }
+                    }
+                }
+            }
+        }
+
+        if ($hasStatusChange) {
+            $this->changeStatus($entity, $newStatus, $userId, null, false);
+            $entity->status = $newStatus;
+        }
+
+        $this->notifications->sendResponseNotifications($entity, $comment, $oldStatus, $newStatus, $hasComment, $commentType, $hasStatusChange, $emailTo, $emailCc);
+
+        return $this->buildResponseResult($hasComment, $hasStatusChange, $uploadedCount, $entity);
+    }
+
+    /**
+     * Change ticket status.
+     *
+     * @param \Cake\Datasource\EntityInterface $entity Ticket entity
+     * @param string $newStatus New status
+     * @param int|null $userId User performing the change
+     * @param string|null $comment Optional override comment for the system entry
+     * @param bool $sendNotifications Whether to dispatch the email notification
+     * @return bool
+     */
+    public function changeStatus(
+        EntityInterface $entity,
+        string $newStatus,
+        ?int $userId = null,
+        ?string $comment = null,
+        bool $sendNotifications = true,
+    ): bool {
+        $table = $this->fetchTable('Tickets');
+        $oldStatus = $entity->status;
+
+        if ($oldStatus === $newStatus) {
+            return true;
+        }
+
+        if ($entity instanceof Ticket && !$entity->canTransitionTo($newStatus)) {
+            throw InvalidStatusTransitionException::for($oldStatus, $newStatus);
+        }
+
+        $entity->status = $newStatus;
+
+        $now = FrozenTime::now();
+        if ($newStatus === 'resuelto' && !$entity->resolved_at) {
+            $entity->resolved_at = $now;
+        }
+
+        if (!$table->save($entity)) {
+            Log::error('Failed to change status', ['errors' => $entity->getErrors()]);
+
+            return false;
+        }
+
+        $this->logHistory(
+            'TicketHistory',
+            'ticket_id',
+            $entity->id,
+            'status',
+            $oldStatus,
+            $newStatus,
+            $userId,
+            "Estado cambiado de '{$oldStatus}' a '{$newStatus}'",
+        );
+
+        $systemComment = $comment ?? "El estado cambió de '{$oldStatus}' a '{$newStatus}'";
+        $this->comments->addComment($entity->id, $userId, $systemComment, 'internal', true);
+
+        if ($sendNotifications) {
+            $this->notifications->sendStatusChangeEmail($entity, $oldStatus, $newStatus);
+        }
+
+        return true;
+    }
+
+    /**
+     * Assign ticket to a user.
+     *
+     * @param \Cake\Datasource\EntityInterface $entity Ticket entity
+     * @param int|null $assigneeId New assignee user ID (0 or null clears)
+     * @param int|null $userId User performing the change
+     * @return bool
+     */
+    public function assign(
+        EntityInterface $entity,
+        ?int $assigneeId,
+        ?int $userId = null,
+    ): bool {
+        $table = $this->fetchTable('Tickets');
+        $usersTable = $this->fetchTable('Users');
+
+        $oldAssigneeId = $entity->assignee_id;
+        $entity->assignee_id = $assigneeId === 0 || $assigneeId === '0' ? null : $assigneeId;
+
+        if (!$table->save($entity)) {
+            $errors = $entity->getErrors();
+            Log::error("Failed to assign ticket - ID: {$entity->id}");
+            Log::error("Assignment details - New assignee: {$assigneeId}, Old assignee: {$oldAssigneeId}");
+            Log::error('Validation errors: ' . print_r($errors, true));
+            Log::error('Dirty fields: ' . print_r($entity->getDirty(), true));
+
+            return false;
+        }
+
+        $oldAssigneeName = 'Sin asignar';
+        if ($oldAssigneeId) {
+            $oldUser = $usersTable->get($oldAssigneeId);
+            $oldAssigneeName = $oldUser->first_name . ' ' . $oldUser->last_name;
+        }
+
+        $newAssigneeName = 'Sin asignar';
+        if ($assigneeId) {
+            $newUser = $usersTable->get($assigneeId);
+            $newAssigneeName = $newUser->first_name . ' ' . $newUser->last_name;
+        }
+
+        $this->logHistory(
+            'TicketHistory',
+            'ticket_id',
+            $entity->id,
+            'assignee_id',
+            $oldAssigneeName,
+            $newAssigneeName,
+            $userId,
+            "Asignado a {$newAssigneeName}",
+        );
+
+        $this->comments->addComment($entity->id, $userId, "Asignado a {$newAssigneeName}", 'internal', true);
+
+        return true;
+    }
+
+    /**
+     * Change ticket priority.
+     *
+     * @param \Cake\Datasource\EntityInterface $entity Ticket entity
+     * @param string $newPriority New priority
+     * @param int|null $userId User performing the change
+     * @return bool
+     */
+    public function changePriority(
+        EntityInterface $entity,
+        string $newPriority,
+        ?int $userId = null,
+    ): bool {
+        $table = $this->fetchTable('Tickets');
+        $oldPriority = $entity->priority;
+
+        if ($oldPriority === $newPriority) {
+            return true;
+        }
+
+        $entity->priority = $newPriority;
+
+        if (!$table->save($entity)) {
+            Log::error('Failed to change priority', ['errors' => $entity->getErrors()]);
+
+            return false;
+        }
+
+        $this->logHistory(
+            'TicketHistory',
+            'ticket_id',
+            $entity->id,
+            'priority',
+            $oldPriority,
+            $newPriority,
+            $userId,
+            "Prioridad cambiada de '{$oldPriority}' a '{$newPriority}'",
+        );
+
+        $this->comments->addComment(
+            $entity->id,
+            $userId,
+            "Prioridad cambiada de '{$oldPriority}' a '{$newPriority}'",
+            'internal',
+            true,
+        );
+
+        return true;
+    }
+
+    /**
+     * Add tag to ticket.
+     *
+     * @param int $ticketId Ticket ID
+     * @param int $tagId Tag ID
+     * @return array{success: bool, message: string}
+     */
+    public function addTag(int $ticketId, int $tagId): array
+    {
+        $ticketsTable = $this->fetchTable('Tickets');
+        $ticketsTable->get($ticketId);
+
+        $ticketTagsTable = $this->fetchTable('TicketTags');
+
+        $exists = $ticketTagsTable->find()
+            ->where(['ticket_id' => $ticketId, 'tag_id' => $tagId])
+            ->count();
+
+        if ($exists) {
+            return ['success' => false, 'message' => 'Esta etiqueta ya está agregada.'];
+        }
+
+        $ticketTag = $ticketTagsTable->newEntity([
+            'ticket_id' => $ticketId,
+            'tag_id' => $tagId,
+        ]);
+
+        if ($ticketTagsTable->save($ticketTag)) {
+            return ['success' => true, 'message' => 'Etiqueta agregada.'];
+        }
+
+        return ['success' => false, 'message' => 'Error al agregar la etiqueta.'];
+    }
+
+    /**
+     * Remove tag from ticket.
+     *
+     * @param int $ticketId Ticket ID
+     * @param int $tagId Tag ID
+     * @return array{success: bool, message: string}
+     */
+    public function removeTag(int $ticketId, int $tagId): array
+    {
+        $ticketTagsTable = $this->fetchTable('TicketTags');
+
+        $ticketTag = $ticketTagsTable->find()
+            ->where(['ticket_id' => $ticketId, 'tag_id' => $tagId])
+            ->first();
+
+        if ($ticketTag && $ticketTagsTable->delete($ticketTag)) {
+            return ['success' => true, 'message' => 'Etiqueta eliminada.'];
+        }
+
+        return ['success' => false, 'message' => 'Error al eliminar la etiqueta.'];
+    }
+
+    /**
+     * Add follower to ticket.
+     *
+     * @param int $ticketId Ticket ID
+     * @param int $userId User ID
+     * @return array{success: bool, message: string}
+     */
+    public function addFollower(int $ticketId, int $userId): array
+    {
+        $followersTable = $this->fetchTable('TicketFollowers');
+
+        $exists = $followersTable->find()
+            ->where(['ticket_id' => $ticketId, 'user_id' => $userId])
+            ->count();
+
+        if ($exists) {
+            return ['success' => false, 'message' => 'Este usuario ya está siguiendo el ticket.'];
+        }
+
+        $follower = $followersTable->newEntity([
+            'ticket_id' => $ticketId,
+            'user_id' => $userId,
+        ]);
+
+        if ($followersTable->save($follower)) {
+            return ['success' => true, 'message' => 'Seguidor agregado.'];
+        }
+
+        return ['success' => false, 'message' => 'Error al agregar seguidor.'];
+    }
+
+    /**
+     * Build success message for response operations.
+     *
+     * @param bool $hasComment Whether a comment was added
+     * @param bool $hasStatusChange Whether status changed
+     * @param int $uploadedCount Number of attachments uploaded
+     * @param mixed $entity Ticket entity
+     * @return array
+     */
+    private function buildResponseResult(bool $hasComment, bool $hasStatusChange, int $uploadedCount, mixed $entity): array
+    {
+        $successMessage = '';
+        if ($hasComment && $hasStatusChange) {
+            $successMessage = 'Comentario agregado y estado actualizado exitosamente.';
+        } elseif ($hasComment) {
+            $successMessage = 'Comentario agregado exitosamente.';
+        } elseif ($hasStatusChange) {
+            $successMessage = 'Estado actualizado exitosamente.';
+        }
+
+        if ($uploadedCount > 0) {
+            $successMessage .= " ({$uploadedCount} archivo(s) adjunto(s))";
+        }
+
+        return [
+            'success' => true,
+            'message' => $successMessage,
+            'entity' => $entity,
+        ];
+    }
+
+    /**
+     * Decode email recipients from JSON string or array.
+     *
+     * @param mixed $data Raw recipients value
+     * @return array
+     */
+    private function decodeEmailRecipients(mixed $data): array
+    {
+        if (empty($data)) {
+            return [];
+        }
+
+        if (is_string($data)) {
+            $decoded = json_decode($data, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return $decoded;
+            }
+        }
+
+        if (is_array($data)) {
+            return $data;
+        }
+
+        return [];
+    }
+}
