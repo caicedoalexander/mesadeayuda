@@ -68,8 +68,8 @@ class AppController extends Controller
         parent::beforeFilter($event);
 
         // Make user data available in all views
-        $user = $this->Authentication->getIdentity();
-        $this->set('currentUser', $user);
+        $identity = $this->Authentication->getIdentity();
+        $this->set('currentUser', $identity?->getOriginalData());
 
         // Load system settings with cache (1 hour TTL)
         $systemConfig = Cache::remember(CacheConstants::CACHE_SETTINGS, function () {
