@@ -5,6 +5,7 @@ namespace App\Controller\Trait;
 
 use App\Constants\CacheConstants;
 use App\Constants\TicketConstants;
+use App\Service\Dto\SystemConfig;
 use App\Service\TicketPipelineService;
 use Cake\Cache\Cache;
 use Cake\ORM\Table;
@@ -23,10 +24,11 @@ trait TicketServiceInitializerTrait
      */
     protected function initializeServices(array $serviceMap): void
     {
-        $systemConfig = Cache::read(CacheConstants::CACHE_SETTINGS, CacheConstants::CACHE_CONFIG);
+        $raw = Cache::read(CacheConstants::CACHE_SETTINGS, CacheConstants::CACHE_CONFIG);
+        $config = SystemConfig::fromSettingsArray(is_array($raw) ? $raw : null);
 
         foreach ($serviceMap as $propertyName => $serviceClass) {
-            $this->{$propertyName} = new $serviceClass($systemConfig);
+            $this->{$propertyName} = new $serviceClass($config);
         }
     }
 
