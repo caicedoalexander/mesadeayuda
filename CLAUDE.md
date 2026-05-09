@@ -16,6 +16,8 @@ Run from project root. Inside Docker prefix with `docker compose exec web …`.
 composer install                            # install PHP deps
 composer cs-check                           # PHPCS using CakePHP ruleset
 composer cs-fix                             # PHPCBF auto-fix
+composer test                                # run unit tests (PHPUnit 13)
+composer test-coverage                       # run with HTML coverage report (./coverage)
 
 bin/cake server                              # dev server on http://localhost:8765
 bin/cake migrations migrate                  # apply pending migrations
@@ -29,7 +31,7 @@ bin/cake import_gmail --max 5                # one-shot Gmail import (debug). Pr
 docker compose up -d --build                 # web (Nginx + PHP-FPM)
 ```
 
-This project does not run an automated test suite — there is no `tests/` directory and no PHPStan configuration. Verify changes by exercising the affected flows manually (browser, CLI command, app logs).
+This project runs a minimal unit test suite (no DB, no fixtures) covering the `Ticket` entity domain methods (predicates, transitions, assignability). Run with `composer test`. Integration/DB tests are not yet bootstrapped — verify those flows manually (browser, CLI command, app logs). PHPStan is installed but without project-level configuration.
 
 ## Architecture
 
@@ -82,6 +84,7 @@ The codebase follows a fat-service / thin-controller pattern on top of CakePHP:
 - **Ticket status enum**: el modelo canónico de 4 estados (`nuevo`, `abierto`, `pendiente`, `resuelto`) vive en `TicketConstants::STATUSES`. Estados anteriores (`convertido`, `cerrado`, `en_progreso`) fueron consolidados a `resuelto` en la migration `ConsolidateLegacyTicketStatuses` (mayo 2026). Los helpers `StatusHelper::statusLabel/statusColor` mantienen un fallback genérico defensivo, pero ningún flujo de runtime debería producir valores fuera de `STATUSES`.
 - **Audit trail**: ticket mutations write to `ticket_history` via `AuditBehavior` (changed_by, field_name, old_value, new_value, description, created). Don't bypass this when mutating ticket entities.
 - **Notifications**: outbound notifications (email + WhatsApp + n8n webhook) flow through `NotificationDispatcherTrait` + `EmailTemplateRenderer` + `Renderer/NotificationRenderer`. Add new notification types by extending the renderer + templates rather than calling integrations directly from controllers.
+- **Domain events**: ticket lifecycle events live en `src/Domain/Event/` (`TicketCreated`, `TicketAssigned`, `TicketStatusChanged`). Extienden `Cake\Event\Event` y se despachan vía `EventManager::instance()`. El listener `App\Listener\TicketNotificationListener` se registra en `Application::bootstrap` y traduce eventos a llamadas de `TicketNotificationService` (recargando la entidad fresca). Nuevas notificaciones de cambio de estado deberían emitir un evento en lugar de invocar el servicio de notificaciones directamente. Los eventos `TicketCommentAdded`, `TicketPriorityChanged`, etc. todavía no existen — extender la familia en lugar de cablear `TicketNotificationService` desde nuevos flujos.
 - **Attachments**: shared via `GenericAttachmentTrait`. Files are stored on local disk under `webroot/uploads/attachments/{ticket_number}/`. Profile images live under `webroot/uploads/profile_images/`.
 - **Sidebar counters**: `SidebarCountsService` produces the unread/unassigned counts displayed across the layout — reuse it instead of querying tables ad-hoc from views.
 - **Coding standard**: CakePHP CodeSniffer ruleset (`phpcs.xml`), with `SlevomatCodingStandard.TypeHints.ReturnTypeHint.MissingNativeTypeHint` excluded for `src/Controller/*` (controllers don't need return type hints; services and other classes do). Run `composer cs-fix` then `composer cs-check` before committing.
@@ -93,6 +96,7 @@ The codebase follows a fat-service / thin-controller pattern on top of CakePHP:
 - Runtime configuration is environment-driven; `docker-compose.yml` enumerates the variables (`DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `SECURITY_SALT`, `TRUST_PROXY`, `FULL_BASE_URL`).
 - Optional `.env` loading (`config/.env`) is wired through `josegonzalez/dotenv` in `config/bootstrap.php`.
 - Per-tenant runtime settings (Gmail OAuth tokens, integration credentials, email templates, etc.) live in `system_settings` and `email_templates` tables and are managed at `/admin/*` — there is no static config file for them.
+- Service-side configuration is exposed as the `App\Service\Dto\SystemConfig` value object — composed of `GmailConfig`, `N8nConfig`, `WhatsappConfig`, `AppConfig`, `SmtpConfig` (readonly). Built from the cached settings snapshot in `TicketServiceInitializerTrait::initializeServices` and `Application::bootstrap`, then passed to all ticket services and integration services (`EmailService`, `WhatsappService`, `N8nService`). `GmailService` keeps its own `array $config` shape (decoded `client_secret` + `refresh_token`) because its data flow is OAuth-specific.
 
 ### Docker topology
 Single `Dockerfile` builds an image that runs Nginx + PHP-FPM (port 80, mapped to 8082 on host). `docker-compose.yml` defines a single service:

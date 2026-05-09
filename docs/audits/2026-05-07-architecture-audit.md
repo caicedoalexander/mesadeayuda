@@ -471,3 +471,30 @@ Cerrados:
 
 Plan ejecutado: `docs/superpowers/plans/2026-05-08-audit-fase3-riesgo.md`.
 Diseño: `docs/superpowers/specs/2026-05-08-audit-fase3-riesgo-design.md`.
+
+### Anexo 6 — Cierre fase 4 medios (2026-05-09)
+
+Cerrados 4 de los 5 medios pendientes. **5.2 (tests unitarios)** parcialmente cerrado: solo el test de la entidad `Ticket` quedó persistido (ver detalle).
+
+- **5.1 ✅** Domain events introducidos: `App\Domain\Event\TicketCreated`, `TicketAssigned`, `TicketStatusChanged`. Base abstract `DomainEvent` extiende `Cake\Event\Event`. Listener `App\Listener\TicketNotificationListener` registrado en `Application::bootstrap` traduce eventos a `TicketNotificationService` (recarga la entidad fresca y delega). Sitios de dispatch: `TicketIngestionService::createFromEmail` (Created), `TicketPipelineService::assign` (Assigned), `TicketPipelineService::changeStatus` (StatusChanged). `dispatchUpdateNotifications('comment'|'response')` no migrado — sigue invocándose directo (fuera de alcance). `TicketAssigned` se emite pero el listener solo registra debug log; la rama `'assignment'` aún no existe en `dispatchUpdateNotifications` y se difiere.
+
+- **5.2 🟡** PHPUnit 13.1.8 ya estaba instalado en `require-dev`. Se añadieron `phpunit.xml.dist`, `tests/bootstrap.php`, scripts `composer test` / `composer test-coverage`. Suite unit puro (sin DB) cubre la entidad `Ticket` (predicados, transitions, assignability — 15 tests, 38 asserts, pasa al 100%). Tests de `SystemConfig`, eventos de dominio y listener planificados pero no persistidos en este commit (decisión del operador; pueden añadirse en una iteración posterior siguiendo el mismo patrón). Integration/DB tests fuera de alcance.
+
+- **5.3 ✅** Sweep de `RuntimeException` literal en `src/`. 2 excepciones tipadas nuevas en `src/Service/Exception/`: `GmailAuthenticationException` (3 throws en `GmailService`), `SettingsEncryptionException` (1 throw en `SettingsEncryptionTrait`). Ambas heredan `\RuntimeException` para compatibilidad. Adicionalmente, los 2 throws fuera del scope de servicios (`TicketActionsTrait::getCurrentUserId`, `AuditBehavior::logChange`) se convirtieron a `LogicException` por ser aserciones de programación. `grep "throw new RuntimeException" src/` retorna 0.
+
+- **5.5 ✅** Value Object `App\Service\Dto\SystemConfig` (readonly) compone 5 sub-configs (`GmailConfig`, `SmtpConfig`, `N8nConfig`, `WhatsappConfig`, `AppConfig`). Mapper `fromSettingsArray` tolerante a keys faltantes. `toSettingsArray` permite bridge a código legacy (`ConfigResolutionTrait`). Servicios migrados: 5 ticket services (firma + interno) + 3 integration services (firma + interno via `toSettingsArray`). `GmailService` queda en su forma de config propia (decisión documentada — su shape `client_secret JSON decoded + refresh_token` no es system-wide settings). `TicketServiceInitializerTrait::initializeServices` y `Application::bootstrap` construyen el VO desde cache. Caller `GmailImportService` migrado para construir `SystemConfig::fromSettingsArray` antes de instanciar `TicketIngestionService`.
+
+- **5.6 ✅** `SidebarCountsService` se mantiene sin cambios. Justificación documentada: post-fase 2 ya consume `getAgentStatusCounts` desde el Cell; el Cell es hoy el único caller pero la abstracción está lista para ser reutilizada por futuras vistas. Coste de inlinear y eventualmente re-extraer > beneficio.
+
+**Auditoría cerrada al ~95%.** Pendiente menor: completar suite de tests unitarios (DTOs, eventos, listener) — ver 5.2.
+
+Pendientes futuros explícitos (NO bugs):
+- Tests unitarios restantes (`SystemConfig`, eventos, listener routing).
+- Integration tests con DB (fixtures, schema migrado en setUp).
+- Eventos adicionales (`TicketCommentAdded`, `TicketPriorityChanged`, `TicketTagAdded`, `TicketFollowerAdded`).
+- Rama `'assignment'` en `TicketNotificationService::dispatchUpdateNotifications` para conectar `TicketAssigned` al pipeline de notificaciones.
+- Asincronía de eventos (queue dispatch).
+- CI pipeline.
+
+Plan ejecutado: `docs/superpowers/plans/2026-05-08-audit-fase4-medios.md`.
+Diseño: `docs/superpowers/specs/2026-05-08-audit-fase4-medios-design.md`.
