@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace App\Listener;
 
-use App\Domain\Event\TicketAssigned;
 use App\Domain\Event\TicketCreated;
 use App\Domain\Event\TicketStatusChanged;
 use App\Service\TicketNotificationService;
@@ -20,6 +19,13 @@ use Throwable;
  * method. Exceptions are caught and logged — they never propagate back to
  * the dispatch site, mirroring the defensive behavior the service had when
  * called directly.
+ *
+ * Scope: this listener only subscribes to events whose semantic is "notify
+ * users via email/WhatsApp". Other domain events (e.g., TicketAssigned,
+ * future TicketPriorityChanged) keep flowing through the global EventManager
+ * for separate subscribers (audit, integrations) — they are NOT this
+ * listener's concern. When/if assignment becomes a notification trigger,
+ * add a real handler here rather than a log-only stub.
  */
 final class TicketNotificationListener implements EventListenerInterface
 {
@@ -40,7 +46,6 @@ final class TicketNotificationListener implements EventListenerInterface
     {
         return [
             TicketCreated::NAME => 'onCreated',
-            TicketAssigned::NAME => 'onAssigned',
             TicketStatusChanged::NAME => 'onStatusChanged',
         ];
     }
@@ -59,22 +64,6 @@ final class TicketNotificationListener implements EventListenerInterface
                 'error' => $e->getMessage(),
             ]);
         }
-    }
-
-    /**
-     * @param \App\Domain\Event\TicketAssigned $event Assigned event
-     *
-     * Note: TicketNotificationService::dispatchUpdateNotifications does not yet
-     * implement an 'assignment' branch. The event is still emitted so other
-     * listeners (audit, future integrations) can react; notification side is a
-     * follow-up scope.
-     */
-    public function onAssigned(TicketAssigned $event): void
-    {
-        Log::debug('TicketAssigned event received (no notification side)', [
-            'ticket_id' => $event->ticketId,
-            'assignee_id' => $event->assigneeId,
-        ]);
     }
 
     /**
