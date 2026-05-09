@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Constants\TicketConstants;
 use App\Domain\Event\TicketAssigned;
 use App\Domain\Event\TicketStatusChanged;
 use App\Model\Entity\Ticket;
@@ -71,7 +72,7 @@ class TicketPipelineService
     public function handleResponse(int $entityId, int $userId, array $data, array $files): array
     {
         $commentBody = $data['comment_body'] ?? $data['body'] ?? '';
-        $commentType = $data['comment_type'] ?? 'public';
+        $commentType = $data['comment_type'] ?? TicketConstants::COMMENT_PUBLIC;
         $newStatus = $data['status'] ?? null;
 
         $emailTo = $this->decodeEmailRecipients($data['email_to'] ?? null);
@@ -167,7 +168,7 @@ class TicketPipelineService
         $entity->status = $newStatus;
 
         $now = FrozenTime::now();
-        if ($newStatus === 'resuelto' && !$entity->resolved_at) {
+        if ($newStatus === TicketConstants::STATUS_RESUELTO && !$entity->resolved_at) {
             $entity->resolved_at = $now;
         }
 
@@ -189,7 +190,7 @@ class TicketPipelineService
         );
 
         $systemComment = $comment ?? "El estado cambió de '{$oldStatus}' a '{$newStatus}'";
-        $this->comments->addComment($entity->id, $userId, $systemComment, 'internal', true);
+        $this->comments->addComment($entity->id, $userId, $systemComment, TicketConstants::COMMENT_INTERNAL, true);
 
         if ($sendNotifications) {
             $this->eventManager->dispatch(new TicketStatusChanged(
@@ -277,7 +278,7 @@ class TicketPipelineService
             "Asignado a {$newAssigneeName}",
         );
 
-        $this->comments->addComment($entity->id, $userId, "Asignado a {$newAssigneeName}", 'internal', true);
+        $this->comments->addComment($entity->id, $userId, "Asignado a {$newAssigneeName}", TicketConstants::COMMENT_INTERNAL, true);
 
         $this->eventManager->dispatch(new TicketAssigned(
             ticketId: (int)$entity->id,
@@ -332,7 +333,7 @@ class TicketPipelineService
             $entity->id,
             $userId,
             "Prioridad cambiada de '{$oldPriority}' a '{$newPriority}'",
-            'internal',
+            TicketConstants::COMMENT_INTERNAL,
             true,
         );
 

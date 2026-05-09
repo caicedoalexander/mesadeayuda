@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Constants\TicketConstants;
 use App\Service\Dto\SystemConfig;
 use Cake\Datasource\EntityInterface;
 use Cake\Log\Log;
@@ -166,7 +167,7 @@ class TicketNotificationService
         array $emailTo = [],
         array $emailCc = [],
     ): void {
-        $hasPublicComment = $hasComment && $commentType === 'public';
+        $hasPublicComment = $hasComment && $commentType === TicketConstants::COMMENT_PUBLIC;
 
         if ($hasPublicComment && $hasStatusChange && $comment) {
             $this->dispatchUpdateNotifications($entity, 'response', [

@@ -123,9 +123,10 @@ class NotificationRenderer
      */
     public function renderWhatsappNewTicket(Ticket $ticket): string
     {
-        $priorityLabels = ['baja' => 'Baja', 'media' => 'Media', 'alta' => 'Alta', 'urgente' => 'Urgente'];
-        $priorityLabel = $priorityLabels[$ticket->priority] ?? ucfirst($ticket->priority);
-        $channelLabel = $ticket->channel === 'email' ? 'Correo electrónico' : ucfirst($ticket->channel);
+        $priorityLabel = TicketConstants::PRIORITY_LABELS[$ticket->priority] ?? ucfirst($ticket->priority);
+        $channelLabel = $ticket->channel === TicketConstants::CHANNEL_EMAIL
+            ? 'Correo electrónico'
+            : ucfirst($ticket->channel);
 
         return "━━━━━━━━━━━━━━━━━━━━\n" .
             "*NUEVO TICKET DE SOPORTE*\n" .

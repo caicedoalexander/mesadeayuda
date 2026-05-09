@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Constants\TicketConstants;
 use App\Domain\Event\TicketCreated;
 use App\Model\Entity\Ticket;
 use App\Model\Entity\TicketComment;
@@ -98,10 +99,10 @@ class TicketIngestionService
         }
 
         // Determine channel: if email comes from WhatsApp bot email, set channel as 'whatsapp'
-        $channel = 'email';
+        $channel = TicketConstants::CHANNEL_EMAIL;
         $whatsappBotEmail = 'mesadeayuda.whatsapp@gmail.com';
         if (strtolower($fromEmail) === strtolower($whatsappBotEmail)) {
-            $channel = 'whatsapp';
+            $channel = TicketConstants::CHANNEL_WHATSAPP;
         }
 
         // Create ticket
@@ -111,8 +112,8 @@ class TicketIngestionService
             'gmail_thread_id' => $emailData['gmail_thread_id'] ?? null,
             'subject' => $subject,
             'description' => $description,
-            'status' => 'nuevo',
-            'priority' => 'media',
+            'status' => TicketConstants::STATUS_NUEVO,
+            'priority' => TicketConstants::PRIORITY_MEDIA,
             'requester_id' => $user->id,
             'channel' => $channel,
             'source_email' => $fromEmail,
@@ -141,7 +142,7 @@ class TicketIngestionService
         $this->eventManager->dispatch(new TicketCreated(
             ticketId: (int)$ticket->id,
             requesterId: (int)$ticket->requester_id,
-            source: 'email',
+            source: TicketConstants::CHANNEL_EMAIL,
         ));
 
         // Send n8n webhook for AI tag assignment (lazy loaded only when creating tickets)
@@ -220,7 +221,7 @@ class TicketIngestionService
             'ticket_id' => $ticket->id,
             'user_id' => $user->id,
             'body' => $body,
-            'comment_type' => 'public',
+            'comment_type' => TicketConstants::COMMENT_PUBLIC,
             'is_system_comment' => false,
             'gmail_message_id' => $emailData['gmail_message_id'] ?? null,
             'sent_as_email' => false,

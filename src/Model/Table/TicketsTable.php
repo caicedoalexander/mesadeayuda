@@ -246,7 +246,7 @@ class TicketsTable extends Table
                     $query->where(['Tickets.status NOT IN' => TicketConstants::RESOLVED_STATUSES]);
                     break;
                 case 'pendientes':
-                    $conditions = ['Tickets.status' => 'pendiente'];
+                    $conditions = ['Tickets.status' => TicketConstants::STATUS_PENDIENTE];
                     // Agents see only their assigned tickets, admins see all
                     if ($isAgent && $userId) {
                         $conditions['Tickets.assignee_id'] = $userId;
@@ -254,7 +254,7 @@ class TicketsTable extends Table
                     $query->where($conditions);
                     break;
                 case 'nuevos':
-                    $conditions = ['Tickets.status' => 'nuevo'];
+                    $conditions = ['Tickets.status' => TicketConstants::STATUS_NUEVO];
                     // Agents see only their assigned tickets, admins see all
                     if ($isAgent && $userId) {
                         $conditions['Tickets.assignee_id'] = $userId;
@@ -262,7 +262,7 @@ class TicketsTable extends Table
                     $query->where($conditions);
                     break;
                 case 'abiertos':
-                    $conditions = ['Tickets.status' => 'abierto'];
+                    $conditions = ['Tickets.status' => TicketConstants::STATUS_ABIERTO];
                     // Agents see only their assigned tickets, admins see all
                     if ($isAgent && $userId) {
                         $conditions['Tickets.assignee_id'] = $userId;
@@ -270,7 +270,7 @@ class TicketsTable extends Table
                     $query->where($conditions);
                     break;
                 case 'resueltos':
-                    $query->where(['Tickets.status' => 'resuelto']);
+                    $query->where(['Tickets.status' => TicketConstants::STATUS_RESUELTO]);
                     break;
                 case 'recientes':
                     $query->where([

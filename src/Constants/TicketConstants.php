@@ -85,4 +85,16 @@ final class TicketConstants
     public const COMMENT_TYPES = [self::COMMENT_PUBLIC, self::COMMENT_INTERNAL];
 
     public const ALL_COMMENT_TYPES = [self::COMMENT_PUBLIC, self::COMMENT_INTERNAL, self::COMMENT_SYSTEM];
+
+    public const CHANNEL_EMAIL    = 'email';
+    public const CHANNEL_WHATSAPP = 'whatsapp';
+    public const CHANNEL_WEB      = 'web';
+    public const CHANNEL_API      = 'api';
+
+    public const CHANNELS = [
+        self::CHANNEL_EMAIL,
+        self::CHANNEL_WHATSAPP,
+        self::CHANNEL_WEB,
+        self::CHANNEL_API,
+    ];
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\View\Cell;
 
 use App\Constants\RoleConstants;
+use App\Constants\TicketConstants;
 use App\Service\SidebarCountsService;
 use Cake\ORM\Locator\LocatorAwareTrait;
 use Cake\View\Cell;
@@ -39,13 +40,19 @@ class TicketsSidebarCell extends Cell
             $agentStatusCounts = $service->getAgentStatusCounts($userId);
         }
 
+        $countFor = static fn(string $status): int => $isAgent
+            ? (int)($agentStatusCounts[$status] ?? 0)
+            : (int)($statusCounts[$status] ?? 0);
+
         $counts = [
             'sin_asignar' => $data['unassigned'],
-            'todos_sin_resolver' => ($statusCounts['nuevo'] ?? 0) + ($statusCounts['abierto'] ?? 0) + ($statusCounts['pendiente'] ?? 0),
-            'pendientes' => $isAgent ? ($agentStatusCounts['pendiente'] ?? 0) : ($statusCounts['pendiente'] ?? 0),
-            'nuevos' => $isAgent ? ($agentStatusCounts['nuevo'] ?? 0) : ($statusCounts['nuevo'] ?? 0),
-            'abiertos' => $isAgent ? ($agentStatusCounts['abierto'] ?? 0) : ($statusCounts['abierto'] ?? 0),
-            'resueltos' => $statusCounts['resuelto'] ?? 0,
+            'todos_sin_resolver' => ($statusCounts[TicketConstants::STATUS_NUEVO] ?? 0)
+                + ($statusCounts[TicketConstants::STATUS_ABIERTO] ?? 0)
+                + ($statusCounts[TicketConstants::STATUS_PENDIENTE] ?? 0),
+            'pendientes' => $countFor(TicketConstants::STATUS_PENDIENTE),
+            'nuevos' => $countFor(TicketConstants::STATUS_NUEVO),
+            'abiertos' => $countFor(TicketConstants::STATUS_ABIERTO),
+            'resueltos' => $statusCounts[TicketConstants::STATUS_RESUELTO] ?? 0,
         ];
 
         if ($isAgent && $userId) {

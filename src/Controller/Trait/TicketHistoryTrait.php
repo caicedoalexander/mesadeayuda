@@ -59,7 +59,7 @@ trait TicketHistoryTrait
                 ->find()
                 ->where([$foreignKey => $id])
                 ->contain(['Users'])
-                ->order([$historyTable->getAlias() . '.created' => 'DESC'])
+                ->orderBy([$historyTable->getAlias() . '.created' => 'DESC'])
                 ->all();
             $formattedHistory = [];
             foreach ($history as $entry) {

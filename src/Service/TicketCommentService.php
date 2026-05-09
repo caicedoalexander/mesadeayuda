@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Constants\TicketConstants;
 use App\Service\Dto\SystemConfig;
 use App\Service\Traits\HtmlSanitizerTrait;
 use Cake\Datasource\EntityInterface;
@@ -47,7 +48,7 @@ class TicketCommentService
         int $entityId,
         ?int $userId,
         string $body,
-        string $type = 'public',
+        string $type = TicketConstants::COMMENT_PUBLIC,
         bool $isSystem = false,
         ?array $emailTo = null,
         ?array $emailCc = null,
@@ -64,7 +65,7 @@ class TicketCommentService
             'is_system_comment' => $isSystem,
         ];
 
-        if ($type === 'public' && !$isSystem) {
+        if ($type === TicketConstants::COMMENT_PUBLIC && !$isSystem) {
             if (is_array($emailTo) && count($emailTo) > 0) {
                 $data['email_to'] = json_encode($emailTo);
             }
