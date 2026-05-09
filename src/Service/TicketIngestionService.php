@@ -200,15 +200,19 @@ class TicketIngestionService
         $rawBody = $emailData['body_html'] ?: $emailData['body_text'];
         $body = $this->sanitizeHtml($rawBody);
 
-        // Truncate body if > 65,000 chars (prevent DB overflow)
+        // Truncate body if it exceeds the MySQL TEXT byte budget. The previous
+        // implementation used a naive substr() which (a) could split UTF-8
+        // multi-byte sequences and (b) cut HTML mid-tag, producing malformed
+        // markup. truncateSanitizedHtml() handles both safely.
         $maxLength = 65000;
-        if (strlen($body) > $maxLength) {
+        $originalLength = strlen($body);
+        if ($originalLength > $maxLength) {
+            $body = $this->truncateSanitizedHtml($body, $maxLength);
             Log::warning('Email body truncated to prevent DB overflow', [
                 'ticket_id' => $ticket->id,
-                'original_length' => strlen($body),
-                'truncated_length' => $maxLength,
+                'original_length' => $originalLength,
+                'truncated_length' => strlen($body),
             ]);
-            $body = substr($body, 0, $maxLength);
         }
 
         // Create TicketComment entity with comment_type='public'
