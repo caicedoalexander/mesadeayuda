@@ -22,6 +22,12 @@ use Exception;
 trait SettingsEncryptionTrait
 {
     /**
+     * Marker prefix used to identify ciphertext payloads in storage.
+     * Format on disk: ENCRYPTION_PREFIX . base64(Security::encrypt(plain, salt))
+     */
+    private const ENCRYPTION_PREFIX = '{encrypted}';
+
+    /**
      * List of setting keys that should be encrypted
      *
      * @var array
@@ -46,65 +52,86 @@ trait SettingsEncryptionTrait
     }
 
     /**
-     * Encrypt a setting value
+     * Encrypt a setting value.
      *
-     * @param string $value Plain text value
+     * Idempotent: if the input is already a ciphertext payload (prefixed),
+     * it is returned unchanged to prevent double-encryption when forms
+     * round-trip an encrypted blob.
+     *
+     * @param string $value Plain text value (or already-encrypted payload)
      * @param string $key Setting key (for context)
-     * @return string Encrypted value
+     * @return string Encrypted value (with prefix)
      */
     protected function encryptSetting(string $value, string $key): string
     {
-        if (empty($value)) {
+        unset($key); // reserved for future per-key context (e.g., AAD)
+
+        if ($value === '') {
             return '';
         }
 
-        $encrypted = Security::encrypt($value, $this->getEncryptionKey());
-        $base64 = base64_encode($encrypted);
-
-        return '{encrypted}' . $base64;
-    }
-
-    /**
-     * Decrypt a setting value
-     *
-     * @param string|null $value Encrypted value
-     * @param string $key Setting key (for context)
-     * @return string Plain text value
-     */
-    protected function decryptSetting(?string $value, string $key): string
-    {
-        if (empty($value)) {
-            return '';
-        }
-
-        if (!str_starts_with($value, '{encrypted}')) {
+        // Idempotency guard: never double-encrypt a payload that is already encrypted.
+        if (str_starts_with($value, self::ENCRYPTION_PREFIX)) {
             return $value;
         }
 
-        $base64Value = substr($value, 11);
+        $encrypted = Security::encrypt($value, $this->getEncryptionKey());
+
+        return self::ENCRYPTION_PREFIX . base64_encode($encrypted);
+    }
+
+    /**
+     * Decrypt a setting value.
+     *
+     * Fail-loud semantics: throws SettingsEncryptionException for any real
+     * decryption failure (corrupt base64, OpenSSL failure, salt rotation,
+     * tampering). Empty / null input legitimately means "no value yet" and
+     * returns ''. Plaintext values without the encryption prefix are returned
+     * as-is for backwards compatibility with non-encrypted keys.
+     *
+     * @param string|null $value Encrypted value (or null/'' when unset)
+     * @param string $key Setting key (for context)
+     * @return string Plain text value
+     * @throws \App\Service\Exception\SettingsEncryptionException on decrypt failure
+     */
+    protected function decryptSetting(?string $value, string $key): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+
+        if (!str_starts_with($value, self::ENCRYPTION_PREFIX)) {
+            return $value;
+        }
+
+        $base64Value = substr($value, strlen(self::ENCRYPTION_PREFIX));
         $encryptedValue = base64_decode($base64Value, true);
 
         if ($encryptedValue === false) {
-            Log::error('Failed to base64 decode setting: ' . $key);
-
-            return '';
+            throw new SettingsEncryptionException(
+                'Failed to base64-decode encrypted setting: ' . $key,
+            );
         }
 
         try {
             $decrypted = Security::decrypt($encryptedValue, $this->getEncryptionKey());
-
-            if ($decrypted === false || $decrypted === null) {
-                return '';
-            }
-
-            return (string)$decrypted;
         } catch (Exception $e) {
-            Log::error('Failed to decrypt setting: ' . $key, [
-                'error' => $e->getMessage(),
-            ]);
-
-            return '';
+            throw new SettingsEncryptionException(
+                'Failed to decrypt setting: ' . $key . ' (' . $e->getMessage() . ')',
+                0,
+                $e,
+            );
         }
+
+        if ($decrypted === false || $decrypted === null) {
+            // Most common cause: Security.salt was rotated or ciphertext was tampered.
+            throw new SettingsEncryptionException(
+                'Decryption returned empty for setting: ' . $key
+                . ' (likely salt rotation or tampered ciphertext)',
+            );
+        }
+
+        return (string)$decrypted;
     }
 
     /**
@@ -127,20 +154,34 @@ trait SettingsEncryptionTrait
     }
 
     /**
-     * Process settings array - decrypt encrypted values
+     * Process settings array - decrypt encrypted values.
+     *
+     * Resilience: a single corrupted encrypted setting must not bring down the
+     * whole settings load. If decryption fails, the offending key is logged and
+     * **excluded** from the result (callers see an absent key rather than an
+     * empty string, which would be unsafe for tokens compared via hash_equals).
      *
      * @param array $settings Array of setting_key => setting_value
-     * @return array Processed settings with decrypted values
+     * @return array Processed settings with decrypted values (failed keys absent)
      */
     protected function processSettings(array $settings): array
     {
         $processed = [];
 
         foreach ($settings as $key => $value) {
-            if ($this->shouldEncrypt($key)) {
-                $processed[$key] = $this->decryptSetting($value, $key);
-            } else {
+            if (!$this->shouldEncrypt($key)) {
                 $processed[$key] = $value;
+                continue;
+            }
+
+            try {
+                $processed[$key] = $this->decryptSetting($value, $key);
+            } catch (SettingsEncryptionException $e) {
+                Log::error('Settings: cannot decrypt key, excluding from runtime settings', [
+                    'key' => $key,
+                    'error' => $e->getMessage(),
+                ]);
+                // Intentionally do NOT add the key. Absence is safer than '' for tokens.
             }
         }
 

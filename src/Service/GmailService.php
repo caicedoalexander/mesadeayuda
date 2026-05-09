@@ -6,6 +6,7 @@ namespace App\Service;
 use App\Constants\CacheConstants;
 use App\Constants\SettingKeys;
 use App\Service\Exception\GmailAuthenticationException;
+use App\Service\Exception\SettingsEncryptionException;
 use App\Service\Traits\SettingsEncryptionTrait;
 use Cake\Cache\Cache;
 use Cake\Log\Log;
@@ -60,7 +61,18 @@ class GmailService
 
             $config = ['refresh_token' => '', 'client_secret' => []];
             foreach ($settings as $setting) {
-                $decrypted = $instance->decryptSetting($setting->setting_value, $setting->setting_key);
+                try {
+                    $decrypted = $instance->decryptSetting($setting->setting_value, $setting->setting_key);
+                } catch (SettingsEncryptionException $e) {
+                    // Fail-loud in logs but don't break the whole config load.
+                    // Leaving the field empty surfaces a clear GmailNotConfiguredException downstream
+                    // instead of silently authenticating with garbage.
+                    Log::error('Gmail setting cannot be decrypted; skipping', [
+                        'key' => $setting->setting_key,
+                        'error' => $e->getMessage(),
+                    ]);
+                    continue;
+                }
 
                 if ($setting->setting_key === SettingKeys::GMAIL_REFRESH_TOKEN) {
                     $config['refresh_token'] = $decrypted;
