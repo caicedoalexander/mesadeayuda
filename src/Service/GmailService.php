@@ -33,6 +33,15 @@ class GmailService
     use LocatorAwareTrait;
     use SettingsEncryptionTrait;
 
+    /**
+     * Microseconds to sleep before each attachment download.
+     *
+     * Gmail API quota is ~250 req/s; throttling at 5 req/s (200ms) leaves
+     * ample headroom for parsing/list calls happening in parallel and
+     * keeps batches predictable. Property of the API client, not the consumer.
+     */
+    private const ATTACHMENT_THROTTLE_US = 200_000;
+
     private GoogleClient $client;
     private ?Gmail $service = null;
     private array $config;
@@ -345,6 +354,10 @@ class GmailService
      */
     public function downloadAttachment(string $messageId, string $attachmentId): string
     {
+        // Throttle BEFORE the API call — guarantees a minimum gap regardless of
+        // caller. Not a circuit breaker, just a back-off to stay under quota.
+        usleep(self::ATTACHMENT_THROTTLE_US);
+
         try {
             $service = $this->getService();
             $attachment = $service->users_messages_attachments->get('me', $messageId, $attachmentId);

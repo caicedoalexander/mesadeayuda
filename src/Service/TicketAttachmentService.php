@@ -22,6 +22,20 @@ class TicketAttachmentService
     use LocatorAwareTrait;
     use GenericAttachmentTrait;
 
+    private ?GmailService $gmail;
+
+    /**
+     * @param \App\Service\GmailService|null $gmail Optional pre-built Gmail client.
+     *        When null, a client is built lazily on first use (only when an email
+     *        with attachments is actually processed). This avoids the OAuth-refresh
+     *        roundtrip during construction and lets callers (e.g., GmailImportService)
+     *        share a single authenticated instance across many tickets.
+     */
+    public function __construct(?GmailService $gmail = null)
+    {
+        $this->gmail = $gmail;
+    }
+
     /**
      * Process email attachments using GenericAttachmentTrait.
      *
@@ -34,16 +48,17 @@ class TicketAttachmentService
     public function processEmailAttachments(EntityInterface $ticket, array $attachments, int $userId, ?int $commentId = null): void
     {
         assert($ticket instanceof Ticket);
-        $gmailService = new GmailService(GmailService::loadConfigFromDatabase());
+
+        if ($attachments === []) {
+            return;
+        }
+
+        $gmailService = $this->getGmailService();
 
         foreach ($attachments as $attachmentData) {
             try {
-                // PERFORMANCE FIX: Reduced sleep from 1000ms to 200ms
-                // Gmail API allows 250 requests/second, 200ms = 5 requests/second is safe
-                // Previous: 10 files = 10 seconds, Now: 10 files = 2 seconds (80% faster)
-                usleep(200000);
-
-                // Download attachment from Gmail
+                // Download attachment from Gmail. Rate-limit (Gmail API quota)
+                // is enforced inside GmailService::downloadAttachment().
                 $content = $gmailService->downloadAttachment(
                     $ticket->gmail_message_id,
                     $attachmentData['attachment_id'],
@@ -66,6 +81,16 @@ class TicketAttachmentService
                 ]);
             }
         }
+    }
+
+    /**
+     * Lazily build (or return cached) Gmail client. Subsequent calls reuse
+     * the instance, avoiding repeated OAuth refresh roundtrips when many
+     * tickets are ingested in a single batch.
+     */
+    private function getGmailService(): GmailService
+    {
+        return $this->gmail ??= new GmailService(GmailService::loadConfigFromDatabase());
     }
 
     /**

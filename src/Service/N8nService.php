@@ -22,24 +22,60 @@ class N8nService
     use Traits\ConfigResolutionTrait;
     use Traits\SecureHttpTrait;
 
-    private array $config;
+    /**
+     * Resolved n8n settings.
+     *  - null  = not yet resolved (lazy)
+     *  - false = resolved but disabled / unconfigured
+     *  - array = resolved and ready to use
+     */
+    private array|false|null $config = null;
+
+    /**
+     * Raw system configuration from constructor (passed-through DTO).
+     */
     private ?array $systemConfig;
 
     /**
-     * Constructor
+     * Constructor — does no I/O. Settings are resolved lazily on first use
+     * via {@see getConfig()}. This keeps construction free of DB/cache reads
+     * for callers that may never actually dispatch a webhook (e.g., a ticket
+     * creation flow when n8n is disabled).
      *
-     * @param \App\Service\Dto\SystemConfig|null $config Optional system configuration VO to avoid redundant DB queries
+     * @param \App\Service\Dto\SystemConfig|null $config Optional system configuration VO
      */
     public function __construct(?SystemConfig $config = null)
     {
         $this->systemConfig = $config?->toSettingsArray();
-        $this->config = $this->resolveSettingsBatch(SettingKeys::N8N_ENABLED, 'n8n_settings', [
+    }
+
+    /**
+     * Resolve n8n settings on demand. Caches the result for the lifetime of
+     * this instance — three states: null (unresolved), false (disabled),
+     * array (active). Mirrors {@see WhatsappService::getConfig()}.
+     */
+    private function getConfig(): ?array
+    {
+        if ($this->config !== null) {
+            return $this->config === false ? null : $this->config;
+        }
+
+        $settings = $this->resolveSettingsBatch(SettingKeys::N8N_ENABLED, 'n8n_settings', [
             SettingKeys::N8N_ENABLED,
             SettingKeys::N8N_WEBHOOK_URL,
             SettingKeys::N8N_API_KEY,
             SettingKeys::N8N_SEND_TAGS_LIST,
             SettingKeys::N8N_TIMEOUT,
         ]);
+
+        if (empty($settings[SettingKeys::N8N_ENABLED]) || $settings[SettingKeys::N8N_ENABLED] !== '1') {
+            $this->config = false;
+
+            return null;
+        }
+
+        $this->config = $settings;
+
+        return $this->config;
     }
 
     /**
@@ -50,15 +86,14 @@ class N8nService
      */
     public function sendTicketCreatedWebhook(Ticket $ticket): bool
     {
-        // Check if n8n is enabled
-        if (empty($this->config[SettingKeys::N8N_ENABLED]) || $this->config[SettingKeys::N8N_ENABLED] !== '1') {
-            Log::debug('n8n integration is disabled');
+        $config = $this->getConfig();
+        if ($config === null) {
+            Log::debug('n8n integration is disabled or unconfigured');
 
             return false;
         }
 
-        // Check webhook URL is configured
-        if (empty($this->config[SettingKeys::N8N_WEBHOOK_URL])) {
+        if (empty($config[SettingKeys::N8N_WEBHOOK_URL])) {
             Log::warning('n8n webhook URL is not configured');
 
             return false;
@@ -66,10 +101,10 @@ class N8nService
 
         try {
             // Build webhook payload
-            $payload = $this->buildTicketPayload($ticket);
+            $payload = $this->buildTicketPayload($ticket, $config);
 
             // Send webhook
-            $response = $this->sendWebhook($this->config[SettingKeys::N8N_WEBHOOK_URL], $payload);
+            $response = $this->sendWebhook($config[SettingKeys::N8N_WEBHOOK_URL], $payload, $config);
 
             if ($response['success']) {
                 Log::info('n8n webhook sent successfully', [
@@ -100,9 +135,10 @@ class N8nService
      * Build webhook payload for ticket
      *
      * @param \App\Model\Entity\Ticket $ticket Ticket entity
+     * @param array $config Resolved n8n configuration
      * @return array Webhook payload
      */
-    private function buildTicketPayload(Ticket $ticket): array
+    private function buildTicketPayload(Ticket $ticket, array $config): array
     {
         // Strip HTML for plain text version
         $descriptionPlain = strip_tags($ticket->description ?? '');
@@ -147,7 +183,7 @@ class N8nService
         }
 
         // Add available tags if enabled
-        if (!empty($this->config[SettingKeys::N8N_SEND_TAGS_LIST]) && $this->config[SettingKeys::N8N_SEND_TAGS_LIST] === '1') {
+        if (!empty($config[SettingKeys::N8N_SEND_TAGS_LIST]) && $config[SettingKeys::N8N_SEND_TAGS_LIST] === '1') {
             $tagsTable = $this->fetchTable('Tags');
             $tags = $tagsTable->find()
                 ->select(['id', 'name', 'color'])
@@ -182,19 +218,20 @@ class N8nService
      *
      * @param string $url Webhook URL
      * @param array $payload Payload data
+     * @param array $config Resolved n8n configuration
      * @return array Response with success status
      */
-    private function sendWebhook(string $url, array $payload): array
+    private function sendWebhook(string $url, array $payload, array $config): array
     {
-        $timeout = (int)($this->config[SettingKeys::N8N_TIMEOUT] ?? 10);
+        $timeout = (int)($config[SettingKeys::N8N_TIMEOUT] ?? 10);
 
         $headers = [
             'Content-Type: application/json',
             'User-Agent: TicketSystem/1.0',
         ];
 
-        if (!empty($this->config[SettingKeys::N8N_API_KEY])) {
-            $headers[] = 'X-API-Key: ' . $this->config[SettingKeys::N8N_API_KEY];
+        if (!empty($config[SettingKeys::N8N_API_KEY])) {
+            $headers[] = 'X-API-Key: ' . $config[SettingKeys::N8N_API_KEY];
         }
 
         return $this->secureCurlPost($url, json_encode($payload), $headers, $timeout);
@@ -219,7 +256,8 @@ class N8nService
      */
     public function testConnection(): array
     {
-        if (empty($this->config[SettingKeys::N8N_WEBHOOK_URL])) {
+        $config = $this->getConfig();
+        if ($config === null || empty($config[SettingKeys::N8N_WEBHOOK_URL])) {
             return [
                 'success' => false,
                 'message' => 'URL del webhook de n8n no configurada',
@@ -233,7 +271,7 @@ class N8nService
                 'test' => true,
             ];
 
-            $response = $this->sendWebhook($this->config[SettingKeys::N8N_WEBHOOK_URL], $testPayload);
+            $response = $this->sendWebhook($config[SettingKeys::N8N_WEBHOOK_URL], $testPayload, $config);
 
             if ($response['success']) {
                 return [
