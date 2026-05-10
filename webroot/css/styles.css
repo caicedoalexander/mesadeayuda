@@ -1018,10 +1018,249 @@ body > * {
 
 .rounded-md { border-radius: var(--radius-md); }
 
-/* Layout: app shell is 55px topbar + scroll area below */
+/* Layout: app shell is 56px topbar + scroll area below */
 .app-topbar { max-height: 56px; z-index: 1000; }
 .below-topbar-h { height: calc(100vh - 56px); }
 .below-topbar-mh { max-height: calc(100vh - 56px); }
+
+/* ============================================
+   CONTENT SHELL — harmonious spacing, balanced rhythm
+   ============================================ */
+.content-shell {
+    width: 100%;
+    padding: 28px 32px 16px;
+    gap: 14px;
+}
+
+.content-shell > * + * { margin-top: 0; }
+
+.content-shell .page-header { margin-bottom: 4px; }
+
+.content-toolbar {
+    padding: 4px 0 2px;
+}
+
+.content-meta {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 10px 2px 12px;
+    color: var(--ink-400);
+    font-size: 13px;
+    letter-spacing: 0.005em;
+}
+.content-meta .meta-count {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--ink-800);
+    font-size: 14px;
+}
+.content-meta .meta-label {
+    color: var(--ink-600);
+}
+.content-meta .meta-sep {
+    color: var(--bone-300);
+    margin: 0 2px;
+}
+.content-meta .meta-page {
+    color: var(--ink-400);
+}
+
+.content-pagination {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: var(--hairline);
+}
+
+/* ============================================
+   TICKETS TABLE — editorial, hairline, no shadows
+   ============================================ */
+.tickets-table-wrap {
+    background-color: var(--bone-0);
+    border: var(--hairline);
+    border-radius: var(--radius-md);
+    overflow: auto;
+    box-shadow: none;
+}
+
+.tickets-table {
+    margin: 0;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background-color: var(--bone-0);
+}
+
+.tickets-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: var(--bone-50);
+    color: var(--ink-400);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 12px 14px;
+    border-bottom: var(--hairline);
+    border-top: 0;
+    text-align: left;
+    white-space: nowrap;
+}
+.tickets-table thead th a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.2s var(--ease);
+}
+.tickets-table thead th a:hover { color: var(--sage-700); }
+.tickets-table thead th a.asc::after  { content: " ↑"; color: var(--sage-500); }
+.tickets-table thead th a.desc::after { content: " ↓"; color: var(--sage-500); }
+
+.tickets-table tbody td {
+    padding: 14px;
+    border-top: var(--hairline);
+    font-size: 14px;
+    color: var(--ink-800);
+    vertical-align: middle;
+    background-color: transparent;
+    transition: background-color 0.2s var(--ease);
+}
+.tickets-table tbody tr:first-child td { border-top: 0; }
+
+.tickets-table tbody tr {
+    transition: background-color 0.22s var(--ease);
+}
+.tickets-table tbody tr:hover td {
+    background-color: var(--bone-50);
+}
+
+/* Column sizing */
+.tickets-table .col-check     { width: 38px; padding-right: 4px; }
+.tickets-table .col-status    { width: 110px; }
+.tickets-table .col-subject   { min-width: 320px; max-width: 360px; }
+.tickets-table .col-requester { min-width: 180px; max-width: 220px; }
+.tickets-table .col-assignee  { width: 180px; }
+.tickets-table .col-date      {
+    width: 130px;
+    color: var(--ink-400);
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+/* Subject — link with sliding underline */
+.subject-link {
+    color: var(--ink-900);
+    font-weight: 500;
+    text-decoration: none;
+    background-image: linear-gradient(var(--sage-500), var(--sage-500));
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    background-size: 0% 1px;
+    transition: background-size 0.35s var(--ease), color 0.2s var(--ease);
+    padding-bottom: 1px;
+}
+.subject-link:hover {
+    color: var(--sage-700);
+    background-size: 100% 1px;
+}
+
+/* Requester */
+.requester-name {
+    display: block;
+    font-weight: 500;
+    color: var(--ink-800);
+    font-size: 13.5px;
+    line-height: 1.25;
+}
+.requester-email {
+    display: block;
+    color: var(--ink-400);
+    font-size: 12px;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Checkboxes — quiet, sage when checked */
+.tickets-table .form-check-input {
+    border: 1.5px solid var(--bone-300);
+    border-radius: 4px;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    cursor: pointer;
+    transition: border-color 0.2s var(--ease), background-color 0.2s var(--ease);
+}
+.tickets-table .form-check-input:hover {
+    border-color: var(--sage-400);
+}
+.tickets-table .form-check-input:checked {
+    background-color: var(--sage-500);
+    border-color: var(--sage-500);
+}
+.tickets-table .form-check-input:focus {
+    box-shadow: 0 0 0 3px var(--sage-100);
+    border-color: var(--sage-500);
+}
+
+/* Assignee select inside table — flatter look */
+.tickets-table .table-assign-form { margin: 0; }
+.tickets-table .form-select-sm {
+    border: 1px solid var(--bone-200);
+    border-radius: var(--radius-sm);
+    background-color: transparent;
+    color: var(--ink-800);
+    font-size: 13px;
+    padding: 4px 26px 4px 10px;
+    transition: border-color 0.2s var(--ease), background-color 0.2s var(--ease);
+}
+.tickets-table .form-select-sm:hover {
+    border-color: var(--sage-400);
+    background-color: var(--bone-0);
+}
+.tickets-table .form-select-sm:focus {
+    border-color: var(--sage-500);
+    box-shadow: 0 0 0 3px var(--sage-100);
+}
+
+/* ============================================
+   EMPTY STATE
+   ============================================ */
+.empty-state {
+    margin: 24px 0;
+    padding: 56px 32px;
+    text-align: center;
+    background-color: var(--bone-0);
+    border: var(--hairline);
+    border-radius: var(--radius-md);
+    color: var(--ink-600);
+    animation: shell-in 0.4s var(--ease) both;
+}
+.empty-state-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 14px;
+    border-radius: 999px;
+    border: var(--hairline);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-400);
+    font-size: 22px;
+}
+.empty-state-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 1.4rem;
+    color: var(--ink-900);
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
+}
+.empty-state-hint {
+    font-size: 13px;
+    color: var(--ink-400);
+    margin: 0;
+}
 
 /* Tag/label primitives */
 .tag-input-inline {
