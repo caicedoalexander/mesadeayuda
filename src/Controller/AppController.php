@@ -17,7 +17,6 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Constants\CacheConstants;
-use App\Constants\RoleConstants;
 use App\Constants\SettingKeys;
 use App\Model\Entity\User;
 use App\Service\Traits\SettingsEncryptionTrait;
@@ -97,38 +96,18 @@ class AppController extends Controller
         $safeConfig = array_diff_key($systemConfig, array_flip($sensitiveKeys));
         $this->set('systemConfig', $safeConfig);
         $this->set('systemTitle', $systemConfig[SettingKeys::SYSTEM_TITLE] ?? CacheConstants::DEFAULT_SYSTEM_TITLE);
-
-        // Set layout based on user role
-        $user = $identity?->getOriginalData();
-        if ($user instanceof User) {
-            $role = $user->role;
-            if ($role === RoleConstants::ROLE_ADMIN) {
-                $this->viewBuilder()->setLayout('admin');
-            } elseif ($role === RoleConstants::ROLE_AGENT) {
-                $this->viewBuilder()->setLayout('agent');
-            } elseif ($role === RoleConstants::ROLE_SERVICIO_CLIENTE) {
-                $this->viewBuilder()->setLayout('servicio_cliente');
-            } else {
-                $this->viewBuilder()->setLayout('requester');
-            }
-        }
     }
 
     /**
-     * Get the default redirect target for a given role
+     * Get the default redirect target for a given role.
      *
      * @param string $role User role
      * @return array CakePHP-style URL array
      */
     protected function getDefaultRedirectForRole(string $role): array
     {
-        $roleRedirects = [
-            RoleConstants::ROLE_AGENT => ['controller' => 'Tickets', 'action' => 'index', '?' => ['view' => 'mis_tickets']],
-            RoleConstants::ROLE_REQUESTER => ['controller' => 'Tickets', 'action' => 'index', '?' => ['view' => 'mis_tickets']],
-            RoleConstants::ROLE_ADMIN => ['controller' => 'Tickets', 'action' => 'index'],
-        ];
-
-        return $roleRedirects[$role] ?? ['controller' => 'Tickets', 'action' => 'index'];
+        // All staff lands on the unfiltered tickets index.
+        return ['controller' => 'Tickets', 'action' => 'index'];
     }
 
     /**

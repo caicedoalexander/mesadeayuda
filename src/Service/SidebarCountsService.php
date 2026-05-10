@@ -40,7 +40,7 @@ class SidebarCountsService
             ->count();
 
         $myItems = null;
-        if ($userRole === RoleConstants::ROLE_AGENT && $userId) {
+        if ($userRole === RoleConstants::ROLE_ASESOR_TIC && $userId) {
             $myItems = $table->find()
                 ->where(['assignee_id' => $userId, 'status NOT IN' => $resolvedStatuses])
                 ->count();

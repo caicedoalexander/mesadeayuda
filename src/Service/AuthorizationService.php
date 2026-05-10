@@ -32,6 +32,6 @@ class AuthorizationService
 
         $userRole = $user->get('role');
 
-        return !in_array($userRole, [RoleConstants::ROLE_ADMIN, RoleConstants::ROLE_AGENT], true);
+        return !in_array($userRole, RoleConstants::STAFF_ROLES, true);
     }
 }

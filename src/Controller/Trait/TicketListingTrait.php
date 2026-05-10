@@ -120,12 +120,10 @@ trait TicketListingTrait
 
     private function applyRoleBasedFilters($query, $user, ?string $userRole, string $tableAlias): void
     {
-        if (!$user || !$userRole) {
-            return;
-        }
-        if ($userRole === RoleConstants::ROLE_REQUESTER) {
-            $query->where([$tableAlias . '.requester_id' => $user->get('id')]);
-        }
+        // Antes filtrábamos por requester_id cuando el rol era 'requester'.
+        // 'external' no inicia sesión, así que esa rama es código muerto.
+        // El método se conserva como punto de extensión para filtros por rol
+        // futuros (p.ej. organización).
     }
 
     /**
@@ -179,7 +177,7 @@ trait TicketListingTrait
      */
     private function getDefaultUsersRoleFilter(): array
     {
-        return [RoleConstants::ROLE_ADMIN, RoleConstants::ROLE_AGENT];
+        return [RoleConstants::ROLE_ADMIN, RoleConstants::ROLE_ASESOR_TIC];
     }
 
     /**

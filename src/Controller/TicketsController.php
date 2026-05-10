@@ -52,7 +52,7 @@ class TicketsController extends AppController
             'history',
         ]);
 
-        return $this->redirectByRole([RoleConstants::ROLE_ADMIN, RoleConstants::ROLE_AGENT, RoleConstants::ROLE_REQUESTER], 'tickets');
+        return $this->redirectByRole(RoleConstants::STAFF_ROLES, 'tickets');
     }
 
     /**

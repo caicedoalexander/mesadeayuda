@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Constants\RoleConstants;
-use App\Controller\AppController;
 use Cake\Event\EventInterface;
 
 /**

@@ -32,7 +32,7 @@ class TicketsSidebarCell extends Cell
         $data = $service->getSidebarCounts($userRole, $userId);
         $statusCounts = $data['statusCounts'];
 
-        $isAgent = $userRole === RoleConstants::ROLE_AGENT;
+        $isAgent = $userRole === RoleConstants::ROLE_ASESOR_TIC;
 
         // For agents: count status-specific tickets assigned to them
         $agentStatusCounts = [];

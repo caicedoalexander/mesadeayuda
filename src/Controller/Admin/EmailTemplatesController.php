@@ -5,7 +5,6 @@ namespace App\Controller\Admin;
 
 use App\Constants\CacheConstants;
 use App\Constants\RoleConstants;
-use App\Controller\AppController;
 use App\Service\EmailTemplateRenderer;
 use Cake\Event\EventInterface;
 

@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace App\Controller\Trait;
 
-use App\Constants\RoleConstants;
 use Cake\Datasource\Exception\RecordNotFoundException;
 use Cake\Log\Log;
 use Exception;
@@ -44,16 +43,7 @@ trait TicketHistoryTrait
             $components = $this->getEntityComponents();
             $tableName = $components['tableName'];
             $foreignKey = $components['foreignKey'];
-            $entity = $this->fetchTable($tableName)->get($id);
-            $userRole = $user->get('role');
-            $userId = $user->get('id');
-            if ($userRole === RoleConstants::ROLE_REQUESTER && $entity->requester_id !== $userId) {
-                $this->set('error', 'No tienes permiso para ver este historial');
-                $this->viewBuilder()->setOption('serialize', ['error']);
-                $this->response = $this->response->withStatus(403);
-
-                return;
-            }
+            $this->fetchTable($tableName)->get($id);
             $historyTable = $this->getHistoryTable();
             $history = $historyTable
                 ->find()

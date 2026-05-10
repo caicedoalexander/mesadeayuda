@@ -6,7 +6,6 @@ namespace App\Controller\Admin;
 use App\Constants\CacheConstants;
 use App\Constants\RoleConstants;
 use App\Constants\SettingKeys;
-use App\Controller\AppController;
 use App\Service\GmailService;
 use App\Service\N8nService;
 use App\Service\ProfileImageService;

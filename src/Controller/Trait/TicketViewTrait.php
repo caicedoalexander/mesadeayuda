@@ -40,24 +40,12 @@ trait TicketViewTrait
 
     /**
      * @param \App\Model\Entity\Ticket $ticket Ticket entity
-     * @return \Cake\Http\Response|null Redirect response if no permission, null if allowed
+     * @return \Cake\Http\Response|null Reservado para ramas de permisos futuras.
      */
     private function _checkTicketViewPermission(Ticket $ticket)
     {
-        $user = $this->Authentication->getIdentity();
-        if (!$user) {
-            return null;
-        }
-
-        $userRole = $user->get('role');
-        $userId = $user->get('id');
-
-        if ($userRole === RoleConstants::ROLE_REQUESTER && $ticket->requester_id !== $userId) {
-            $this->Flash->error('No tienes permiso para ver este ticket.');
-
-            return $this->redirect(['action' => 'index']);
-        }
-
+        // Antes filtrábamos requester. Como 'external' nunca inicia sesión,
+        // la rama es código muerto. Cualquier staff autenticado ve todo.
         return null;
     }
 
@@ -133,7 +121,7 @@ trait TicketViewTrait
      */
     private function getDefaultAgentsRoleFilter(): array
     {
-        return [RoleConstants::ROLE_ADMIN, RoleConstants::ROLE_AGENT];
+        return [RoleConstants::ROLE_ADMIN, RoleConstants::ROLE_ASESOR_TIC];
     }
 
     /**
