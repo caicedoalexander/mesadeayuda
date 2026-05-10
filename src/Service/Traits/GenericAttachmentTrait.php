@@ -24,7 +24,14 @@ trait GenericAttachmentTrait
     private const UPLOAD_BASE_DIR = 'uploads' . DS . 'attachments';
 
     /**
-     * Allowed file extensions with their valid MIME types
+     * Allowed file extensions with their valid MIME types as identified by
+     * content sniffing (finfo). The claimed MIME from the browser is NOT
+     * trusted as the final word — see verifyMimeTypeFromContent().
+     *
+     * application/octet-stream was previously listed as a fallback for
+     * browser laxity, but combined with a permissive content-sniff branch
+     * it let executables pass as PDFs (CR-004). The allowlist now mirrors
+     * what finfo actually reports for legitimate files.
      */
     private const ALLOWED_TYPES = [
         'jpg' => ['image/jpeg', 'image/pjpeg'],
@@ -33,29 +40,26 @@ trait GenericAttachmentTrait
         'gif' => ['image/gif'],
         'bmp' => ['image/bmp', 'image/x-ms-bmp'],
         'webp' => ['image/webp'],
-        'pdf' => ['application/pdf', 'application/octet-stream'],
-        'doc' => ['application/msword', 'application/octet-stream'],
+        'pdf' => ['application/pdf'],
+        'doc' => ['application/msword'],
         'docx' => [
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             'application/zip',
-            'application/octet-stream',
         ],
-        'xls' => ['application/vnd.ms-excel', 'application/octet-stream'],
+        'xls' => ['application/vnd.ms-excel'],
         'xlsx' => [
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'application/zip',
-            'application/octet-stream',
         ],
-        'ppt' => ['application/vnd.ms-powerpoint', 'application/octet-stream'],
+        'ppt' => ['application/vnd.ms-powerpoint'],
         'pptx' => [
             'application/vnd.openxmlformats-officedocument.presentationml.presentation',
             'application/zip',
-            'application/octet-stream',
         ],
         'txt' => ['text/plain'],
         'csv' => ['text/csv', 'text/plain', 'application/csv'],
         'zip' => ['application/zip', 'application/x-zip-compressed'],
-        'rar' => ['application/x-rar-compressed', 'application/octet-stream'],
+        'rar' => ['application/x-rar-compressed', 'application/vnd.rar'],
         '7z' => ['application/x-7z-compressed'],
     ];
 
@@ -269,6 +273,15 @@ trait GenericAttachmentTrait
             return null;
         }
 
+        if (!$this->verifyMimeTypeFromBinary($binaryContent, $filename)) {
+            Log::error('Ticket attachment binary MIME verification failed', [
+                'filename' => $filename,
+                'claimed_mime' => $mimeType,
+            ]);
+
+            return null;
+        }
+
         $extension = pathinfo($filename, PATHINFO_EXTENSION);
         $uniqueFilename = Text::uuid() . '.' . $extension;
         $entityNumber = (string)$entity->ticket_number;
@@ -388,9 +401,14 @@ trait GenericAttachmentTrait
             return 'File is empty';
         }
 
-        if ($mimeType !== null) {
+        // The claimed MIME is informational only — browsers occasionally send
+        // application/octet-stream for legitimate PDFs/Office files. The real
+        // gate is verifyMimeTypeFromContent() (upload path) or the binary
+        // content sniff in saveAttachmentFromBinary(). We only reject obvious
+        // mismatches here when both sides are concrete.
+        if ($mimeType !== null && $mimeType !== '' && $mimeType !== 'application/octet-stream') {
             $allowedMimes = self::ALLOWED_TYPES[$extension];
-            if (!in_array($mimeType, $allowedMimes)) {
+            if (!in_array($mimeType, $allowedMimes, true)) {
                 return 'MIME type does not match file extension';
             }
         }
@@ -428,7 +446,6 @@ trait GenericAttachmentTrait
         }
 
         $actualMime = finfo_file($finfo, $filePath);
-        finfo_close($finfo);
 
         if ($actualMime === false) {
             return false;
@@ -441,15 +458,59 @@ trait GenericAttachmentTrait
 
         $allowedMimes = self::ALLOWED_TYPES[$extension];
 
-        if (in_array($actualMime, $allowedMimes)) {
+        if (in_array($actualMime, $allowedMimes, true)) {
             return true;
         }
 
-        if ($actualMime === 'application/zip' && in_array($extension, ['docx', 'xlsx', 'pptx'])) {
+        // Office formats are zip containers — finfo reports application/zip
+        // for them on many systems; that's legitimate.
+        if ($actualMime === 'application/zip' && in_array($extension, ['docx', 'xlsx', 'pptx'], true)) {
             return true;
         }
 
-        if (in_array($claimedMime, $allowedMimes)) {
+        // No fallback to claimedMime: trusting the client-supplied MIME here
+        // is what let executables masquerade as PDFs (CR-004).
+        unset($claimedMime);
+
+        return false;
+    }
+
+    /**
+     * Verify a binary payload (e.g. an email attachment) has a MIME type that
+     * matches its extension by sniffing the content with finfo. The email
+     * client's claimed MIME is not trusted.
+     *
+     * @param string $binaryContent Raw bytes
+     * @param string $originalFilename Original filename (used for extension)
+     * @return bool True if content type matches the extension allowlist
+     */
+    private function verifyMimeTypeFromBinary(string $binaryContent, string $originalFilename): bool
+    {
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        if ($finfo === false) {
+            Log::warning('finfo not available for MIME verification, rejecting binary attachment');
+
+            return false;
+        }
+
+        $actualMime = finfo_buffer($finfo, $binaryContent);
+
+        if ($actualMime === false) {
+            return false;
+        }
+
+        $extension = strtolower(pathinfo($originalFilename, PATHINFO_EXTENSION));
+        if (!isset(self::ALLOWED_TYPES[$extension])) {
+            return false;
+        }
+
+        $allowedMimes = self::ALLOWED_TYPES[$extension];
+
+        if (in_array($actualMime, $allowedMimes, true)) {
+            return true;
+        }
+
+        if ($actualMime === 'application/zip' && in_array($extension, ['docx', 'xlsx', 'pptx'], true)) {
             return true;
         }
 

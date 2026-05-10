@@ -58,11 +58,11 @@ trait TicketBulkTrait
     protected function bulkAssignTickets(): Response
     {
         $this->request->allowMethod(['post']);
-        $entityIds = array_map('intval', explode(',', $this->request->getData('entity_ids') ?? $this->request->getData('ticket_ids') ?? ''));
+        $entityIds = $this->parseEntityIds();
         $agentId = $this->request->getData('agent_id') ?? $this->request->getData('assignee_id');
         $agentId = $this->normalizeAssigneeId($agentId);
         $actor = $this->Authentication->getIdentity();
-        $userId = $actor ? (int)$actor->get('id') : 1;
+        $userId = $this->getCurrentUserId();
         [$table, $service, $entityName] = $this->getEntityComponents();
 
         // Early actor guard: abort whole batch if actor cannot assign
@@ -104,32 +104,30 @@ trait TicketBulkTrait
 
     /**
      * Bulk change priority of tickets.
+     *
+     * Routes through TicketPipelineService::changePriority so the audit
+     * trail (system internal comment + history) and the isLocked() invariant
+     * stay in lockstep with the single-ticket flow.
      */
     protected function bulkChangeTicketPriority(): Response
     {
         $this->request->allowMethod(['post']);
-        $entityIds = array_map('intval', explode(',', $this->request->getData('entity_ids') ?? $this->request->getData('ticket_ids') ?? ''));
+        $entityIds = $this->parseEntityIds();
         $newPriority = $this->request->getData('priority');
-        $user = $this->Authentication->getIdentity();
-        $userId = $user ? $user->get('id') : 1;
-        [$table, , $entityName] = $this->getEntityComponents();
-        $historyTable = $this->getHistoryTable();
+        $userId = $this->getCurrentUserId();
+        [$table, $service, $entityName] = $this->getEntityComponents();
+
         $successCount = 0;
         $errorCount = 0;
+        $lockedCount = 0;
         foreach ($entityIds as $entityId) {
             try {
                 $entity = $table->get($entityId);
-                $oldPriority = $entity->priority;
-                $entity->priority = $newPriority;
-                if ($table->save($entity)) {
-                    $historyTable->logChange(
-                        $entity->id,
-                        'priority',
-                        $oldPriority,
-                        $newPriority,
-                        $userId,
-                        "Prioridad cambiada de {$oldPriority} a {$newPriority}",
-                    );
+                if ($entity->isLocked()) {
+                    $lockedCount++;
+                    continue;
+                }
+                if ($service->changePriority($entity, $newPriority, $userId)) {
                     $successCount++;
                 } else {
                     $errorCount++;
@@ -141,6 +139,9 @@ trait TicketBulkTrait
         }
         if ($successCount > 0) {
             $this->Flash->success(__("{$successCount} {$entityName}(s) actualizado(s) correctamente."));
+        }
+        if ($lockedCount > 0) {
+            $this->Flash->warning(__("{$lockedCount} {$entityName}(s) en estado final no fueron modificados."));
         }
         if ($errorCount > 0) {
             $this->Flash->error(__("{$errorCount} {$entityName}(s) no pudieron ser actualizados."));
@@ -155,7 +156,7 @@ trait TicketBulkTrait
     protected function bulkAddTicketTag(): Response
     {
         $this->request->allowMethod(['post']);
-        $entityIds = array_map('intval', explode(',', $this->request->getData('entity_ids') ?? $this->request->getData('ticket_ids') ?? ''));
+        $entityIds = $this->parseEntityIds();
         $tagId = (int)$this->request->getData('tag_id');
         [, , $entityName] = $this->getEntityComponents();
         $tagsTable = $this->fetchTable('TicketTags');
@@ -202,7 +203,7 @@ trait TicketBulkTrait
     protected function bulkDeleteTickets(): Response
     {
         $this->request->allowMethod(['post']);
-        $entityIds = array_map('intval', explode(',', $this->request->getData('entity_ids') ?? $this->request->getData('ticket_ids') ?? ''));
+        $entityIds = $this->parseEntityIds();
         [$table, , $entityName] = $this->getEntityComponents();
         $successCount = 0;
         $errorCount = 0;
@@ -227,6 +228,30 @@ trait TicketBulkTrait
         }
 
         return $this->redirect(['action' => 'index']);
+    }
+
+    /**
+     * Parse the comma-separated id list submitted by the bulk form.
+     *
+     * Drops anything that doesn't represent a positive int, so a malformed
+     * payload yields an empty batch instead of silently fetching ticket #0
+     * and inflating the error counter.
+     *
+     * @return list<int>
+     */
+    private function parseEntityIds(): array
+    {
+        $raw = $this->request->getData('entity_ids') ?? $this->request->getData('ticket_ids') ?? '';
+
+        $ids = [];
+        foreach (explode(',', (string)$raw) as $candidate) {
+            $id = (int)trim($candidate);
+            if ($id > 0) {
+                $ids[] = $id;
+            }
+        }
+
+        return $ids;
     }
 
     // endregion

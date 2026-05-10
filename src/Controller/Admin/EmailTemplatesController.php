@@ -6,6 +6,7 @@ namespace App\Controller\Admin;
 use App\Constants\CacheConstants;
 use App\Constants\RoleConstants;
 use App\Controller\AppController;
+use App\Service\EmailTemplateRenderer;
 use Cake\Event\EventInterface;
 
 /**
@@ -20,12 +21,7 @@ class EmailTemplatesController extends AppController
     {
         parent::beforeFilter($event);
 
-        $user = $this->Authentication->getIdentity();
-        if (!$user || $user->get('role') !== RoleConstants::ROLE_ADMIN) {
-            $this->Flash->error('Solo los administradores pueden acceder a esta sección.');
-
-            return $this->redirect(['controller' => 'Tickets', 'action' => 'index', 'prefix' => false]);
-        }
+        return $this->redirectByRole([RoleConstants::ROLE_ADMIN], 'admin');
     }
 
     /**
@@ -93,10 +89,9 @@ class EmailTemplatesController extends AppController
             'system_title' => CacheConstants::DEFAULT_SYSTEM_TITLE,
         ];
 
-        $previewBody = $template->body_html;
-        foreach ($sampleData as $key => $value) {
-            $previewBody = str_replace('{{' . $key . '}}', $value, $previewBody);
-        }
+        // Use the same renderer the live mailer uses so the preview reflects
+        // actual escaping behavior (text vars escaped, sanitized HTML passed through).
+        $previewBody = (new EmailTemplateRenderer())->render($template->body_html, $sampleData);
 
         $this->viewBuilder()->setLayout(null);
         $this->set(compact('previewBody', 'template'));

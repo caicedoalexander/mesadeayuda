@@ -67,10 +67,15 @@ class NotificationRenderer
     }
 
     /**
-     * Render attachments list as HTML
+     * Render attachments list as a table cell.
+     *
+     * Returns a `<td>…</td>` fragment intended to be embedded inside an
+     * existing `<tr>` in the email template (mirrors the contract of
+     * {@see renderStatusChangeHtml()}). Caller is responsible for the
+     * surrounding `<table>`/`<tr>`.
      *
      * @param array $attachments Array of attachment entities
-     * @return string HTML list
+     * @return string HTML cell, or empty string when no attachments
      */
     public function renderAttachmentsHtml(array $attachments): string
     {
@@ -86,7 +91,7 @@ class NotificationRenderer
             $html .= "<li>{$attachment->original_filename} ({$sizeKB} KB)</li>";
         }
 
-        $html .= '</ul>';
+        $html .= '</ul></td>';
 
         return $html;
     }

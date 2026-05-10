@@ -19,12 +19,7 @@ class TagsController extends AppController
     {
         parent::beforeFilter($event);
 
-        $user = $this->Authentication->getIdentity();
-        if (!$user || $user->get('role') !== RoleConstants::ROLE_ADMIN) {
-            $this->Flash->error('Solo los administradores pueden acceder a esta sección.');
-
-            return $this->redirect(['controller' => 'Tickets', 'action' => 'index', 'prefix' => false]);
-        }
+        return $this->redirectByRole([RoleConstants::ROLE_ADMIN], 'admin');
     }
 
     /**

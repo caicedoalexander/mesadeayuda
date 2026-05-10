@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Constants\CacheConstants;
 use App\Constants\SettingKeys;
 use App\Service\Exception\GmailNotConfiguredException;
 use App\Service\GmailImportService;
@@ -60,8 +61,6 @@ final class WebhooksController extends Controller
 
             $result = $service->run($max, $query, 0);
 
-            Cache::write(self::RATE_LIMIT_KEY, time(), self::RATE_LIMIT_CACHE);
-
             return $this->jsonOk($result->toArray());
         } catch (GmailNotConfiguredException $e) {
             unset($e);
@@ -75,12 +74,19 @@ final class WebhooksController extends Controller
 
             return $this->jsonError(500, 'import_failed');
         } finally {
+            // Throttle every attempt that reached this point — including failed
+            // ones — so a hammering caller cannot bypass the 60s rate limit by
+            // triggering errors. Token/lock/recency rejections happen earlier
+            // and are intentionally exempt.
+            Cache::write(self::RATE_LIMIT_KEY, time(), self::RATE_LIMIT_CACHE);
             $this->releaseFileLock($lock);
         }
     }
 
     /**
-     * Compara el header X-Webhook-Token contra el setting cifrado.
+     * Compara el header X-Webhook-Token contra el setting cifrado, aceptando
+     * también el token anterior si todavía está dentro de la ventana de gracia
+     * tras una rotación.
      */
     private function verifyToken(): bool
     {
@@ -92,7 +98,33 @@ final class WebhooksController extends Controller
         $settings = (new SettingsService())->loadAll();
         $expected = $settings[SettingKeys::WEBHOOK_GMAIL_IMPORT_TOKEN] ?? null;
 
-        return is_string($expected) && $expected !== '' && hash_equals($expected, $provided);
+        if (is_string($expected) && $expected !== '' && hash_equals($expected, $provided)) {
+            return true;
+        }
+
+        return $this->matchesPreviousToken($provided);
+    }
+
+    /**
+     * Acepta el token anterior durante la ventana de gracia tras una rotación.
+     */
+    private function matchesPreviousToken(string $provided): bool
+    {
+        $previous = Cache::read(CacheConstants::WEBHOOK_GMAIL_PREVIOUS_TOKEN, 'default');
+        if (!is_array($previous)) {
+            return false;
+        }
+
+        $token = $previous['token'] ?? null;
+        $expiresAt = (int)($previous['expires_at'] ?? 0);
+
+        if (!is_string($token) || $token === '' || $expiresAt <= time()) {
+            Cache::delete(CacheConstants::WEBHOOK_GMAIL_PREVIOUS_TOKEN, 'default');
+
+            return false;
+        }
+
+        return hash_equals($token, $provided);
     }
 
     /**

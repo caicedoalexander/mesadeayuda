@@ -12,6 +12,7 @@ use App\Service\Dto\SystemConfig;
 use App\Service\Exception\InvalidStatusTransitionException;
 use App\Service\Exception\UnauthorizedAssignmentException;
 use App\Service\Traits\TicketHistoryLoggerTrait;
+use Authentication\IdentityInterface;
 use Cake\Datasource\EntityInterface;
 use Cake\Event\EventManager;
 use Cake\Event\EventManagerInterface;
@@ -128,8 +129,28 @@ class TicketPipelineService
         }
 
         if ($hasStatusChange) {
-            $this->changeStatus($entity, $newStatus, $userId, null, false);
-            $entity->status = $newStatus;
+            try {
+                $this->changeStatus($entity, $newStatus, $userId, null, false);
+            } catch (InvalidStatusTransitionException $e) {
+                // Comment + uploads were already committed; report the failure
+                // without bubbling a 500 that would tempt the user to retry
+                // and double-post the comment.
+                Log::warning('Response committed but status transition rejected', [
+                    'ticket_id' => $entityId,
+                    'from' => $oldStatus,
+                    'to' => $newStatus,
+                    'error' => $e->getMessage(),
+                ]);
+
+                return [
+                    'success' => false,
+                    'message' => sprintf(
+                        'Comentario guardado, pero no se pudo cambiar el estado: %s',
+                        $e->getMessage(),
+                    ),
+                    'entity' => $entity,
+                ];
+            }
         }
 
         $this->notifications->sendResponseNotifications($entity, $comment, $oldStatus, $newStatus, $hasComment, $commentType, $hasStatusChange, $emailTo, $emailCc);
@@ -161,11 +182,14 @@ class TicketPipelineService
             return true;
         }
 
-        if ($entity instanceof Ticket && !$entity->canTransitionTo($newStatus)) {
-            throw InvalidStatusTransitionException::for($oldStatus, $newStatus);
+        // Domain-level guard + mutation — Ticket::transitionTo() asserts the
+        // transition is legal and applies it through the entity's setter,
+        // so services can't drift away from the state machine.
+        if ($entity instanceof Ticket) {
+            $entity->transitionTo($newStatus);
+        } else {
+            $entity->status = $newStatus;
         }
-
-        $entity->status = $newStatus;
 
         $now = FrozenTime::now();
         if ($newStatus === TicketConstants::STATUS_RESUELTO && !$entity->resolved_at) {
@@ -210,7 +234,7 @@ class TicketPipelineService
      * @param \Cake\Datasource\EntityInterface $entity Ticket entity
      * @param int|null $assigneeId New assignee user ID (0 or null clears)
      * @param int|null $userId User performing the change (for history)
-     * @param mixed $actor Actor identity (User entity or Authentication identity)
+     * @param \Authentication\IdentityInterface|null $actor Authenticated identity performing the assignment
      * @return bool
      * @throws \App\Service\Exception\UnauthorizedAssignmentException When actor lacks role or target is invalid
      */
@@ -218,7 +242,7 @@ class TicketPipelineService
         EntityInterface $entity,
         ?int $assigneeId,
         ?int $userId = null,
-        mixed $actor = null,
+        ?IdentityInterface $actor = null,
     ): bool {
         $table = $this->fetchTable('Tickets');
         $usersTable = $this->fetchTable('Users');
@@ -232,6 +256,7 @@ class TicketPipelineService
 
         // Guard 2: target must be a valid assignee for this ticket (only when assigning, not clearing)
         $normalizedAssigneeId = $assigneeId === 0 || $assigneeId === '0' ? null : $assigneeId;
+        $targetUser = null;
         if ($normalizedAssigneeId !== null) {
             $targetUser = $usersTable->get($normalizedAssigneeId);
             assert($targetUser instanceof User);
@@ -261,11 +286,10 @@ class TicketPipelineService
             $oldAssigneeName = $oldUser->first_name . ' ' . $oldUser->last_name;
         }
 
-        $newAssigneeName = 'Sin asignar';
-        if ($normalizedAssigneeId) {
-            $newUser = $usersTable->get($normalizedAssigneeId);
-            $newAssigneeName = $newUser->first_name . ' ' . $newUser->last_name;
-        }
+        // Reuse the user already fetched by the canBeAssignedTo guard.
+        $newAssigneeName = $targetUser !== null
+            ? $targetUser->first_name . ' ' . $targetUser->last_name
+            : 'Sin asignar';
 
         $this->logHistory(
             'TicketHistory',

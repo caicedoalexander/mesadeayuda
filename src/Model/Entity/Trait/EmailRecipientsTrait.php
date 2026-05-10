@@ -58,15 +58,7 @@ trait EmailRecipientsTrait
      */
     protected function _getEmailToArray(): array
     {
-        $value = $this->_fields['email_to'] ?? null;
-
-        if (empty($value)) {
-            return [];
-        }
-
-        $decoded = json_decode($value, true);
-
-        return is_array($decoded) ? $decoded : [];
+        return $this->decodeRecipients('email_to');
     }
 
     /**
@@ -78,13 +70,26 @@ trait EmailRecipientsTrait
      */
     protected function _getEmailCcArray(): array
     {
-        $value = $this->_fields['email_cc'] ?? null;
+        return $this->decodeRecipients('email_cc');
+    }
+
+    /**
+     * @param string $field Field name (email_to or email_cc)
+     * @return array Array of recipients with 'name' and 'email' keys
+     */
+    private function decodeRecipients(string $field): array
+    {
+        // Read via the public Entity API rather than reaching into $this->_fields,
+        // which is internal to Cake\ORM\Entity and could change between releases.
+        // get() also runs through any registered virtual accessors — important if
+        // these fields ever gain wrapping behaviour.
+        $value = $this->get($field);
 
         if (empty($value)) {
             return [];
         }
 
-        $decoded = json_decode($value, true);
+        $decoded = json_decode((string)$value, true);
 
         return is_array($decoded) ? $decoded : [];
     }

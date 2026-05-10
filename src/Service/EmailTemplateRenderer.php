@@ -66,16 +66,30 @@ class EmailTemplateRenderer
     }
 
     /**
-     * Render a template by replacing {{variable}} placeholders
+     * Render a template by replacing {{variable}} placeholders.
+     *
+     * Templates are stored as HTML, so any text-typed variable must be escaped
+     * before substitution to prevent stored-XSS via user-controlled fields
+     * (requester names, subjects, comment authors).
+     *
+     * Caller declares which keys hold pre-rendered/sanitized HTML via
+     * $rawHtmlKeys (e.g. comment_body, attachments_list, status_change_section);
+     * everything else is escaped through htmlspecialchars().
      *
      * @param string $templateString Template string with {{variables}}
      * @param array<string, string> $variables Key => value pairs
+     * @param list<string> $rawHtmlKeys Keys whose values are already safe HTML
      * @return string Rendered string
      */
-    public function render(string $templateString, array $variables): string
+    public function render(string $templateString, array $variables, array $rawHtmlKeys = []): string
     {
+        $rawHtmlIndex = array_flip($rawHtmlKeys);
         foreach ($variables as $key => $value) {
-            $templateString = str_replace('{{' . $key . '}}', (string)$value, $templateString);
+            $stringValue = (string)$value;
+            if (!isset($rawHtmlIndex[$key])) {
+                $stringValue = htmlspecialchars($stringValue, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            }
+            $templateString = str_replace('{{' . $key . '}}', $stringValue, $templateString);
         }
 
         return $templateString;
@@ -88,8 +102,13 @@ class EmailTemplateRenderer
      */
     public function getSystemVariables(): array
     {
+        $systemTitle = $this->resolveSettingValue(
+            SettingKeys::SYSTEM_TITLE,
+            CacheConstants::DEFAULT_SYSTEM_TITLE,
+        );
+
         return [
-            'system_title' => $this->resolveSettingValue(SettingKeys::SYSTEM_TITLE, CacheConstants::DEFAULT_SYSTEM_TITLE),
+            'system_title' => $systemTitle,
             'current_year' => date('Y'),
         ];
     }

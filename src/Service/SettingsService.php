@@ -90,7 +90,7 @@ class SettingsService
 
             // Decrypt and cache
             $settings = $this->processSettings($settings);
-            Cache::write('system_settings', $settings, self::CACHE_CONFIG);
+            Cache::write(CacheConstants::CACHE_SETTINGS, $settings, self::CACHE_CONFIG);
         }
 
         return $settings;

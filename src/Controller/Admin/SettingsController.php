@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
+use App\Constants\CacheConstants;
 use App\Constants\RoleConstants;
 use App\Constants\SettingKeys;
 use App\Controller\AppController;
@@ -51,12 +52,7 @@ class SettingsController extends AppController
             'index', 'gmailAuth', 'gmailClientSecret', 'testWhatsapp', 'regenerateWebhookToken',
         ]);
 
-        $user = $this->Authentication->getIdentity();
-        if (!$user || $user->get('role') !== RoleConstants::ROLE_ADMIN) {
-            $this->Flash->error('Solo los administradores pueden acceder a esta sección.');
-
-            return $this->redirect(['controller' => 'Tickets', 'action' => 'index', 'prefix' => false]);
-        }
+        return $this->redirectByRole([RoleConstants::ROLE_ADMIN], 'admin');
     }
 
     /**
@@ -80,17 +76,10 @@ class SettingsController extends AppController
                 $data[SettingKeys::N8N_SEND_TAGS_LIST] = '0';
             }
 
-            // Allowlist of valid setting keys to prevent arbitrary setting injection
-            $allowedKeys = [
-                SettingKeys::SYSTEM_TITLE, SettingKeys::GMAIL_CHECK_INTERVAL,
-                SettingKeys::WHATSAPP_ENABLED, SettingKeys::WHATSAPP_API_URL, SettingKeys::WHATSAPP_API_KEY,
-                SettingKeys::WHATSAPP_INSTANCE_NAME, SettingKeys::WHATSAPP_TICKETS_NUMBER,
-                SettingKeys::N8N_ENABLED, SettingKeys::N8N_WEBHOOK_URL, SettingKeys::N8N_API_KEY,
-                SettingKeys::N8N_SEND_TAGS_LIST, SettingKeys::N8N_TIMEOUT,
-            ];
-
+            // Allowlist lives in SettingKeys::USER_EDITABLE_KEYS so the form,
+            // tests and any future settings UI share a single source of truth.
             foreach ($data as $key => $value) {
-                if (in_array($key, $allowedKeys, true)) {
+                if (in_array($key, SettingKeys::USER_EDITABLE_KEYS, true)) {
                     $this->settingsService->saveSetting($key, $value);
                 }
             }
@@ -487,11 +476,28 @@ class SettingsController extends AppController
     {
         $this->request->allowMethod(['POST']);
 
+        // Capture the current token *before* rotation so it can stay valid
+        // for a short grace window — avoids dropping in-flight n8n traffic.
+        $currentToken = $this->settingsService->loadAll()[SettingKeys::WEBHOOK_GMAIL_IMPORT_TOKEN] ?? null;
+
         $token = bin2hex(random_bytes(32));
         $saved = $this->settingsService->saveSetting(SettingKeys::WEBHOOK_GMAIL_IMPORT_TOKEN, $token);
 
         if ($saved) {
-            $this->Flash->success('Token de webhook regenerado. Actualiza la credencial en n8n.');
+            if (is_string($currentToken) && $currentToken !== '') {
+                Cache::write(
+                    CacheConstants::WEBHOOK_GMAIL_PREVIOUS_TOKEN,
+                    [
+                        'token' => $currentToken,
+                        'expires_at' => time() + CacheConstants::WEBHOOK_TOKEN_OVERLAP_SECONDS,
+                    ],
+                    'default',
+                );
+            }
+            $this->Flash->success(sprintf(
+                'Token de webhook regenerado. El anterior sigue siendo aceptado por %d s mientras actualizas n8n.',
+                CacheConstants::WEBHOOK_TOKEN_OVERLAP_SECONDS,
+            ));
         } else {
             $this->Flash->error('No se pudo regenerar el token.');
         }

@@ -28,11 +28,9 @@ trait SettingsEncryptionTrait
     private const ENCRYPTION_PREFIX = '{encrypted}';
 
     /**
-     * List of setting keys that should be encrypted
-     *
-     * @var array
+     * Setting keys whose values are encrypted at rest.
      */
-    private array $encryptedSettings = [
+    private const ENCRYPTED_SETTING_KEYS = [
         SettingKeys::GMAIL_REFRESH_TOKEN,
         SettingKeys::GMAIL_CLIENT_SECRET_JSON,
         SettingKeys::WHATSAPP_API_KEY,
@@ -48,7 +46,7 @@ trait SettingsEncryptionTrait
      */
     protected function shouldEncrypt(string $key): bool
     {
-        return in_array($key, $this->encryptedSettings, true);
+        return in_array($key, self::ENCRYPTED_SETTING_KEYS, true);
     }
 
     /**

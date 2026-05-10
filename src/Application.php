@@ -75,11 +75,17 @@ class Application extends BaseApplication implements AuthenticationServiceProvid
      */
     private function registerDomainEventListeners(): void
     {
-        $raw = Cache::read(CacheConstants::CACHE_SETTINGS, CacheConstants::CACHE_CONFIG);
-        $config = SystemConfig::fromSettingsArray(is_array($raw) ? $raw : null);
+        // Lazy: TicketNotificationService is built only if/when a domain event
+        // actually fires, so CLI commands that never dispatch tickets
+        // (`bin/cake migrations migrate`, `bin/cake bake`, …) skip the work.
+        $notificationsFactory = static function (): TicketNotificationService {
+            $raw = Cache::read(CacheConstants::CACHE_SETTINGS, CacheConstants::CACHE_CONFIG);
+            $config = SystemConfig::fromSettingsArray(is_array($raw) ? $raw : null);
 
-        $notifications = new TicketNotificationService($config);
-        EventManager::instance()->on(new TicketNotificationListener($notifications));
+            return new TicketNotificationService($config);
+        };
+
+        EventManager::instance()->on(new TicketNotificationListener($notificationsFactory));
     }
 
     /**

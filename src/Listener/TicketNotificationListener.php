@@ -9,6 +9,7 @@ use App\Service\TicketNotificationService;
 use Cake\Event\EventListenerInterface;
 use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
+use Closure;
 use Throwable;
 
 /**
@@ -19,6 +20,11 @@ use Throwable;
  * method. Exceptions are caught and logged — they never propagate back to
  * the dispatch site, mirroring the defensive behavior the service had when
  * called directly.
+ *
+ * The dispatcher is constructed lazily through the factory closure passed
+ * to the constructor so that CLI processes which never dispatch a domain
+ * event (e.g. `bin/cake migrations migrate`) don't pay the cost of building
+ * TicketNotificationService at bootstrap.
  *
  * Scope: this listener only subscribes to events whose semantic is "notify
  * users via email/WhatsApp". Other domain events (e.g., TicketAssigned,
@@ -31,11 +37,13 @@ final class TicketNotificationListener implements EventListenerInterface
 {
     use LocatorAwareTrait;
 
+    private ?TicketNotificationService $notifications = null;
+
     /**
-     * @param \App\Service\TicketNotificationService $notifications Notification dispatcher
+     * @param \Closure(): \App\Service\TicketNotificationService $notificationsFactory Factory for the dispatcher
      */
     public function __construct(
-        private readonly TicketNotificationService $notifications,
+        private readonly Closure $notificationsFactory,
     ) {
     }
 
@@ -57,7 +65,7 @@ final class TicketNotificationListener implements EventListenerInterface
     {
         try {
             $ticket = $this->fetchTable('Tickets')->get($event->ticketId, contain: ['Requesters']);
-            $this->notifications->dispatchCreationNotifications($ticket);
+            $this->notifications()->dispatchCreationNotifications($ticket);
         } catch (Throwable $e) {
             Log::error('TicketNotificationListener::onCreated failed', [
                 'ticket_id' => $event->ticketId,
@@ -73,7 +81,7 @@ final class TicketNotificationListener implements EventListenerInterface
     {
         try {
             $ticket = $this->fetchTable('Tickets')->get($event->ticketId, contain: ['Requesters', 'Assignees']);
-            $this->notifications->dispatchUpdateNotifications($ticket, 'status_change', [
+            $this->notifications()->dispatchUpdateNotifications($ticket, 'status_change', [
                 'old_status' => $event->oldStatus,
                 'new_status' => $event->newStatus,
             ]);
@@ -83,5 +91,13 @@ final class TicketNotificationListener implements EventListenerInterface
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * @return \App\Service\TicketNotificationService
+     */
+    private function notifications(): TicketNotificationService
+    {
+        return $this->notifications ??= ($this->notificationsFactory)();
     }
 }

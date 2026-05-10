@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace App\Service;
 
 use Cake\ORM\Locator\LocatorAwareTrait;
+use DateTimeImmutable;
+use Psr\Clock\ClockInterface;
 use RuntimeException;
 
 /**
@@ -15,12 +17,34 @@ use RuntimeException;
  * sentencia INSERT ... ON DUPLICATE KEY UPDATE incrementa el contador del año
  * y deja el nuevo valor disponible vía LAST_INSERT_ID() en la misma sesión MySQL.
  * Esto elimina la race condition que tenía la versión read-then-format previa.
+ *
+ * El año se obtiene a través de un {@see ClockInterface} (PSR-20), inyectable
+ * en tests para verificar comportamiento de cambio de año sin esperar al
+ * 1 de enero.
  */
 class NumberGenerationService
 {
     use LocatorAwareTrait;
 
     private const SEQUENCE_TABLE = 'ticket_number_sequences';
+
+    private readonly ClockInterface $clock;
+
+    /**
+     * @param \Psr\Clock\ClockInterface|null $clock Clock for "current year" (defaults to system clock)
+     */
+    public function __construct(?ClockInterface $clock = null)
+    {
+        $this->clock = $clock ?? new class implements ClockInterface {
+            /**
+             * @return \DateTimeImmutable
+             */
+            public function now(): DateTimeImmutable
+            {
+                return new DateTimeImmutable();
+            }
+        };
+    }
 
     /**
      * Genera el siguiente número de ticket secuencial para el año actual.
@@ -30,7 +54,7 @@ class NumberGenerationService
      */
     public function generate(): string
     {
-        $year = (int)date('Y');
+        $year = (int)$this->clock->now()->format('Y');
 
         return self::formatNumber($year, $this->allocateSequence($year));
     }

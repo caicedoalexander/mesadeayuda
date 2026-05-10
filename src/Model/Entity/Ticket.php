@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Model\Entity;
 
 use App\Constants\TicketConstants;
+use App\Service\Exception\InvalidStatusTransitionException;
 use Cake\ORM\Entity;
 
 /**
@@ -210,6 +211,26 @@ class Ticket extends Entity
         $allowed = self::TRANSITIONS[$this->status] ?? [];
 
         return in_array($newStatus, $allowed, true);
+    }
+
+    /**
+     * Apply a status transition, asserting it is legal first.
+     *
+     * Centralises status mutation so services can't bypass the state machine
+     * with a raw $entity->status = $foo assignment.
+     *
+     * @param string $newStatus Target status
+     * @throws \App\Service\Exception\InvalidStatusTransitionException If the transition is not allowed
+     */
+    public function transitionTo(string $newStatus): void
+    {
+        if ($this->status === $newStatus) {
+            return;
+        }
+        if (!$this->canTransitionTo($newStatus)) {
+            throw InvalidStatusTransitionException::for($this->status, $newStatus);
+        }
+        $this->set('status', $newStatus);
     }
 
     /**

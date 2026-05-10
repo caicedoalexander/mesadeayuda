@@ -7,7 +7,9 @@ use App\Constants\CacheConstants;
 use App\Constants\SettingKeys;
 use App\Service\Exception\GmailAuthenticationException;
 use App\Service\Exception\SettingsEncryptionException;
+use App\Service\Traits\HtmlSanitizerTrait;
 use App\Service\Traits\SettingsEncryptionTrait;
+use App\Service\Util\EmailHeaderParser;
 use Cake\Cache\Cache;
 use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
@@ -30,6 +32,7 @@ use Google\Service\Gmail\ModifyMessageRequest;
  */
 class GmailService
 {
+    use HtmlSanitizerTrait;
     use LocatorAwareTrait;
     use SettingsEncryptionTrait;
 
@@ -258,8 +261,8 @@ class GmailService
                 'to' => $this->getHeader($headers, 'To'),
                 'subject' => $this->getHeader($headers, 'Subject'),
                 'date' => $this->getHeader($headers, 'Date'),
-                'email_to' => $this->parseRecipients($toHeader),
-                'email_cc' => $this->parseRecipients($ccHeader),
+                'email_to' => EmailHeaderParser::parseRecipients($toHeader),
+                'email_cc' => EmailHeaderParser::parseRecipients($ccHeader),
                 'body_html' => '',
                 'body_text' => '',
                 'attachments' => [],
@@ -270,6 +273,13 @@ class GmailService
 
             // Extract body and attachments
             $this->extractMessageParts($message->getPayload(), $data);
+
+            // Defense in depth: sanitize at the trust boundary so any consumer
+            // (ingestion, future indexers, debug dumps) gets safe HTML even if
+            // they forget to call HtmlSanitizerTrait themselves.
+            if ($data['body_html'] !== '') {
+                $data['body_html'] = $this->sanitizeHtml($data['body_html']);
+            }
 
             return $data;
         } catch (Exception $e) {
@@ -456,7 +466,7 @@ class GmailService
 
         // Check 2: Sender is system email address
         $from = $this->getHeader($headers, 'From');
-        $fromEmail = $this->extractEmailAddress($from);
+        $fromEmail = EmailHeaderParser::extractEmailAddress($from);
 
         // Load system email from settings
         $systemEmail = $this->getSystemEmail();
@@ -725,67 +735,27 @@ class GmailService
     }
 
     /**
-     * Extract email address from "Name <email@example.com>" format
+     * Extract email address from "Name <email@example.com>" format.
      *
+     * @deprecated Use {@see \App\Service\Util\EmailHeaderParser::extractEmailAddress()}.
+     *             Kept as a thin delegate for callers still holding a GmailService instance.
      * @param string $emailString Email string
      * @return string Email address
      */
     public function extractEmailAddress(string $emailString): string
     {
-        if (preg_match('/<(.+?)>/', $emailString, $matches)) {
-            return $matches[1];
-        }
-
-        return trim($emailString);
+        return EmailHeaderParser::extractEmailAddress($emailString);
     }
 
     /**
-     * Extract name from "Name <email@example.com>" format
+     * Extract name from "Name <email@example.com>" format.
      *
+     * @deprecated Use {@see \App\Service\Util\EmailHeaderParser::extractName()}.
      * @param string $emailString Email string
      * @return string Name or email if no name found
      */
     public function extractName(string $emailString): string
     {
-        if (preg_match('/^(.+?)\s*</', $emailString, $matches)) {
-            return trim($matches[1], '" ');
-        }
-
-        return $this->extractEmailAddress($emailString);
-    }
-
-    /**
-     * Parse recipients header into structured array
-     *
-     * Parses email headers like "To" or "Cc" that may contain multiple recipients
-     * in format: "Name1 <email1@example.com>, Name2 <email2@example.com>"
-     *
-     * @param string $recipientsHeader Raw header string with recipients
-     * @return array Array of recipients with 'name' and 'email' keys, or empty array
-     */
-    private function parseRecipients(string $recipientsHeader): array
-    {
-        if (empty($recipientsHeader)) {
-            return [];
-        }
-
-        $recipients = [];
-
-        // Split by comma (handling cases where commas might appear in quoted names)
-        $parts = preg_split('/,(?=(?:[^"]*"[^"]*")*[^"]*$)/', $recipientsHeader);
-
-        foreach ($parts as $part) {
-            $part = trim($part);
-            if (empty($part)) {
-                continue;
-            }
-
-            $recipients[] = [
-                'name' => $this->extractName($part),
-                'email' => $this->extractEmailAddress($part),
-            ];
-        }
-
-        return $recipients;
+        return EmailHeaderParser::extractName($emailString);
     }
 }

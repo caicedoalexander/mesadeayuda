@@ -39,8 +39,27 @@ class EmailService
     private const ATTACHMENTS_PROPERTY = 'attachments';
     private const COMMENT_FOREIGN_KEY = 'comment_id';
 
+    /**
+     * Variable keys whose values are already-sanitized HTML produced by our
+     * own renderers; the rest are user-supplied text and must be escaped
+     * by EmailTemplateRenderer::render() before substitution.
+     */
+    private const RAW_HTML_VARIABLES = [
+        'comment_body',
+        'attachments_list',
+        'status_change_section',
+    ];
+
     private NotificationRenderer $renderer;
     private EmailTemplateRenderer $templateRenderer;
+    private ?SystemConfig $config;
+    /**
+     * Lazy view of {@see $config} as a flat settings array. Required by
+     * {@see ConfigResolutionTrait} (uses $this->systemConfig['key'] lookups)
+     * and by {@see EmailTemplateRenderer}, which still consumes the array
+     * form. SystemConfig remains the single source of truth — this is just
+     * a derived projection.
+     */
     private ?array $systemConfig = null;
     private ?GmailService $gmailService = null;
 
@@ -49,10 +68,10 @@ class EmailService
      */
     public function __construct(?SystemConfig $config = null)
     {
-        $systemConfig = $config?->toSettingsArray();
+        $this->config = $config;
+        $this->systemConfig = $config?->toSettingsArray();
         $this->renderer = new NotificationRenderer();
-        $this->templateRenderer = new EmailTemplateRenderer($systemConfig);
-        $this->systemConfig = $systemConfig;
+        $this->templateRenderer = new EmailTemplateRenderer($this->systemConfig);
     }
 
     private function getSettingValue(string $key, string $default = ''): string
@@ -109,7 +128,7 @@ class EmailService
 
     private function replaceVariables(string $template, array $variables): string
     {
-        return $this->templateRenderer->render($template, $variables);
+        return $this->templateRenderer->render($template, $variables, self::RAW_HTML_VARIABLES);
     }
 
     private function getGmailService(): GmailService

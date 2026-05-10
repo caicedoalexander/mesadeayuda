@@ -3,9 +3,11 @@ declare(strict_types=1);
 
 namespace App\Controller\Trait;
 
+use App\Constants\CacheConstants;
 use App\Constants\RoleConstants;
 use App\Model\Entity\Ticket;
 use App\Service\AuthorizationService;
+use Cake\Cache\Cache;
 use Cake\Http\Response;
 
 /**
@@ -77,10 +79,7 @@ trait TicketViewTrait
             }
         }
         $agentsRoleFilter = $config['agentsRoleFilter'] ?? $this->getDefaultAgentsRoleFilter();
-        $agents = $this->fetchTable('Users')
-            ->find('list')
-            ->where(['role IN' => $agentsRoleFilter, 'is_active' => true])
-            ->toArray();
+        $agents = $this->loadAgentsForRoles($agentsRoleFilter);
         $viewVars = [
             $variableName => $entity,
             'agents' => $agents,
@@ -143,6 +142,38 @@ trait TicketViewTrait
     private function getSingleEntityVariable(): string
     {
         return 'ticket';
+    }
+
+    /**
+     * Load the active-agents list for the given role filter, cached so a hot
+     * ticket-view page doesn't run the same Users query on every request.
+     *
+     * Cache is invalidated when settings change (CACHE_CONFIG bucket is the
+     * shared settings cache flushed on user create/deactivate paths that
+     * touch SystemSettings); a 5-minute TTL bounds staleness for direct
+     * Users mutations that don't currently bust this slot.
+     *
+     * @param list<string> $roles Roles to include (e.g. admin, agent)
+     * @return array<int, string>
+     */
+    private function loadAgentsForRoles(array $roles): array
+    {
+        sort($roles);
+        $cacheKey = 'agents_list_' . md5(implode(',', $roles));
+
+        $agents = Cache::read($cacheKey, CacheConstants::CACHE_CONFIG);
+        if (is_array($agents)) {
+            return $agents;
+        }
+
+        $agents = $this->fetchTable('Users')
+            ->find('list')
+            ->where(['role IN' => $roles, 'is_active' => true])
+            ->toArray();
+
+        Cache::write($cacheKey, $agents, CacheConstants::CACHE_CONFIG);
+
+        return $agents;
     }
 
     // endregion

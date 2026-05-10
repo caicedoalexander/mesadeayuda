@@ -10,6 +10,7 @@ use App\Model\Entity\TicketComment;
 use App\Model\Entity\User;
 use App\Service\Dto\SystemConfig;
 use App\Service\Traits\HtmlSanitizerTrait;
+use App\Service\Util\EmailHeaderParser;
 use Cake\Event\EventManager;
 use Cake\Event\EventManagerInterface;
 use Cake\Log\Log;
@@ -71,10 +72,8 @@ class TicketIngestionService
             }
         }
 
-        // Extract email address from From header (no config needed for parsing)
-        $parser = new GmailService();
-        $fromEmail = $parser->extractEmailAddress($emailData['from']);
-        $fromName = $parser->extractName($emailData['from']);
+        $fromEmail = EmailHeaderParser::extractEmailAddress($emailData['from']);
+        $fromName = EmailHeaderParser::extractName($emailData['from']);
 
         // Find or create user
         $user = $this->findOrCreateUser($fromEmail, $fromName);
@@ -98,10 +97,11 @@ class TicketIngestionService
             $subject = '(Sin asunto)';
         }
 
-        // Determine channel: if email comes from WhatsApp bot email, set channel as 'whatsapp'
+        // Determine channel: if email comes from the configured WhatsApp bot
+        // address, classify as whatsapp instead of email.
         $channel = TicketConstants::CHANNEL_EMAIL;
-        $whatsappBotEmail = 'mesadeayuda.whatsapp@gmail.com';
-        if (strtolower($fromEmail) === strtolower($whatsappBotEmail)) {
+        $botEmail = $this->config->whatsapp->botEmail;
+        if ($botEmail !== '' && strtolower($fromEmail) === strtolower($botEmail)) {
             $channel = TicketConstants::CHANNEL_WHATSAPP;
         }
 
@@ -173,10 +173,8 @@ class TicketIngestionService
     {
         $ticketCommentsTable = $this->fetchTable('TicketComments');
 
-        // Extract sender email and name from emailData (no config needed for parsing)
-        $parser = new GmailService();
-        $fromEmail = $parser->extractEmailAddress($emailData['from']);
-        $fromName = $parser->extractName($emailData['from']);
+        $fromEmail = EmailHeaderParser::extractEmailAddress($emailData['from']);
+        $fromName = EmailHeaderParser::extractName($emailData['from']);
 
         // Validate sender using isEmailInTicketRecipients() - return null if unauthorized
         if (!$this->isEmailInTicketRecipients($ticket, $fromEmail)) {

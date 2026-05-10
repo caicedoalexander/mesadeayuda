@@ -14,44 +14,75 @@ use Cake\Log\Log;
 trait SecureHttpTrait
 {
     /**
-     * Validate that a URL is safe for external requests (anti-SSRF)
+     * Validate that a URL is safe AND resolve its hostname to an IP we control.
+     *
+     * Returns the resolved IP so the caller can pin curl to that exact address
+     * via CURLOPT_RESOLVE — closing the DNS-rebinding window where a hostname
+     * resolves to a public IP at validation time but to 127.0.0.1 at connect time.
+     *
+     * @param string $url URL to validate
+     * @return array{ok: bool, error: ?string, host: ?string, port: ?int, ip: ?string}
+     */
+    private function resolveAndValidateUrl(string $url): array
+    {
+        $parsed = parse_url($url);
+
+        if ($parsed === false || empty($parsed['scheme']) || empty($parsed['host'])) {
+            return ['ok' => false, 'error' => 'URL inválida.', 'host' => null, 'port' => null, 'ip' => null];
+        }
+
+        $scheme = strtolower($parsed['scheme']);
+        if (!in_array($scheme, ['http', 'https'], true)) {
+            return [
+                'ok' => false,
+                'error' => 'Solo se permiten URLs con esquema http o https.',
+                'host' => null, 'port' => null, 'ip' => null,
+            ];
+        }
+
+        $host = strtolower($parsed['host']);
+        $blockedHosts = ['localhost', '127.0.0.1', '::1', '0.0.0.0', '[::1]'];
+        if (in_array($host, $blockedHosts, true)) {
+            return [
+                'ok' => false,
+                'error' => 'No se permiten URLs apuntando a localhost.',
+                'host' => $host, 'port' => null, 'ip' => null,
+            ];
+        }
+
+        $port = isset($parsed['port']) ? (int)$parsed['port'] : ($scheme === 'https' ? 443 : 80);
+
+        $ip = gethostbyname($host);
+        if ($ip === $host && !filter_var($host, FILTER_VALIDATE_IP)) {
+            // gethostbyname returns the input on resolution failure. Fail closed:
+            // we cannot enforce the private-IP guard without a real address.
+            return [
+                'ok' => false,
+                'error' => 'No se pudo resolver el hostname.',
+                'host' => $host, 'port' => $port, 'ip' => null,
+            ];
+        }
+
+        if ($this->isPrivateIp($ip)) {
+            return [
+                'ok' => false,
+                'error' => 'No se permiten URLs que resuelvan a direcciones IP privadas o internas.',
+                'host' => $host, 'port' => $port, 'ip' => $ip,
+            ];
+        }
+
+        return ['ok' => true, 'error' => null, 'host' => $host, 'port' => $port, 'ip' => $ip];
+    }
+
+    /**
+     * Backwards-compatible wrapper that returns only the error message.
      *
      * @param string $url URL to validate
      * @return string|null Error message if invalid, null if valid
      */
     private function validateExternalUrl(string $url): ?string
     {
-        $parsed = parse_url($url);
-
-        if ($parsed === false || empty($parsed['scheme']) || empty($parsed['host'])) {
-            return 'URL inválida.';
-        }
-
-        // Only allow http/https schemes
-        if (!in_array(strtolower($parsed['scheme']), ['http', 'https'], true)) {
-            return 'Solo se permiten URLs con esquema http o https.';
-        }
-
-        // Block localhost and loopback variations
-        $host = strtolower($parsed['host']);
-        $blockedHosts = ['localhost', '127.0.0.1', '::1', '0.0.0.0', '[::1]'];
-        if (in_array($host, $blockedHosts, true)) {
-            return 'No se permiten URLs apuntando a localhost.';
-        }
-
-        // Resolve hostname to IP and check for private ranges
-        $ip = gethostbyname($host);
-        if ($ip === $host) {
-            // gethostbyname returns the hostname if resolution fails
-            // Allow it through - DNS might resolve at curl time
-            return null;
-        }
-
-        if ($this->isPrivateIp($ip)) {
-            return 'No se permiten URLs que resuelvan a direcciones IP privadas o internas.';
-        }
-
-        return null;
+        return $this->resolveAndValidateUrl($url)['error'];
     }
 
     /**
@@ -72,9 +103,13 @@ trait SecureHttpTrait
     }
 
     /**
-     * Execute a secure cURL POST request with SSRF protections
+     * Execute a secure cURL POST request with SSRF protections.
      *
-     * @param string $url Target URL (must pass validateExternalUrl)
+     * Resolves the hostname once, validates the resulting IP, then pins curl
+     * to that exact IP via CURLOPT_RESOLVE so a second DNS lookup at connect
+     * time cannot redirect the request to a different (e.g. internal) host.
+     *
+     * @param string $url Target URL
      * @param string $jsonPayload JSON-encoded payload
      * @param array $headers HTTP headers
      * @param int $timeout Request timeout in seconds
@@ -82,16 +117,15 @@ trait SecureHttpTrait
      */
     private function secureCurlPost(string $url, string $jsonPayload, array $headers = [], int $timeout = 10): array
     {
-        // Validate URL before making request
-        $urlError = $this->validateExternalUrl($url);
-        if ($urlError !== null) {
-            Log::warning('SSRF protection blocked request', ['url' => $url, 'reason' => $urlError]);
+        $resolution = $this->resolveAndValidateUrl($url);
+        if (!$resolution['ok']) {
+            Log::warning('SSRF protection blocked request', ['url' => $url, 'reason' => $resolution['error']]);
 
             return [
                 'success' => false,
                 'http_code' => 0,
                 'response' => null,
-                'error' => $urlError,
+                'error' => $resolution['error'],
             ];
         }
 
@@ -106,6 +140,13 @@ trait SecureHttpTrait
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
         curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
         curl_setopt($ch, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTPS);
+
+        // Pin DNS to the IP we already validated. Format: "host:port:ip".
+        if ($resolution['ip'] !== null && $resolution['host'] !== null && $resolution['port'] !== null) {
+            curl_setopt($ch, CURLOPT_RESOLVE, [
+                sprintf('%s:%d:%s', $resolution['host'], $resolution['port'], $resolution['ip']),
+            ]);
+        }
 
         $response = curl_exec($ch);
         $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
