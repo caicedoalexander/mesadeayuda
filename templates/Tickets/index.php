@@ -21,7 +21,7 @@ $userId = $user ? $user->get('id') : null;
     <?= $this->cell('TicketsSidebar::display', [$view, $userRole, $userId]) ?>
 </div>
 
-<div class="content-shell d-flex flex-column">
+<div class="pt-3 pb-1 ps-5 pe-4 w-100 d-flex flex-column">
     <!-- Page Header -->
     <div class="page-header">
         <div class="header-icon">
@@ -45,7 +45,7 @@ $userId = $user ? $user->get('id') : null;
         </div>
     </div>
 
-    <div class="content-toolbar d-flex align-items-center gap-2">
+    <div class="d-flex align-items-center mb-1 gap-2">
         <!-- Search Bar -->
         <?= $this->element('tickets/search_bar', [
             'searchValue' => $filters['search'] ?? '',
@@ -60,61 +60,62 @@ $userId = $user ? $user->get('id') : null;
     </div>
 
     <div id="entity-list-content" class="d-flex flex-column flex-grow-1" style="min-height: 0;">
-        <div class="content-meta">
-            <span class="meta-count"><?= $tickets->count() ?></span>
-            <span class="meta-label">tickets</span>
-            <span class="meta-sep">·</span>
-            <span class="meta-page"><?= $this->Paginator->counter(__('Página {{page}} de {{pages}}')) ?></span>
+        <div class="mb-2 fs-6 d-flex align-items-center">
+            <small class="me-1"> <?= $tickets->count() ?> Tickets </small>
+            <small class="m-0 text-muted">(<?= $this->Paginator->counter(__('Pagina {{page}} de {{pages}}')) ?>)</small>
         </div>
 
         <?php if ($tickets->count() > 0): ?>
-            <div class="table-responsive table-scroll tickets-table-wrap mb-auto">
-                <table class="table tickets-table align-middle">
-                    <thead>
+            <div class="table-responsive table-scroll mb-auto">
+                <table class="table table-hover">
+                    <thead class="bg-white" style="position: sticky; top: 0; z-index: 10;">
                         <tr>
-                            <th class="col-check">
-                                <input type="checkbox" id="checkAll" class="form-check-input" />
+                            <th class="w-fit pe-4 align-middle" style="width:36px">
+                                <input type="checkbox" id="checkAll" class="form-check-input border border-dark rounded" />
                             </th>
-                            <th class="col-status">Estado</th>
-                            <th class="col-subject">Asunto</th>
-                            <th class="col-requester">Solicitante</th>
-                            <th class="col-assignee">Asignado a</th>
+                            <th class="w-fit fw-semibold align-middle fs-sm" >Estado</th>
+                            <th class="w-fit fw-semibold align-middle fs-sm" >Asunto</th>
+                            <th class="w-fit fw-semibold align-middle fs-sm" >Solicitante</th>
+                            <th class="w-fit fw-semibold align-middle fs-sm" >Asignado a</th>
                             <?php if ($view === 'resueltos'): ?>
-                                <th class="col-date">
+                                <th class="w-fit fw-semibold align-middle fs-sm" >
                                     <?= $this->Paginator->sort('resolved_at', 'Resuelto') ?>
                                 </th>
                             <?php endif; ?>
-                            <th class="col-date">
+                            <th class="w-fit fw-semibold align-middle fs-sm" >
                                 <?= $this->Paginator->sort('created', 'Solicitado') ?>
                             </th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="">
                         <?php foreach ($tickets as $ticket): ?>
                             <tr>
-                                <td class="col-check">
-                                    <input type="checkbox" class="form-check-input row-check"
+                                <td class="py-0 align-middle ">
+                                    <input type="checkbox" class="form-check-input row-check rounded border border-dark"
                                         value="<?= (int) $ticket->id ?>" />
                                 </td>
 
-                                <td class="col-status">
+                                <td class="py-0 align-middle " style="width: 100px; font-size: 14px;">
                                     <?= $this->Status->statusBadge($ticket->status) ?>
                                 </td>
 
-                                <td class="col-subject text-truncate">
+                                <td class="py-0 fw-light align-middle text-truncate"
+                                    style="min-width: 300px; max-width: 300px;">
                                     <?= $this->Html->link(
                                         h($ticket->subject),
                                         ['action' => 'view', $ticket->id],
-                                        ['class' => 'subject-link']
+                                        ['style' => 'text-decoration: none; color: var(--gray-900); font-size: 14px;']
                                     ) ?>
                                 </td>
 
-                                <td class="col-requester text-truncate">
-                                    <span class="requester-name"><?= h($ticket->requester->name) ?></span>
-                                    <span class="requester-email"><?= h($ticket->requester->email) ?></span>
+                                <td class="py-0 text-truncate align-middle" style="min-width: 150px; max-width: 150px;">
+                                    <strong class=" fs-sm" ><?= h($ticket->requester->name) ?></strong>
+                                    <span class="text-muted fs-sm" >
+                                        (<?= h($ticket->requester->email) ?>)
+                                    </span>
                                 </td>
 
-                                <td class="col-assignee">
+                                <td class="py-1 align-middle" style="max-width: 150px;">
                                     <?php
                                     $isLocked = $ticket->isLocked();
                                     $isDisabled = $isAssignmentDisabled || $isLocked;
@@ -131,12 +132,12 @@ $userId = $user ? $user->get('id') : null;
                                 </td>
 
                                 <?php if ($view === 'resueltos'): ?>
-                                    <td class="col-date">
-                                        <?= $ticket->resolved_at ? $this->TimeHuman->short($ticket->resolved_at) : '—' ?>
+                                    <td class="py-1 align-middle lh-1 fs-sm" >
+                                        <?= $ticket->resolved_at ? $this->TimeHuman->short($ticket->resolved_at) : '-' ?>
                                     </td>
                                 <?php endif; ?>
 
-                                <td class="col-date">
+                                <td class="py-1 align-middle lh-1  fs-sm" >
                                     <?= $this->TimeHuman->short($ticket->created) ?>
                                 </td>
                             </tr>
@@ -146,17 +147,15 @@ $userId = $user ? $user->get('id') : null;
             </div>
 
             <!-- Pagination -->
-            <nav aria-label="Paginación" class="content-pagination">
+            <nav aria-label="Paginación">
                 <?= $this->element('pagination') ?>
             </nav>
 
         <?php else: ?>
-            <div class="empty-state">
-                <div class="empty-state-icon">
-                    <i class="bi bi-inbox"></i>
+            <div class="table-container">
+                <div style="padding: 40px; text-align: center; color: var(--gray-600);">
+                    <p style="font-size: 18px;">No hay tickets en esta vista</p>
                 </div>
-                <p class="empty-state-title">No hay tickets en esta vista</p>
-                <p class="empty-state-hint">Cuando lleguen, aparecerán aquí.</p>
             </div>
         <?php endif; ?>
     </div>

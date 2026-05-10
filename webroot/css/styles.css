@@ -7,282 +7,147 @@
    FONT IMPORTS
    ============================================ */
 
-/* "Editorial Calm" — refined warm minimalism. Hairline borders, no shadows. */
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap');
 
 :root {
-    /* Brand — muted sage instead of vivid green */
-    --sage-50:  #F1F5F2;
-    --sage-100: #E2ECE5;
-    --sage-200: #C7D9CC;
-    --sage-400: #8AB099;
-    --sage-500: #5A8F7B;
-    --sage-600: #437060;
-    --sage-700: #2F5446;
-
-    /* Warm neutrals — bone/clay palette */
-    --bone-0:   #FFFFFF;
-    --bone-50:  #FAFAF7;   /* page background */
-    --bone-100: #F4F3EE;   /* surface */
-    --bone-200: #ECEAE2;   /* hairline */
-    --bone-300: #DAD7CC;
-    --ink-400:  #8A8678;
-    --ink-600:  #5C5A52;
-    --ink-800:  #2A2A26;
-    --ink-900:  #1F2421;
-
-    /* Accents */
-    --amber-500: #C58940;
-    --rose-500:  #B5524A;
-
-    /* Back-compat aliases (used elsewhere in the app) */
-    --admin-green: var(--sage-500);
-    --admin-orange: var(--amber-500);
-    --admin-blue: #4A6FA5;
-    --gray-50:  var(--bone-50);
-    --gray-100: var(--bone-100);
-    --gray-200: var(--bone-200);
-    --gray-300: var(--bone-300);
-    --gray-400: var(--ink-400);
-    --gray-600: var(--ink-600);
-    --gray-700: var(--ink-800);
-    --gray-900: var(--ink-900);
-
-    --bg-color: var(--bone-50);
-
-    --radius-lg: 14px;
-    --radius-md: 10px;
+    --admin-green: #00A85E;
+    --admin-orange: #CD6A15;
+    --admin-blue: #0066cc;
+    --gray-50: #F9FAFB;
+    --gray-100: #F3F4F6;
+    --gray-200: #E5E7EB;
+    --gray-300: #D1D5DB;
+    --gray-400: #9CA3AF;
+    --gray-600: #4B5563;
+    --gray-700: #374151;
+    --gray-900: #111827;
+    --radius-lg: 12px;
+    --radius-md: 8px;
     --radius-sm: 6px;
-
-    /* No drop shadows — keep tokens defined for legacy refs but make them no-ops */
-    --shadow-md: none;
-    --shadow-lg: none;
-
-    --ease: cubic-bezier(0.22, 1, 0.36, 1);
-    --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
-    --transition: all 0.22s var(--ease);
-
-    --hairline: 1px solid var(--bone-200);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ============================================
-   GLOBAL TYPOGRAPHY
-   Instrument Sans for UI, Instrument Serif reserved for the wordmark.
+   APLICACIÓN DE FUENTE GLOBAL
+   Para cambiar la fuente, modifica SOLO la línea siguiente:
+   var(--font-current)   → DM Sans (actual)
+   var(--font-option-1)  → Outfit (geométrica)
+   var(--font-option-2)  → Plus Jakarta Sans (humanista)
+   var(--font-option-3)  → Manrope (grotesca moderna)
+   var(--font-option-4)  → Bricolage Grotesque (única)
    ============================================ */
 * {
-    font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-optical-sizing: auto;
     font-style: normal;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    letter-spacing: -0.005em;
 }
 
 body {
     height: 100dvh !important;
     max-height: 100dvh !important;
     overflow: hidden !important;
-    background-color: var(--bone-50) !important;
-    color: var(--ink-800);
-}
-
-/* Subtle fade-in for the whole shell on first paint */
-@keyframes shell-in {
-    from { opacity: 0; transform: translateY(2px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-body > * {
-    animation: shell-in 0.4s var(--ease) both;
+    background-color: var(--bg-color) !important;
 }
 
 @view-transition {
     navigation: auto;
 }
-
 /* ============================================
-   TOP NAVBAR — slim, hairline, brand-led
+   NAVIGATION BAR
    ============================================ */
 .top-navbar {
     padding: 0;
-    background-color: var(--bone-50);
-    border-bottom: var(--hairline);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     position: sticky;
     top: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    backdrop-filter: saturate(1.1) blur(6px);
-    -webkit-backdrop-filter: saturate(1.1) blur(6px);
-}
-
-.top-navbar > div {
-    height: 56px;
-}
-
-.top-navbar img {
-    height: 26px;
-    width: auto;
-    transition: opacity 0.3s var(--ease);
-}
-.top-navbar img:hover { opacity: 0.75; }
-
-/* Nav links — flat text with a sliding underline. No outlines, no shadows. */
-.nav-menu {
-    gap: 4px !important;
 }
 
 .nav-menu a {
-    position: relative;
-    color: var(--ink-600);
+    color: #00A85E;
     text-decoration: none;
-    padding: 8px 14px;
-    font-weight: 500;
+    padding: 6px 12px;  
+    transition: all 0.3s ease;
+    font-weight: 700;
     font-size: 14px;
-    border-radius: 999px;
-    transition: color 0.25s var(--ease), background-color 0.25s var(--ease);
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.nav-menu a i {
-    font-size: 15px;
-    color: var(--ink-400);
-    transition: color 0.25s var(--ease);
-}
-
-.nav-menu a::after {
-    content: "";
-    position: absolute;
-    left: 14px;
-    right: 14px;
-    bottom: 4px;
-    height: 1px;
-    background-color: var(--sage-500);
-    transform-origin: left center;
-    transform: scaleX(0);
-    transition: transform 0.35s var(--ease);
+    outline: 1px solid #00A85E;
+    border-radius: 8px;
+    box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
 }
 
 .nav-menu a:hover {
-    color: var(--ink-900);
-    background-color: var(--bone-100);
-}
-.nav-menu a:hover i { color: var(--sage-600); }
-.nav-menu a:hover::after { transform: scaleX(1); }
-
-.nav-menu a.active,
-.nav-menu a[aria-current="page"] {
-    color: var(--sage-700);
-    background-color: var(--sage-50);
+    transform: translateY(-1px);
+    background-color: #00A85E;
+    color: #fff;
 }
 
-/* User area */
 .nav-user {
     display: flex;
     align-items: center;
     gap: 8px;
+    margin-left: 10px;
     padding-left: 10px;
-    color: var(--ink-600);
-    border-left: var(--hairline);
-    margin-left: 8px;
+    color: #333;
 }
 
 .btn-logout {
-    border: 1px solid var(--bone-200);
-    padding: 7px 14px !important;
-    border-radius: 999px;
-    font-size: 13px;
-    font-weight: 500;
-    background-color: transparent !important;
-    color: var(--ink-800) !important;
+    border: none;
+    padding: 6px 14px !important;
+    border-radius: 8px;
+    font-size: 14px;
+    background-color: #CD6A15 !important;
+    color: #fff !important;
     text-decoration: none;
-    transition: background-color 0.25s var(--ease), color 0.25s var(--ease), border-color 0.25s var(--ease);
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
+    transition: all 0.3s ease;
+    outline: 1px solid #CD6A15;
 }
 
-.btn-logout i {
-    color: var(--ink-400);
-    transition: color 0.25s var(--ease), transform 0.3s var(--ease);
-}
+
 
 .btn-logout:hover {
-    background-color: var(--ink-900) !important;
-    color: var(--bone-50) !important;
-    border-color: var(--ink-900);
-}
-.btn-logout:hover i {
-    color: var(--bone-50);
-    transform: translateX(2px);
+    transform: translateY(-1px);
 }
 
-/* ============================================
-   PAGE HEADER — editorial, no boxed icon
-   ============================================ */
+/* Page Header */
 .page-header {
     display: flex;
     align-items: center;
-    gap: 14px;
-    margin-bottom: 1.25rem;
-    padding-bottom: 0.9rem;
-    border-bottom: var(--hairline);
-    position: relative;
-}
-
-.page-header::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    bottom: -1px;
-    width: 56px;
-    height: 1px;
-    background-color: var(--sage-500);
-    animation: rule-grow 0.6s var(--ease) both;
-}
-
-@keyframes rule-grow {
-    from { width: 0; opacity: 0; }
-    to   { width: 56px; opacity: 1; }
+    gap: 1rem;
+    margin-bottom: 1rem;
 }
 
 .header-icon {
-    width: 36px;
-    height: 36px;
-    background: transparent;
-    border: var(--hairline);
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #E6F7F0 0%, #CCF0E1 100%);
+    border: 2px solid var(--admin-green);
     border-radius: var(--radius-md);
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    transition: border-color 0.3s var(--ease), background-color 0.3s var(--ease);
-}
-.header-icon:hover {
-    border-color: var(--sage-400);
-    background-color: var(--sage-50);
 }
 
 .header-icon i {
-    font-size: 18px;
-    color: var(--sage-600);
+    font-size: 28px;
+    color: var(--admin-green);
 }
 
 .header-text h3 {
-    font-family: 'Instrument Serif', 'Instrument Sans', serif;
-    font-size: 1.7rem;
-    font-weight: 400;
-    color: var(--ink-900);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gray-900);
     margin: 0;
-    line-height: 1.1;
-    letter-spacing: -0.015em;
+    line-height: 1.2;
 }
 
-/* ============================================
-   SIDEBAR LIST — flat pills, breathing hover
-   ============================================ */
 .list-group {
-    gap: 2px;
+    gap: 8px;
 }
 
 .list-group-item {
@@ -293,147 +158,36 @@ body > * {
 }
 
 .list-group-item a {
-    color: inherit;
+    color: #fff;
     text-decoration: none;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 9px 12px;
-    border-radius: var(--radius-md) !important;
+    padding: 8px 12px;
+    border-radius: 8px !important;
     font-weight: 400;
-    transition: background-color 0.25s var(--ease), color 0.25s var(--ease), padding-left 0.3s var(--ease);
-    position: relative;
-}
-
-.list-group-item a::before {
-    content: "";
-    position: absolute;
-    left: 4px;
-    top: 50%;
-    width: 2px;
-    height: 0;
-    background-color: currentColor;
-    border-radius: 2px;
-    transform: translateY(-50%);
-    transition: height 0.3s var(--ease);
-    opacity: 0.6;
+    transition: all 0.3s ease;
 }
 
 .list-group-item a:hover {
-    background-color: rgba(255, 255, 255, 0.06);
-    color: inherit;
-    padding-left: 16px;
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    text-decoration: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
-.list-group-item a:hover::before { height: 16px; }
 
-.list-group-item .active,
-.list-group-item a.active {
-    background-color: rgba(255, 255, 255, 0.10);
-    font-weight: 600;
-    padding-left: 16px;
+.list-group-item .active {
+    background-color: rgba(255, 255, 255, 0.1);
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
-.list-group-item a.active::before { height: 16px; }
 
 .count {
-    background-color: rgba(255, 255, 255, 0.10);
-    color: inherit;
-    font-size: 12px;
-    font-weight: 500;
-    font-variant-numeric: tabular-nums;
-    padding: 1px 8px;
-    border-radius: 999px;
-    min-width: 22px;
-    text-align: center;
-    transition: background-color 0.25s var(--ease);
-}
-.list-group-item a:hover .count { background-color: rgba(255, 255, 255, 0.18); }
-
-/* ============================================
-   APP SIDEBAR SURFACE (Tickets cell wrapper)
-   Replaces the dark slate with a calm bone surface.
-   ============================================ */
-.app-sidebar {
-    background-color: var(--bone-100);
-    color: var(--ink-800);
-    min-width: 280px;
-    border-right: var(--hairline);
-    border-radius: 0 !important;
-}
-
-.app-sidebar h6 {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--ink-400);
-    margin-bottom: 8px;
-}
-
-.app-sidebar .list-group-item a {
-    color: var(--ink-800);
-}
-.app-sidebar .list-group-item a:hover {
-    background-color: var(--bone-200);
-    color: var(--ink-900);
-}
-.app-sidebar .list-group-item a.active,
-.app-sidebar .list-group-item .active {
-    background-color: var(--sage-100);
-    color: var(--sage-700);
-}
-.app-sidebar .count {
-    background-color: var(--bone-200);
-    color: var(--ink-600);
-}
-.app-sidebar .list-group-item a:hover .count {
-    background-color: var(--bone-300);
-}
-.app-sidebar .list-group-item a.active .count {
-    background-color: var(--sage-200);
-    color: var(--sage-700);
-}
-
-/* User block in the app sidebar */
-.app-sidebar .sidebar-user {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 6px 4px 14px;
-    margin-bottom: 14px;
-    border-bottom: var(--hairline);
-}
-.app-sidebar .sidebar-user img {
-    width: 36px;
-    height: 36px;
-    border-radius: 999px;
-    object-fit: cover;
-    border: var(--hairline);
-}
-.app-sidebar .sidebar-user .name {
+    background-color: rgba(255, 255, 255, 0.2);
     font-size: 14px;
-    font-weight: 600;
-    color: var(--ink-900);
-    line-height: 1.1;
-}
-.app-sidebar .sidebar-user .role {
-    font-size: 11px;
-    color: var(--ink-400);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-}
-
-/* Ticket-info left sidebar (existing element) — softer surface */
-.sidebar-left .sidebar-scroll {
-    box-shadow: none !important;
-    border: var(--hairline);
-    background-color: var(--bone-0) !important;
-}
-.sidebar-left .sidebar-scroll h3 {
-    font-family: 'Instrument Serif', serif;
-    font-weight: 400 !important;
-    font-size: 1.05rem !important;
-    color: var(--ink-900);
-    letter-spacing: -0.01em;
+    font-weight: bold;
+    padding: 0 4px;
+    border-radius: 8px;
 }
 
 
@@ -764,12 +518,11 @@ body > * {
 
 /* Estilos generales para flash messages */
 .flash-message {
-    top: 64px;
+    top: 55px;
     margin: 10px;
-    box-shadow: none;
-    border: var(--hairline);
-    animation: slideInRight 0.45s var(--ease);
-    border-radius: var(--radius-md);
+    box-shadow: 0px 4px 4px rgba(0,0,0,0.1);
+    animation: slideInRight 0.3s ease-out;
+    border-radius: 8px;
 }
 
 .flash-message.hiding {
@@ -861,10 +614,10 @@ body > * {
     border-radius: 8px;
 }
 
-/* Sidebar scrollbars — flat, hairline only */
+/* Sidebar scrollbars with border-radius integration */
 .sidebar-scroll {
-    border-radius: 0;
-    box-shadow: none;
+    border-radius: 0 8px 8px 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .sidebar-scroll::-webkit-scrollbar {
@@ -1018,249 +771,10 @@ body > * {
 
 .rounded-md { border-radius: var(--radius-md); }
 
-/* Layout: app shell is 56px topbar + scroll area below */
-.app-topbar { max-height: 56px; z-index: 1000; }
-.below-topbar-h { height: calc(100vh - 56px); }
-.below-topbar-mh { max-height: calc(100vh - 56px); }
-
-/* ============================================
-   CONTENT SHELL — harmonious spacing, balanced rhythm
-   ============================================ */
-.content-shell {
-    width: 100%;
-    padding: 28px 32px 16px;
-    gap: 14px;
-}
-
-.content-shell > * + * { margin-top: 0; }
-
-.content-shell .page-header { margin-bottom: 4px; }
-
-.content-toolbar {
-    padding: 4px 0 2px;
-}
-
-.content-meta {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    padding: 10px 2px 12px;
-    color: var(--ink-400);
-    font-size: 13px;
-    letter-spacing: 0.005em;
-}
-.content-meta .meta-count {
-    font-variant-numeric: tabular-nums;
-    font-weight: 600;
-    color: var(--ink-800);
-    font-size: 14px;
-}
-.content-meta .meta-label {
-    color: var(--ink-600);
-}
-.content-meta .meta-sep {
-    color: var(--bone-300);
-    margin: 0 2px;
-}
-.content-meta .meta-page {
-    color: var(--ink-400);
-}
-
-.content-pagination {
-    margin-top: 12px;
-    padding-top: 10px;
-    border-top: var(--hairline);
-}
-
-/* ============================================
-   TICKETS TABLE — editorial, hairline, no shadows
-   ============================================ */
-.tickets-table-wrap {
-    background-color: var(--bone-0);
-    border: var(--hairline);
-    border-radius: var(--radius-md);
-    overflow: auto;
-    box-shadow: none;
-}
-
-.tickets-table {
-    margin: 0;
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    background-color: var(--bone-0);
-}
-
-.tickets-table thead th {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background-color: var(--bone-50);
-    color: var(--ink-400);
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    padding: 12px 14px;
-    border-bottom: var(--hairline);
-    border-top: 0;
-    text-align: left;
-    white-space: nowrap;
-}
-.tickets-table thead th a {
-    color: inherit;
-    text-decoration: none;
-    transition: color 0.2s var(--ease);
-}
-.tickets-table thead th a:hover { color: var(--sage-700); }
-.tickets-table thead th a.asc::after  { content: " ↑"; color: var(--sage-500); }
-.tickets-table thead th a.desc::after { content: " ↓"; color: var(--sage-500); }
-
-.tickets-table tbody td {
-    padding: 14px;
-    border-top: var(--hairline);
-    font-size: 14px;
-    color: var(--ink-800);
-    vertical-align: middle;
-    background-color: transparent;
-    transition: background-color 0.2s var(--ease);
-}
-.tickets-table tbody tr:first-child td { border-top: 0; }
-
-.tickets-table tbody tr {
-    transition: background-color 0.22s var(--ease);
-}
-.tickets-table tbody tr:hover td {
-    background-color: var(--bone-50);
-}
-
-/* Column sizing */
-.tickets-table .col-check     { width: 38px; padding-right: 4px; }
-.tickets-table .col-status    { width: 110px; }
-.tickets-table .col-subject   { min-width: 320px; max-width: 360px; }
-.tickets-table .col-requester { min-width: 180px; max-width: 220px; }
-.tickets-table .col-assignee  { width: 180px; }
-.tickets-table .col-date      {
-    width: 130px;
-    color: var(--ink-400);
-    font-variant-numeric: tabular-nums;
-    font-size: 13px;
-    white-space: nowrap;
-}
-
-/* Subject — link with sliding underline */
-.subject-link {
-    color: var(--ink-900);
-    font-weight: 500;
-    text-decoration: none;
-    background-image: linear-gradient(var(--sage-500), var(--sage-500));
-    background-repeat: no-repeat;
-    background-position: 0 100%;
-    background-size: 0% 1px;
-    transition: background-size 0.35s var(--ease), color 0.2s var(--ease);
-    padding-bottom: 1px;
-}
-.subject-link:hover {
-    color: var(--sage-700);
-    background-size: 100% 1px;
-}
-
-/* Requester */
-.requester-name {
-    display: block;
-    font-weight: 500;
-    color: var(--ink-800);
-    font-size: 13.5px;
-    line-height: 1.25;
-}
-.requester-email {
-    display: block;
-    color: var(--ink-400);
-    font-size: 12px;
-    line-height: 1.25;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Checkboxes — quiet, sage when checked */
-.tickets-table .form-check-input {
-    border: 1.5px solid var(--bone-300);
-    border-radius: 4px;
-    width: 16px;
-    height: 16px;
-    margin: 0;
-    cursor: pointer;
-    transition: border-color 0.2s var(--ease), background-color 0.2s var(--ease);
-}
-.tickets-table .form-check-input:hover {
-    border-color: var(--sage-400);
-}
-.tickets-table .form-check-input:checked {
-    background-color: var(--sage-500);
-    border-color: var(--sage-500);
-}
-.tickets-table .form-check-input:focus {
-    box-shadow: 0 0 0 3px var(--sage-100);
-    border-color: var(--sage-500);
-}
-
-/* Assignee select inside table — flatter look */
-.tickets-table .table-assign-form { margin: 0; }
-.tickets-table .form-select-sm {
-    border: 1px solid var(--bone-200);
-    border-radius: var(--radius-sm);
-    background-color: transparent;
-    color: var(--ink-800);
-    font-size: 13px;
-    padding: 4px 26px 4px 10px;
-    transition: border-color 0.2s var(--ease), background-color 0.2s var(--ease);
-}
-.tickets-table .form-select-sm:hover {
-    border-color: var(--sage-400);
-    background-color: var(--bone-0);
-}
-.tickets-table .form-select-sm:focus {
-    border-color: var(--sage-500);
-    box-shadow: 0 0 0 3px var(--sage-100);
-}
-
-/* ============================================
-   EMPTY STATE
-   ============================================ */
-.empty-state {
-    margin: 24px 0;
-    padding: 56px 32px;
-    text-align: center;
-    background-color: var(--bone-0);
-    border: var(--hairline);
-    border-radius: var(--radius-md);
-    color: var(--ink-600);
-    animation: shell-in 0.4s var(--ease) both;
-}
-.empty-state-icon {
-    width: 48px;
-    height: 48px;
-    margin: 0 auto 14px;
-    border-radius: 999px;
-    border: var(--hairline);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--ink-400);
-    font-size: 22px;
-}
-.empty-state-title {
-    font-family: 'Instrument Serif', serif;
-    font-size: 1.4rem;
-    color: var(--ink-900);
-    margin: 0 0 4px;
-    letter-spacing: -0.01em;
-}
-.empty-state-hint {
-    font-size: 13px;
-    color: var(--ink-400);
-    margin: 0;
-}
+/* Layout: app shell is 55px topbar + scroll area below */
+.app-topbar { max-height: 55px; z-index: 1000; }
+.below-topbar-h { height: calc(100vh - 55px); }
+.below-topbar-mh { max-height: calc(100vh - 55px); }
 
 /* Tag/label primitives */
 .tag-input-inline {
