@@ -1,6 +1,6 @@
 <!-- Right Sidebar - User Info (with independent scroll) -->
 <div class="sidebar-right d-flex flex-column p-3">
-    <div class="bg-white p-3 text-start shadow-sm" style="border-radius: 8px;">
+    <div class="bg-white p-3 text-start shadow-sm rounded-md" >
         <div class="avatar-large text-white rounded-circle d-flex align-items-center justify-content-center fw-bold mb-2"
             style="width: 60px; height: 60px; font-size: 28px; background-color: #CD6A15">
             <?= strtoupper(substr($ticket->requester->name, 0, 2)) ?>
@@ -9,7 +9,7 @@
         <small class="text-muted"><?= h($ticket->requester->email) ?></small>
     </div>
 
-    <div class="sidebar-scroll flex-grow-1 overflow-auto mt-3 bg-white shadow-sm" style="border-radius: 8px;">
+    <div class="sidebar-scroll flex-grow-1 overflow-auto mt-3 bg-white shadow-sm rounded-md" >
         <div class="p-3">
         <section class="mb-3">
             <h3 class="fs-6 mb-3">Información del Usuario</h3>

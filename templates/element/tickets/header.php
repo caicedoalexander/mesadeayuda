@@ -10,7 +10,7 @@ $isResolved = in_array($entity->status, $resolvedStatuses);
 ?>
 
 <!-- Fixed Header -->
-<div class="py-3 px-4 shadow-sm bg-white" style="border-radius: 8px;">
+<div class="py-3 px-4 shadow-sm bg-white rounded-md" >
     <div class="d-flex justify-content-between gap-5 small">
         <div class="d-flex flex-column justify-content-between" style="min-width: 0; flex: 1;">
             <div class="marquee-container ticket-subject-container" style="max-width: 600px;">
@@ -33,15 +33,4 @@ $isResolved = in_array($entity->status, $resolvedStatuses);
     </div>
 </div>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        if (typeof MarqueeText !== 'undefined') {
-            MarqueeText.init('.ticket-subject-container', '.ticket-subject-text', {
-                speed: 60,
-                minDuration: 10,
-                hoverDelay: 0,
-                resetOnLeave: true
-            });
-        }
-    });
-</script>
+<?= $this->Html->script('tickets-marquee', ['block' => 'script']) ?>

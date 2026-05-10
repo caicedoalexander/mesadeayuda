@@ -68,11 +68,11 @@ $requesterUser = $entity->requester ?? null;
                         <div class="small">
                             <!-- Collapsed View (Default) -->
                             <div id="<?= $recipientsId ?>-collapsed" class="recipients-collapsed">
-                                <div class="d-flex flex-column gap-0" style="font-size: 12px;">
+                                <div class="d-flex flex-column gap-0 fs-xs" >
                                     <span class="">
                                         <strong>Para:</strong> <?= $namesString ?>
                                     </span>
-                                    <a href="#" class="text-nowrap" style="font-size: 12px;" onclick="toggleRecipients('<?= $recipientsId ?>'); return false;">
+                                    <a href="#" class="text-nowrap fs-xs"  onclick="toggleRecipients('<?= $recipientsId ?>'); return false;">
                                         Mostrar más
                                     </a>
                                 </div>
@@ -81,17 +81,17 @@ $requesterUser = $entity->requester ?? null;
                             <!-- Expanded View (Hidden by default) -->
                             <div id="<?= $recipientsId ?>-expanded" class="recipients-expanded" style="display: none;">
                                 <?php if (!empty($emailTo)): ?>
-                                    <div class="mb-0" style="font-size: 12px;">
+                                    <div class="mb-0 fs-xs" >
                                         <strong>Para:</strong> <?= implode(', ', $toListDetailed) ?>
                                     </div>
                                 <?php endif; ?>
                                 <?php if (!empty($emailCc)): ?>
-                                    <div class="mb-0" style="font-size: 12px;">
+                                    <div class="mb-0 fs-xs" >
                                         <strong>CC:</strong> <?= implode(', ', $ccListDetailed) ?>
                                     </div>
                                 <?php endif; ?>
-                                <div class="mb-0" style="font-size: 12px;">
-                                    <a href="#" class="text-nowrap" style="font-size: 12px;" onclick="toggleRecipients('<?= $recipientsId ?>'); return false;">
+                                <div class="mb-0 fs-xs" >
+                                    <a href="#" class="text-nowrap fs-xs"  onclick="toggleRecipients('<?= $recipientsId ?>'); return false;">
                                         Mostrar menos
                                     </a>
                                 </div>
@@ -176,11 +176,11 @@ $requesterUser = $entity->requester ?? null;
                                     <div class="small mt-1">
                                         <!-- Collapsed View (Default) -->
                                         <div id="<?= $commentRecipientsId ?>-collapsed" class="recipients-collapsed">
-                                            <div class="d-flex flex-column gap-0" style="font-size: 12px;">
+                                            <div class="d-flex flex-column gap-0 fs-xs" >
                                                 <span class="">
                                                     <strong>Para:</strong> <?= $commentNamesString ?>
                                                 </span>
-                                                <a href="#" class="text-nowrap" style="font-size: 12px;" onclick="toggleRecipients('<?= $commentRecipientsId ?>'); return false;">
+                                                <a href="#" class="text-nowrap fs-xs"  onclick="toggleRecipients('<?= $commentRecipientsId ?>'); return false;">
                                                     Mostrar más
                                                 </a>
                                             </div>
@@ -189,17 +189,17 @@ $requesterUser = $entity->requester ?? null;
                                         <!-- Expanded View (Hidden by default) -->
                                         <div id="<?= $commentRecipientsId ?>-expanded" class="recipients-expanded" style="display: none;">
                                             <?php if (!empty($commentEmailTo)): ?>
-                                                <div class="mb-0" style="font-size: 12px;">
+                                                <div class="mb-0 fs-xs" >
                                                     <strong>Para:</strong> <?= implode(', ', $commentToListDetailed) ?>
                                                 </div>
                                             <?php endif; ?>
                                             <?php if (!empty($commentEmailCc)): ?>
-                                                <div class="mb-0" style="font-size: 12px;">
+                                                <div class="mb-0 fs-xs" >
                                                     <strong>CC:</strong> <?= implode(', ', $commentCcListDetailed) ?>
                                                 </div>
                                             <?php endif; ?>
-                                            <div class="mb-0" style="font-size: 12px;">
-                                                <a href="#" class="text-nowrap" style="font-size: 12px;" onclick="toggleRecipients('<?= $commentRecipientsId ?>'); return false;">
+                                            <div class="mb-0 fs-xs" >
+                                                <a href="#" class="text-nowrap fs-xs"  onclick="toggleRecipients('<?= $commentRecipientsId ?>'); return false;">
                                                     Mostrar menos
                                                 </a>
                                             </div>

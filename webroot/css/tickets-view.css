@@ -1,0 +1,189 @@
+    /* Only custom CSS that Bootstrap doesn't provide */
+
+    /* Main Container - Fixed height viewport */
+    .ticket-view-container {
+        display: grid;
+        grid-template-columns: 288px 1fr 288px;
+        gap: 0;
+        height: calc(100vh - 55px);
+        max-height: calc(100vh - 55px);
+        overflow: hidden;
+        width: 100%;
+    }
+
+    /* Fixed heights for columns */
+    .sidebar-left,
+    .sidebar-right,
+    .main-content {
+        height: calc(100dvh - 55px);
+    }
+
+    /* Editor tabs active state */
+    .editor-tab {
+        background: #f8f9fa;
+        color: #495057;
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    .editor-tab:hover {
+        background: #e9ecef;
+    }
+
+    .editor-tab.active {
+        background: white;
+        color: #555;
+        border-bottom: 2px solid #555 !important;
+        margin-bottom: -1px;
+    }
+
+    /* Timeline styles */
+    .timeline {
+        position: relative;
+    }
+
+    .timeline-item {
+        position: relative;
+        padding-left: 8px;
+    }
+
+    .timeline-item:not(:last-child)::before {
+        content: '';
+        position: absolute;
+        left: 13px;
+        top: 20px;
+        bottom: -15px;
+        width: 2px;
+        background: #dee2e6;
+    }
+
+    /* File upload styles */
+    .file-list {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 1fr 1fr 1fr;
+        margin-top: 8px;
+    }
+
+    .file-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 6px;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+    }
+
+    .file-item:hover {
+        background: #e9ecef;
+        border-color: #adb5bd;
+    }
+
+    .file-item-icon {
+        flex-shrink: 0;
+        font-size: 20px;
+        width: 20px;
+        text-align: center;
+    }
+
+    .file-item-info {
+        flex-grow: 1;
+        min-width: 0;
+    }
+
+    .file-item-name {
+        font-size: 13px;
+        font-weight: 500;
+        color: #212529;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 75px;
+    }
+
+    .file-item-size {
+        font-size: 11px;
+        color: #6c757d;
+    }
+
+    .file-item-remove {
+        flex-shrink: 0;
+        background: none;
+        border: none;
+        color: #dc3545;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        font-size: 14px;
+        line-height: 1;
+    }
+
+    .file-item-remove:hover {
+        background: #dc3545;
+        color: white;
+    }
+
+    /* Reply Editor - Internal Note Mode (Yellow Background) */
+    #editor-container {
+        background-color: #ffffff;
+        transition: background-color 0.3s ease;
+    }
+
+    #editor-container.internal-note-mode {
+        background-color: #fff9e6;
+    }
+
+    #editor-container.internal-note-mode #comment-textarea {
+        background-color: #fff9e6 !important;
+    }
+
+    /* Cursor pointer for clickable elements */
+    .cursor-pointer {
+        cursor: pointer;
+    }
+
+    .cursor-pointer:hover {
+        background-color: #f8f9fa;
+    }
+
+    /* Recipients collapsed view styling */
+    #recipients-collapsed {
+        transition: background-color 0.2s ease;
+    }
+
+    #recipients-collapsed:hover {
+        background-color: #f8f9fa;
+    }
+
+
+    /* Recipients expanded/collapsed animation */
+    #recipients-expanded,
+    #recipients-collapsed {
+        transition: all 0.3s ease-in-out;
+    }
+
+    /* Comment Type Selector (Dropdown Button) */
+    .comment-type-selector {
+        border-color: #dee2e6;
+        background-color: white;
+        font-weight: 500;
+        min-width: 180px;
+    }
+
+    .comment-type-selector:hover {
+        background-color: #f8f9fa;
+        border-color: #adb5bd;
+    }
+
+    .comment-type-selector:focus {
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+    /* Recipients text in header */
+    #comment-type-recipients-text {
+        font-size: 13px;
+        color: #6c757d;
+    }

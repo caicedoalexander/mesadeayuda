@@ -2,7 +2,7 @@
 <html lang="es">
 <?= $this->element('head') ?>
 <body>
-    <nav class="top-navbar" style="max-height: 55px; z-index: 1000;">
+    <nav class="top-navbar app-topbar" >
         <div class="d-flex justify-content-between align-items-center px-3 w-100">
             <img src="<?= $this->Url->image('logos/soporte-interno.svg') ?>">
             <div class="nav-menu d-flex align-items-center gap-3 py-3">
@@ -15,11 +15,11 @@
         </div>
     </nav>
 
-    <div class="overflow-auto sidebar-scroll" style="max-height: calc(100vh - 55px);">
+    <div class="overflow-auto sidebar-scroll below-topbar-mh" >
         <?= $this->Flash->render() ?>
         <!-- Loading Spinner -->
         <?= $this->element('loading_spinner') ?>
-        <div class="d-flex" style="height: calc(100vh - 55px);">
+        <div class="d-flex below-topbar-h" >
             <?= $this->fetch('content') ?>
         </div>
     </div>

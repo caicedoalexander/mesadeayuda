@@ -42,27 +42,27 @@
         <!-- Avg Times -->
         <div class="row g-2">
             <div class="col-6">
-                <div class="text-center p-2" style="background: var(--gray-100); border-radius: 8px;">
-                    <div style="font-size: 1.25rem; font-weight: 700; color: var(--gray-900);">
+                <div class="text-center p-2 surface-soft" >
+                    <div class="heading-md">
                         <?php if ($avgResponseTime && $avgResponseTime->avg_hours): ?>
                             <?= round($avgResponseTime->avg_hours, 1) ?>h
                         <?php else: ?>
                             N/A
                         <?php endif; ?>
                     </div>
-                    <div style="font-size: 0.75rem; color: var(--gray-600); font-weight: 600;">T. Respuesta</div>
+                    <div class="label-meta">T. Respuesta</div>
                 </div>
             </div>
             <div class="col-6">
-                <div class="text-center p-2" style="background: var(--gray-100); border-radius: 8px;">
-                    <div style="font-size: 1.25rem; font-weight: 700; color: var(--gray-900);">
+                <div class="text-center p-2 surface-soft" >
+                    <div class="heading-md">
                         <?php if ($avgResolutionTime && $avgResolutionTime->avg_hours): ?>
                             <?= round($avgResolutionTime->avg_hours, 1) ?>h
                         <?php else: ?>
                             N/A
                         <?php endif; ?>
                     </div>
-                    <div style="font-size: 0.75rem; color: var(--gray-600); font-weight: 600;">T. Resolución</div>
+                    <div class="label-meta">T. Resolución</div>
                 </div>
             </div>
         </div>

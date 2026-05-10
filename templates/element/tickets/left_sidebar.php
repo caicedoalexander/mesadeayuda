@@ -1,6 +1,6 @@
 <!-- Left Sidebar - Ticket Info (with independent scroll) -->
 <div class="sidebar-left d-flex flex-column p-3">
-    <div class="sidebar-scroll flex-grow-1 overflow-auto shadow-sm bg-white" style="border-radius: 8px;">
+    <div class="sidebar-scroll flex-grow-1 overflow-auto shadow-sm bg-white rounded-md" >
         <div class="p-3">
         <?php
         // Check if ticket is locked (in final status)

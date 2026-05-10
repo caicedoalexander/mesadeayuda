@@ -37,15 +37,15 @@ $requesterEmail = $entity->requester->email;
     <!-- Comment Type Selector (Dropdown style) -->
     <div class="d-flex align-items-center gap-4 px-3 py-2">
         <div class="dropup">
-            <button class="btn py-2 text-muted px-4 btn-sm dropdown-toggle shadow-sm d-flex align-items-center gap-2 comment-type-selector"
+            <button
                     type="button"
                     id="comment-type-dropdown"
                     data-bs-toggle="dropdown"
-                    aria-expanded="false" style="border-radius: 8px;">
+                    aria-expanded="false" class="btn py-2 text-muted px-4 btn-sm dropdown-toggle shadow-sm d-flex align-items-center gap-2 comment-type-selector rounded-md">
                 <i class="bi bi-reply-fill text-muted" id="comment-type-icon"></i>
                 <span id="comment-type-label" class="text-muted">Respuesta pública</span>
             </button>
-            <ul class="dropdown-menu w-100 shadow p-0 mb-2" aria-labelledby="comment-type-dropdown" style="border-radius: 8px;">
+            <ul class="dropdown-menu w-100 shadow p-0 mb-2 rounded-md" aria-labelledby="comment-type-dropdown" >
                 <li>
                     <a class="dropdown-item d-flex text-muted align-items-center gap-2 px-3" href="#" onclick="setCommentType('public'); return false;">
                         <i class="bi bi-reply-fill"></i>
@@ -62,7 +62,7 @@ $requesterEmail = $entity->requester->email;
         </div>
         <div class="" id="comment-type-recipients" onclick="expandRecipients()" style="cursor: pointer;">
             <span id="comment-type-recipients-text"
-                  style="font-size: 14px;"
+                  class="fs-sm"
                   data-original-text="<?= h($requesterName) ?>">
                 <?= h($requesterName) ?>
             </span>
@@ -88,16 +88,13 @@ $requesterEmail = $entity->requester->email;
                     <div class="d-flex gap-2 align-items-center">
                         <label for="email-to" class="form-label small m-0 fw-semibold" style="min-width: 40px;">Para:</label>
                         <div class="flex-fill">
-                            <div class="tag-input-container d-flex flex-wrap align-items-center gap-1 bg-white border rounded px-2 py-1"
-                                 id="email-to-container"
-                                 style="min-height: 32px; cursor: text;">
+                            <div
+                                 id="email-to-container" class="tag-input-container d-flex flex-wrap align-items-center gap-1 bg-white border rounded px-2 py-1 editable-line">
                                 <!-- Los tags se renderizarán aquí -->
                                 <input type="text"
-                                    class="tag-input-field border-0 flex-fill fw-light"
                                     id="email-to"
                                     placeholder="Agregar destinatario"
-                                    autocomplete="off"
-                                    style="outline: none; min-width: 180px; padding: 2px 4px; font-size: 13px;">
+                                    autocomplete="off" class="tag-input-field border-0 flex-fill fw-light tag-input-inline">
                             </div>
                             <input type="hidden" name="email_to" id="email-to-hidden" value="">
                         </div>
@@ -107,16 +104,13 @@ $requesterEmail = $entity->requester->email;
                     <div class="d-flex gap-2 align-items-center">
                         <label for="email-cc" class="form-label small m-0 fw-semibold" style="min-width: 40px;">CC:</label>
                         <div class="flex-fill">
-                            <div class="tag-input-container d-flex flex-wrap align-items-center gap-1 bg-white border rounded px-2 py-1"
-                                 id="email-cc-container"
-                                 style="min-height: 32px; cursor: text;">
+                            <div
+                                 id="email-cc-container" class="tag-input-container d-flex flex-wrap align-items-center gap-1 bg-white border rounded px-2 py-1 editable-line">
                                 <!-- Los tags se renderizarán aquí -->
                                 <input type="text"
-                                    class="tag-input-field border-0 flex-fill fw-light"
                                     id="email-cc"
                                     placeholder="Agregar copia"
-                                    autocomplete="off"
-                                    style="outline: none; min-width: 180px; padding: 2px 4px; font-size: 13px;">
+                                    autocomplete="off" class="tag-input-field border-0 flex-fill fw-light tag-input-inline">
                             </div>
                             <input type="hidden" name="email_cc" id="email-cc-hidden" value="">
                         </div>
@@ -152,7 +146,7 @@ $requesterEmail = $entity->requester->email;
                     <div id="file-list" class="file-list"></div>
                 </div>
 
-                <div class="d-flex align-items-center gap-2" style="border-radius: 8px;">
+                <div class="d-flex align-items-center gap-2 rounded-md" >
                     <!-- Status Selector (Dropdown style) -->
                     <?= $this->Form->hidden('status', ['value' => $entity->status, 'id' => 'status-hidden']) ?>
 
@@ -160,7 +154,7 @@ $requesterEmail = $entity->requester->email;
                         <?php
                             $currentConfig = $statuses[$entity->status] ?? $statuses[array_key_first($statuses)] ?? [];
                         ?>
-                        <button class="btn border dropdown-toggle bg-light d-flex align-items-center gap-2 status-selector shadow-none" style="border-radius: 8px;"
+                        <button class="btn border dropdown-toggle bg-light d-flex align-items-center gap-2 status-selector shadow-none rounded-md" 
                                 type="button"
                                 id="status-dropdown"
                                 data-bs-toggle="dropdown"
@@ -172,7 +166,7 @@ $requesterEmail = $entity->requester->email;
                         <ul class="dropdown-menu rounded shadow-sm p-0 mb-2" aria-labelledby="status-dropdown">
                             <?php foreach ($statuses as $statusKey => $statusConfig): ?>
                             <li>
-                                <a class="dropdown-item fw-bold d-flex align-items-center py-1 gap-2" style="font-size: 14px;" href="#" onclick="setStatus('<?= h($statusKey) ?>'); return false;">
+                                <a class="dropdown-item fw-bold d-flex align-items-center py-1 gap-2 fs-sm"  href="#" onclick="setStatus('<?= h($statusKey) ?>'); return false;">
                                     <i class="bi bi-circle-fill" style="color: <?= h($statusConfig['color']) ?>;"></i>
                                     <span><?= h($statusConfig['label']) ?></span>
                                 </a>
@@ -194,79 +188,38 @@ $requesterEmail = $entity->requester->email;
 </div>
 <?php endif; // End isLocked check ?>
 
+<?php
+$systemEmailAddr = strtolower($systemConfig['smtp_username'] ?? $systemConfig['gmail_user_email'] ?? '');
+
+$buildRecipients = function ($field) use ($systemEmailAddr) {
+    if (empty($field)) {
+        return [];
+    }
+    $decoded = is_string($field) ? json_decode($field, true) : $field;
+    if (!is_array($decoded)) {
+        return [];
+    }
+    $out = [];
+    foreach ($decoded as $r) {
+        if (!empty($r['email']) && strtolower($r['email']) !== $systemEmailAddr) {
+            $out[] = ['name' => $r['name'] ?? $r['email'], 'email' => $r['email']];
+        }
+    }
+
+    return $out;
+};
+
+$initialTo = array_merge(
+    [['name' => $requesterName, 'email' => $requesterEmail]],
+    $buildRecipients($entity->email_to ?? null),
+);
+$initialCc = $buildRecipients($entity->email_cc ?? null);
+?>
 <script>
-    // Initialize email recipients from entity data
-    (function() {
-        'use strict';
-
-        // Build initial recipients including requester + original email_to recipients
-        const initialToRecipients = [
-            {
-                name: "<?= h($requesterName) ?>",
-                email: "<?= h($requesterEmail) ?>"
-            }
-        ];
-
-        // Add original email_to recipients if they exist (excluding system email)
-        <?php
-        $systemEmailAddr = strtolower($systemConfig['smtp_username'] ?? $systemConfig['gmail_user_email'] ?? '');
-        $emailToData = [];
-        if (!empty($entity->email_to)) {
-            $decoded = is_string($entity->email_to) ? json_decode($entity->email_to, true) : $entity->email_to;
-            if (is_array($decoded)) {
-                // Filter out system email
-                foreach ($decoded as $recipient) {
-                    if (!empty($recipient['email']) && strtolower($recipient['email']) !== $systemEmailAddr) {
-                        $emailToData[] = $recipient;
-                    }
-                }
-            }
-        }
-        ?>
-        <?php foreach ($emailToData as $recipient): ?>
-        initialToRecipients.push({
-            name: <?= json_encode($recipient['name'] ?? $recipient['email']) ?>,
-            email: <?= json_encode($recipient['email']) ?>
-        });
-        <?php endforeach; ?>
-
-        // Build CC recipients from original email_cc (excluding system email)
-        const initialCcRecipients = [];
-        <?php
-        $emailCcData = [];
-        if (!empty($entity->email_cc)) {
-            $decoded = is_string($entity->email_cc) ? json_decode($entity->email_cc, true) : $entity->email_cc;
-            if (is_array($decoded)) {
-                // Filter out system email
-                foreach ($decoded as $recipient) {
-                    if (!empty($recipient['email']) && strtolower($recipient['email']) !== $systemEmailAddr) {
-                        $emailCcData[] = $recipient;
-                    }
-                }
-            }
-        }
-        ?>
-        <?php foreach ($emailCcData as $recipient): ?>
-        initialCcRecipients.push({
-            name: <?= json_encode($recipient['name'] ?? $recipient['email']) ?>,
-            email: <?= json_encode($recipient['email']) ?>
-        });
-        <?php endforeach; ?>
-
-        // Pass system email to JavaScript for validation
-        const systemEmail = "<?= h($systemConfig['smtp_username'] ?? '') ?>".toLowerCase();
-
-        // Wait for DOM to be ready and initialize with entity data
-        document.addEventListener('DOMContentLoaded', function() {
-            // Set system email globally for validation
-            if (window.EmailRecipients) {
-                window.EmailRecipients.systemEmail = systemEmail;
-            }
-
-            // Re-initialize EmailRecipients with initial data from entity
-            if (window.EmailRecipients && window.EmailRecipients.init) {
-                window.EmailRecipients.init(initialToRecipients, initialCcRecipients);
-            }
-        });
-    })();
+    window.replyEditorData = {
+        to: <?= json_encode($initialTo) ?>,
+        cc: <?= json_encode($initialCc) ?>,
+        systemEmail: <?= json_encode($systemConfig['smtp_username'] ?? '') ?>
+    };
 </script>
+<?= $this->Html->script('reply-editor-init', ['block' => 'script']) ?>

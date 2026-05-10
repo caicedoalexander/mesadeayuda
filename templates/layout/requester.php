@@ -2,7 +2,7 @@
 <html lang="es">
 <?= $this->element('head') ?>
 <body>
-    <nav class="top-navbar" style="max-height: 55px; z-index: 1000;">
+    <nav class="top-navbar app-topbar" >
         <div class="d-flex justify-content-between align-items-center px-3 w-100">
             <div class="d-flex align-items-center gap-2">
                 <div class="bg-white d-flex justify-content-center aling-items-center bg-white rounded-circle shadow-sm" style="width: 42px; height: 42px;">
@@ -30,11 +30,11 @@
         </div>
     </nav>
 
-    <div style="max-height: calc(100vh - 55px);">
+    <div class="below-topbar-mh">
         <?= $this->Flash->render() ?>
         <!-- Loading Spinner -->
         <?= $this->element('loading_spinner') ?>
-        <div class="d-flex" style="height: calc(100vh - 55px);">
+        <div class="d-flex below-topbar-h" >
             <?= $this->fetch('content') ?>
         </div>
     </div>

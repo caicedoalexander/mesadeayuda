@@ -760,3 +760,48 @@ body {
     width: 20px;
     font-size: 16px;
 }
+/* ============================================
+   UTILITIES — replace repeated inline style=""
+   See docs/audits/2026-05-09-code-review-src.md
+   ============================================ */
+
+.fs-sm { font-size: 14px; }
+.fs-xs { font-size: 12px; }
+.fs-13 { font-size: 13px; }
+
+.rounded-md { border-radius: var(--radius-md); }
+
+/* Layout: app shell is 55px topbar + scroll area below */
+.app-topbar { max-height: 55px; z-index: 1000; }
+.below-topbar-h { height: calc(100vh - 55px); }
+.below-topbar-mh { max-height: calc(100vh - 55px); }
+
+/* Tag/label primitives */
+.tag-input-inline {
+    outline: none;
+    min-width: 180px;
+    padding: 2px 4px;
+    font-size: 13px;
+}
+.editable-line {
+    min-height: 32px;
+    cursor: text;
+}
+
+/* Typography helpers */
+.heading-md {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--gray-900);
+}
+.label-meta {
+    font-size: 0.75rem;
+    color: var(--gray-600);
+    font-weight: 600;
+}
+
+/* Surfaces */
+.surface-soft {
+    background: var(--gray-100);
+    border-radius: var(--radius-md);
+}

@@ -73,16 +73,16 @@ $userId = $user ? $user->get('id') : null;
                             <th class="w-fit pe-4 align-middle" style="width:36px">
                                 <input type="checkbox" id="checkAll" class="form-check-input border border-dark rounded" />
                             </th>
-                            <th class="w-fit fw-semibold align-middle" style="font-size: 14px;">Estado</th>
-                            <th class="w-fit fw-semibold align-middle" style="font-size: 14px;">Asunto</th>
-                            <th class="w-fit fw-semibold align-middle" style="font-size: 14px;">Solicitante</th>
-                            <th class="w-fit fw-semibold align-middle" style="font-size: 14px;">Asignado a</th>
+                            <th class="w-fit fw-semibold align-middle fs-sm" >Estado</th>
+                            <th class="w-fit fw-semibold align-middle fs-sm" >Asunto</th>
+                            <th class="w-fit fw-semibold align-middle fs-sm" >Solicitante</th>
+                            <th class="w-fit fw-semibold align-middle fs-sm" >Asignado a</th>
                             <?php if ($view === 'resueltos'): ?>
-                                <th class="w-fit fw-semibold align-middle" style="font-size: 14px;">
+                                <th class="w-fit fw-semibold align-middle fs-sm" >
                                     <?= $this->Paginator->sort('resolved_at', 'Resuelto') ?>
                                 </th>
                             <?php endif; ?>
-                            <th class="w-fit fw-semibold align-middle" style="font-size: 14px;">
+                            <th class="w-fit fw-semibold align-middle fs-sm" >
                                 <?= $this->Paginator->sort('created', 'Solicitado') ?>
                             </th>
                         </tr>
@@ -109,8 +109,8 @@ $userId = $user ? $user->get('id') : null;
                                 </td>
 
                                 <td class="py-0 text-truncate align-middle" style="min-width: 150px; max-width: 150px;">
-                                    <strong class="" style="font-size: 14px;"><?= h($ticket->requester->name) ?></strong>
-                                    <span class="text-muted" style="font-size: 14px;">
+                                    <strong class=" fs-sm" ><?= h($ticket->requester->name) ?></strong>
+                                    <span class="text-muted fs-sm" >
                                         (<?= h($ticket->requester->email) ?>)
                                     </span>
                                 </td>
@@ -132,12 +132,12 @@ $userId = $user ? $user->get('id') : null;
                                 </td>
 
                                 <?php if ($view === 'resueltos'): ?>
-                                    <td class="py-1 align-middle lh-1" style="font-size: 14px;">
+                                    <td class="py-1 align-middle lh-1 fs-sm" >
                                         <?= $ticket->resolved_at ? $this->TimeHuman->short($ticket->resolved_at) : '-' ?>
                                     </td>
                                 <?php endif; ?>
 
-                                <td class="py-1 align-middle lh-1 " style="font-size: 14px;">
+                                <td class="py-1 align-middle lh-1  fs-sm" >
                                     <?= $this->TimeHuman->short($ticket->created) ?>
                                 </td>
                             </tr>
@@ -168,20 +168,14 @@ $userId = $user ? $user->get('id') : null;
     'showTagModal' => true
 ]) ?>
 
-<?= $this->Html->script('ajax-refresh') ?>
+<?php
+$showInitialSpinner = $this->request->getSession()->check('show_loading_spinner');
+if ($showInitialSpinner) {
+    $this->request->getSession()->delete('show_loading_spinner');
+}
+?>
+<?= $this->Html->script('ajax-refresh', ['block' => 'script']) ?>
 <script>
-    // Inicializar bulk actions module
-    initBulkActions('ticket');
-
-    // Inicializar AJAX refresh con auto-refresh cada 30 segundos
-    AjaxRefresh.init({
-        entityType: 'ticket',
-        autoRefreshSeconds: 30
-    });
-
-    // Spinner: Mostrar en carga inicial (primera vez en la sesión)
-    <?php if ($this->request->getSession()->check('show_loading_spinner')): ?>
-        LoadingSpinner.showFor(800, 'Cargando tickets...');
-        <?php $this->request->getSession()->delete('show_loading_spinner'); ?>
-    <?php endif; ?>
+    window.ticketsIndexData = { showInitialSpinner: <?= $showInitialSpinner ? 'true' : 'false' ?> };
 </script>
+<?= $this->Html->script('tickets-index', ['block' => 'script']) ?>

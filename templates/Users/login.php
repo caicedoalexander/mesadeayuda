@@ -26,61 +26,7 @@ $this->assign('title', 'Iniciar Sesión');
                 <div class="circle circle-brown" style="width: 28px; height: 28px; top: 140px; left: 25px; animation-delay: 2.3s;"></div>
             </div>
 
-            <style>
-                .login-circles {
-                    position: absolute;
-                    width: 100%;
-                    height: 100%;
-                    overflow: hidden;
-                }
-
-                .circle {
-                    position: absolute;
-                    border-radius: 50%;
-                    opacity: 1;
-                    animation: float 6s ease-in-out infinite;
-                }
-
-                .circle-orange {
-                    background: radial-gradient(circle at 30% 30%, rgba(205, 106, 21, 1), rgba(205, 106, 21, 0.5));
-                }
-
-                .circle-green {
-                    background: radial-gradient(circle at 30% 30%, rgba(0, 168, 94, 1), rgba(0, 168, 94, 0.5));
-                }
-
-                .circle-brown {
-                    background: radial-gradient(circle at 30% 30%, rgba(143, 87, 54, 1), rgba(143, 87, 54, 0.5));
-                }
-
-                @keyframes float {
-                    0%, 100% {
-                        transform: translateY(0) scale(1);
-                    }
-                    25% {
-                        transform: translateY(-15px) scale(1.05);
-                    }
-                    50% {
-                        transform: translateY(-10px) scale(0.95);
-                    }
-                    75% {
-                        transform: translateY(-20px) scale(1.02);
-                    }
-                }
-
-                /* Variaciones aleatorias en la animación */
-                .circle:nth-child(odd) {
-                    animation-duration: 7s;
-                }
-
-                .circle:nth-child(even) {
-                    animation-duration: 5s;
-                }
-
-                .circle:nth-child(3n) {
-                    animation-direction: reverse;
-                }
-            </style>
+            <?= $this->Html->css('login', ['block' => 'css']) ?>
         </div>
         <div class="d-flex flex-column justify-content-between w-75 p-5 pb-2">
             <div class="">
@@ -135,10 +81,5 @@ $this->assign('title', 'Iniciar Sesión');
         </div>
     </section>
 
-    <script>
-        // Mostrar spinner al enviar el formulario de login
-        document.querySelector('form').addEventListener('submit', function(e) {
-            LoadingSpinner.show('Iniciando sesión...');
-        });
-    </script>
+    <?= $this->Html->script('login') ?>
 </div>
