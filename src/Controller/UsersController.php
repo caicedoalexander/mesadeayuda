@@ -34,6 +34,7 @@ class UsersController extends AppController
     public function login()
     {
         $this->request->allowMethod(['get', 'post']);
+        $this->viewBuilder()->setLayout('login');
 
         $result = $this->Authentication->getResult();
 
