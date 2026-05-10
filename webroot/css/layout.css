@@ -1,0 +1,488 @@
+/* ============================================================
+   QUIET OPERATIONS — Layout System
+   Friendly · Minimal · Professional · Shadow-free
+   ------------------------------------------------------------
+   Loaded AFTER styles.css; overrides legacy chrome on:
+   topbar, sidebar, page header, list groups, tables.
+   ============================================================ */
+
+/* ---------- Design Tokens ---------- */
+:root {
+    /* Surfaces — warm neutral, not stark white */
+    --qo-canvas:        #FAFAF7;
+    --qo-surface:       #FFFFFF;
+    --qo-surface-2:     #F4F4F0;
+    --qo-surface-soft:  #F7F7F3;
+
+    /* Ink */
+    --qo-ink:           #15171A;
+    --qo-ink-2:         #3A3D41;
+    --qo-muted:         #6B7075;
+    --qo-muted-soft:    #A0A4A8;
+
+    /* Lines (1px borders replace shadows) */
+    --qo-line:          #ECECE6;
+    --qo-line-strong:   #DEDED6;
+
+    /* Accent — refined helpdesk green */
+    --qo-accent:        #0E8A4F;
+    --qo-accent-ink:    #0A6E3F;
+    --qo-accent-soft:   #E8F2EC;
+    --qo-accent-tint:   #F1F7F3;
+
+    /* Status palette (calmer than bootstrap) */
+    --qo-status-new:        #C68A12;
+    --qo-status-open:       #C0432E;
+    --qo-status-pending:    #2563B5;
+    --qo-status-resolved:   #0E8A4F;
+
+    /* Shape */
+    --qo-r-sm: 6px;
+    --qo-r-md: 10px;
+    --qo-r-lg: 14px;
+
+    /* Motion — Apple-style ease */
+    --qo-ease:    cubic-bezier(0.32, 0.72, 0, 1);
+    --qo-fast:    140ms var(--qo-ease);
+    --qo-base:    220ms var(--qo-ease);
+    --qo-slow:    420ms var(--qo-ease);
+
+    /* Layout metrics */
+    --qo-topbar-h:   56px;
+    --qo-sidebar-w:  272px;
+}
+
+/* ---------- Typography ---------- */
+html, body, * {
+    font-family: 'Geist', 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+code, kbd, samp, pre, .qo-mono, .ticket-number {
+    font-family: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace !important;
+    font-feature-settings: "ss01", "cv01";
+}
+
+body {
+    background-color: var(--qo-canvas) !important;
+    color: var(--qo-ink);
+    letter-spacing: -0.005em;
+}
+
+/* ============================================================
+   TOPBAR
+   ============================================================ */
+.top-navbar.app-topbar {
+    height: var(--qo-topbar-h);
+    max-height: var(--qo-topbar-h);
+    background: var(--qo-surface);
+    border-bottom: 1px solid var(--qo-line);
+    box-shadow: none !important;
+    padding: 0 8px;
+    z-index: 1000;
+    animation: qoFadeDown var(--qo-slow) both;
+}
+
+.top-navbar.app-topbar > .d-flex {
+    height: 100%;
+    gap: 24px;
+}
+
+.top-navbar img {
+    height: 22px;
+    width: auto;
+    opacity: 0.95;
+    transition: opacity var(--qo-fast);
+}
+.top-navbar img:hover { opacity: 1; }
+
+/* Nav links — quiet, text-first, animated underline */
+.nav-menu {
+    gap: 2px !important;
+    padding: 0 !important;
+}
+.nav-menu a {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px !important;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--qo-ink-2) !important;
+    background: transparent !important;
+    border: 0 !important;
+    outline: 0 !important;
+    box-shadow: none !important;
+    border-radius: var(--qo-r-sm) !important;
+    text-decoration: none;
+    letter-spacing: -0.005em;
+    transition: color var(--qo-fast), background-color var(--qo-fast), transform var(--qo-fast);
+}
+.nav-menu a i {
+    font-size: 15px;
+    color: var(--qo-muted);
+    transition: color var(--qo-fast), transform var(--qo-base);
+}
+.nav-menu a:hover {
+    color: var(--qo-ink) !important;
+    background: var(--qo-surface-2) !important;
+    transform: none !important;
+}
+.nav-menu a:hover i {
+    color: var(--qo-accent);
+    transform: translateY(-1px);
+}
+.nav-menu a.active,
+.nav-menu a[aria-current="page"] {
+    color: var(--qo-ink) !important;
+    background: var(--qo-accent-tint) !important;
+}
+.nav-menu a.active i { color: var(--qo-accent); }
+
+/* Logout — borderless, calm */
+.btn-logout {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px !important;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--qo-ink-2) !important;
+    background: transparent !important;
+    border: 1px solid var(--qo-line) !important;
+    outline: 0 !important;
+    border-radius: var(--qo-r-sm) !important;
+    box-shadow: none !important;
+    text-decoration: none;
+    transition: background-color var(--qo-fast), color var(--qo-fast), border-color var(--qo-fast), transform var(--qo-fast);
+}
+.btn-logout:hover {
+    color: var(--qo-ink) !important;
+    background: var(--qo-surface-2) !important;
+    border-color: var(--qo-line-strong) !important;
+    transform: none !important;
+}
+.btn-logout i { color: var(--qo-muted); transition: color var(--qo-fast); }
+.btn-logout:hover i { color: var(--qo-status-open); }
+
+.nav-user {
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+    border-left: 0;
+}
+
+/* ============================================================
+   APP SHELL
+   ============================================================ */
+.below-topbar-mh { max-height: calc(100vh - var(--qo-topbar-h)); }
+.below-topbar-h  { height:     calc(100vh - var(--qo-topbar-h)); }
+
+.sidebar-scroll {
+    background: var(--qo-canvas);
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+/* ============================================================
+   SIDEBAR (TicketsSidebar cell)
+   Override the legacy dark navy block.
+   ============================================================ */
+.qo-sidebar {
+    width: var(--qo-sidebar-w);
+    min-width: var(--qo-sidebar-w);
+    background: var(--qo-surface);
+    border-right: 1px solid var(--qo-line);
+    color: var(--qo-ink);
+    overflow-y: auto;
+    overflow-x: hidden;
+    animation: qoFadeRight var(--qo-slow) both;
+}
+.qo-sidebar::-webkit-scrollbar { width: 6px; }
+.qo-sidebar::-webkit-scrollbar-thumb { background: var(--qo-line-strong); border-radius: 8px; }
+.qo-sidebar::-webkit-scrollbar-thumb:hover { background: var(--qo-muted-soft); }
+
+.qo-sidebar__inner { padding: 20px 16px 28px; }
+
+.qo-sidebar__user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 8px 16px;
+    border-bottom: 1px solid var(--qo-line);
+    margin-bottom: 18px;
+}
+.qo-sidebar__user img,
+.qo-sidebar__user .qo-avatar {
+    width: 36px; height: 36px;
+    border-radius: 999px;
+    object-fit: cover;
+    background: var(--qo-surface-2);
+    box-shadow: none !important;
+    border: 1px solid var(--qo-line);
+}
+.qo-sidebar__user-name {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--qo-ink);
+    line-height: 1.2;
+}
+.qo-sidebar__user-role {
+    font-size: 11.5px;
+    color: var(--qo-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 2px;
+}
+
+.qo-sidebar__label {
+    font-size: 10.5px !important;
+    font-weight: 600;
+    color: var(--qo-muted) !important;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 14px 10px 6px;
+    margin: 0 !important;
+}
+
+/* List items inside sidebar */
+.qo-sidebar .list-group {
+    gap: 1px !important;
+    background: transparent;
+}
+.qo-sidebar .list-group-item {
+    background: transparent !important;
+    border: 0 !important;
+    padding: 0 !important;
+    font-size: 13.5px;
+}
+.qo-sidebar .list-group-item a {
+    position: relative;
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 12px !important;
+    color: var(--qo-ink-2) !important;
+    background: transparent !important;
+    border-radius: var(--qo-r-sm) !important;
+    box-shadow: none !important;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background-color var(--qo-fast), color var(--qo-fast), padding-left var(--qo-base);
+}
+.qo-sidebar .list-group-item a::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 50%;
+    width: 3px; height: 0;
+    background: var(--qo-accent);
+    border-radius: 0 3px 3px 0;
+    transform: translateY(-50%);
+    transition: height var(--qo-base);
+}
+.qo-sidebar .list-group-item a:hover {
+    background: var(--qo-surface-2) !important;
+    color: var(--qo-ink) !important;
+}
+.qo-sidebar .list-group-item a.active {
+    background: var(--qo-accent-tint) !important;
+    color: var(--qo-ink) !important;
+    font-weight: 600;
+    padding-left: 16px !important;
+}
+.qo-sidebar .list-group-item a.active::before { height: 18px; }
+
+/* Count chip — replaces white-on-dark legacy */
+.qo-sidebar .count {
+    background: var(--qo-surface-2) !important;
+    color: var(--qo-muted) !important;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    min-width: 24px;
+    text-align: center;
+    transition: background-color var(--qo-fast), color var(--qo-fast);
+}
+.qo-sidebar .list-group-item a:hover .count {
+    background: var(--qo-surface);
+    color: var(--qo-ink-2) !important;
+}
+.qo-sidebar .list-group-item a.active .count {
+    background: var(--qo-accent);
+    color: #fff !important;
+}
+
+/* Status dot (replaces inline bootstrap badge dots) */
+.qo-status-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 999px;
+    margin-right: 8px;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+.qo-status-dot--new      { background: var(--qo-status-new); }
+.qo-status-dot--open     { background: var(--qo-status-open); }
+.qo-status-dot--pending  { background: var(--qo-status-pending); }
+.qo-status-dot--resolved { background: var(--qo-status-resolved); }
+
+/* Hide legacy bootstrap dot badges that the cell injects inline */
+.qo-sidebar .list-group-item a > .badge {
+    background: transparent !important;
+    color: transparent !important;
+    width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: none !important;
+}
+
+/* ============================================================
+   PAGE HEADER (used by /admin and tickets index)
+   Re-uses .page-header / .header-icon classes globally.
+   ============================================================ */
+.page-header {
+    display: flex !important;
+    align-items: center;
+    gap: 14px !important;
+    margin-bottom: 18px !important;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--qo-line);
+    animation: qoFadeUp var(--qo-base) both;
+}
+.header-icon {
+    width: 36px !important;
+    height: 36px !important;
+    background: var(--qo-accent-soft) !important;
+    border: 0 !important;
+    border-radius: var(--qo-r-md) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: none !important;
+    flex-shrink: 0;
+}
+.header-icon i {
+    font-size: 18px !important;
+    color: var(--qo-accent) !important;
+}
+.header-text h3,
+.page-header h3 {
+    font-size: 1.25rem !important;
+    font-weight: 600 !important;
+    color: var(--qo-ink) !important;
+    letter-spacing: -0.015em;
+    margin: 0;
+    line-height: 1.25;
+}
+.page-header .text-muted,
+.page-header small {
+    color: var(--qo-muted) !important;
+}
+
+/* ============================================================
+   CONTENT SURFACE
+   ============================================================ */
+.table-scroll,
+.table-responsive.table-scroll {
+    background: var(--qo-surface) !important;
+    border: 1px solid var(--qo-line);
+    border-radius: var(--qo-r-md);
+    box-shadow: none !important;
+    animation: qoFadeUp var(--qo-base) both;
+}
+
+.table > :not(caption) > * > * { background-color: transparent; }
+.table thead th {
+    background: var(--qo-surface-soft) !important;
+    color: var(--qo-muted) !important;
+    font-weight: 600;
+    font-size: 11.5px !important;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--qo-line) !important;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+.table tbody tr {
+    border-bottom: 1px solid var(--qo-line);
+    transition: background-color var(--qo-fast);
+}
+.table tbody tr:last-child { border-bottom: 0; }
+.table-hover > tbody > tr:hover > * {
+    background-color: var(--qo-accent-tint) !important;
+}
+
+/* Generic surface utility */
+.qo-surface,
+.surface-soft {
+    background: var(--qo-surface) !important;
+    border: 1px solid var(--qo-line);
+    border-radius: var(--qo-r-md) !important;
+    box-shadow: none !important;
+}
+
+/* Buttons (subtle harmonization, doesn't fight bootstrap) */
+.btn {
+    border-radius: var(--qo-r-sm);
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    transition: background-color var(--qo-fast), border-color var(--qo-fast), color var(--qo-fast), transform var(--qo-fast);
+    box-shadow: none !important;
+}
+.btn:hover { transform: none; }
+.btn-primary {
+    background: var(--qo-accent);
+    border-color: var(--qo-accent);
+}
+.btn-primary:hover {
+    background: var(--qo-accent-ink);
+    border-color: var(--qo-accent-ink);
+}
+
+/* Form controls — match the calm chrome */
+.form-control, .form-select {
+    border-radius: var(--qo-r-sm);
+    border-color: var(--qo-line-strong);
+    box-shadow: none !important;
+    transition: border-color var(--qo-fast), background-color var(--qo-fast);
+}
+.form-control:focus, .form-select:focus {
+    border-color: var(--qo-accent);
+    box-shadow: 0 0 0 3px var(--qo-accent-soft) !important;
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+@keyframes qoFadeDown {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: none; }
+}
+@keyframes qoFadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: none; }
+}
+@keyframes qoFadeRight {
+    from { opacity: 0; transform: translateX(-8px); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* Reduced motion respect */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ============================================================
+   FLASH — adapt to calm palette (kills heavy shadow)
+   ============================================================ */
+.flash-message {
+    border: 1px solid var(--qo-line-strong) !important;
+    box-shadow: none !important;
+    border-radius: var(--qo-r-md) !important;
+}
