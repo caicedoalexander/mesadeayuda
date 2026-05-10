@@ -8,9 +8,9 @@ namespace App\Constants;
  */
 final class RoleConstants
 {
-    public const ROLE_ADMIN       = 'admin';
-    public const ROLE_ASESOR_TIC  = 'asesor_tic';
-    public const ROLE_EXTERNAL    = 'external';
+    public const ROLE_ADMIN = 'admin';
+    public const ROLE_ASESOR_TIC = 'asesor_tic';
+    public const ROLE_EXTERNAL = 'external';
 
     public const ROLES = [
         self::ROLE_ADMIN,
