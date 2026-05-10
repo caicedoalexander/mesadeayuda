@@ -44,7 +44,7 @@ final class TicketTest extends TestCase
     {
         $defaults = [
             'id' => 99,
-            'role' => 'agent',
+            'role' => 'asesor_tic',
             'is_active' => true,
         ];
 
@@ -144,28 +144,28 @@ final class TicketTest extends TestCase
     public function testCanBeAssignedToActiveStaff(): void
     {
         $ticket = $this->makeTicket(['status' => 'abierto']);
-        $user = $this->makeUser(['role' => 'agent', 'is_active' => true]);
+        $user = $this->makeUser(['role' => 'asesor_tic', 'is_active' => true]);
         self::assertTrue($ticket->canBeAssignedTo($user));
     }
 
     public function testCannotBeAssignedToInactiveUser(): void
     {
         $ticket = $this->makeTicket(['status' => 'abierto']);
-        $user = $this->makeUser(['role' => 'agent', 'is_active' => false]);
+        $user = $this->makeUser(['role' => 'asesor_tic', 'is_active' => false]);
         self::assertFalse($ticket->canBeAssignedTo($user));
     }
 
     public function testCannotBeAssignedToNonStaff(): void
     {
         $ticket = $this->makeTicket(['status' => 'abierto']);
-        $user = $this->makeUser(['role' => 'requester', 'is_active' => true]);
+        $user = $this->makeUser(['role' => 'external', 'is_active' => true]);
         self::assertFalse($ticket->canBeAssignedTo($user));
     }
 
     public function testCannotAssignWhenLocked(): void
     {
         $ticket = $this->makeTicket(['status' => 'resuelto']);
-        $user = $this->makeUser(['role' => 'agent', 'is_active' => true]);
+        $user = $this->makeUser(['role' => 'asesor_tic', 'is_active' => true]);
         self::assertFalse($ticket->canBeAssignedTo($user));
     }
 }
