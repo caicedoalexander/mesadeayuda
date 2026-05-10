@@ -114,9 +114,7 @@ $this->assign('title', 'Editar usuario');
                     <label for="role" class="form-label">Rol *</label>
                     <?= $this->Form->select('role', [
                         'admin' => 'Administrador',
-                        'agent' => 'Agente',
-                        'servicio_cliente' => 'Servicio al Cliente',
-                        'requester' => 'Solicitante'
+                        'asesor_tic' => 'Asesor TIC',
                     ], [
                         'value' => h($user->role),
                         'class' => 'form-select',

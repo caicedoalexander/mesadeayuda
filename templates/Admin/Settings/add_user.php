@@ -79,9 +79,7 @@ $this->assign('title', 'Añadir Usuario');
                         <?= $this->Form->label('role', 'Rol *') ?>
                         <?= $this->Form->select('role', [
                             'admin' => 'Administrador',
-                            'agent' => 'Agente',
-                            'servicio_cliente' => 'Servicio al Cliente',
-                            'requester' => 'Solicitante'
+                            'asesor_tic' => 'Asesor TIC',
                         ], [
                             'required' => true
                         ]) ?>

@@ -59,9 +59,8 @@ $this->assign('title', 'Usuarios');
                                 <?php
                                 $roles = [
                                     'admin' => 'Administrador',
-                                    'agent' => 'Agente',
-                                    'servicio_cliente' => 'Servicio al Cliente',
-                                    'requester' => 'Solicitante',
+                                    'asesor_tic' => 'Asesor TIC',
+                                    'external' => 'Externo',
                                 ];
                                 $roleKey = $user->role;
                                 $roleName = $roles[$roleKey] ?? $roleKey;
