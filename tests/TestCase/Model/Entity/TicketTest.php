@@ -51,10 +51,10 @@ final class TicketTest extends TestCase
         return new User(array_merge($defaults, $props), ['markNew' => false, 'markClean' => true]);
     }
 
-    public function testIsNew(): void
+    public function testIsStatusNew(): void
     {
-        self::assertTrue($this->makeTicket(['status' => 'nuevo'])->isNew());
-        self::assertFalse($this->makeTicket(['status' => 'abierto'])->isNew());
+        self::assertTrue($this->makeTicket(['status' => 'nuevo'])->isStatusNew());
+        self::assertFalse($this->makeTicket(['status' => 'abierto'])->isStatusNew());
     }
 
     public function testIsOpen(): void

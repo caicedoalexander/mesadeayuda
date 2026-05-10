@@ -189,7 +189,7 @@ $requesterEmail = $entity->requester->email;
 <?php endif; // End isLocked check ?>
 
 <?php
-$systemEmailAddr = strtolower($systemConfig['smtp_username'] ?? $systemConfig['gmail_user_email'] ?? '');
+$systemEmailAddr = strtolower($systemConfig['gmail_user_email'] ?? '');
 
 $buildRecipients = function ($field) use ($systemEmailAddr) {
     if (empty($field)) {
@@ -219,7 +219,7 @@ $initialCc = $buildRecipients($entity->email_cc ?? null);
     window.replyEditorData = {
         to: <?= json_encode($initialTo) ?>,
         cc: <?= json_encode($initialCc) ?>,
-        systemEmail: <?= json_encode($systemConfig['smtp_username'] ?? '') ?>
+        systemEmail: <?= json_encode($systemConfig['gmail_user_email'] ?? '') ?>
     };
 </script>
 <?= $this->Html->script('reply-editor-init', ['block' => 'script']) ?>

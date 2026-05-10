@@ -191,20 +191,4 @@ class TicketNotificationService
         }
     }
 
-    /**
-     * Send a status-change email notification with try/catch logging.
-     *
-     * @param \Cake\Datasource\EntityInterface $entity Ticket entity
-     * @param string $oldStatus Previous status
-     * @param string $newStatus New status
-     * @return void
-     */
-    public function sendStatusChangeEmail(EntityInterface $entity, string $oldStatus, string $newStatus): void
-    {
-        try {
-            $this->emailService->sendEntityStatusChangeNotification($entity, $oldStatus, $newStatus);
-        } catch (Exception $e) {
-            Log::error('Failed to send status change email notification: ' . $e->getMessage());
-        }
-    }
 }

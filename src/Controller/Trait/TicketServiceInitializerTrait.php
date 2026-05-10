@@ -71,14 +71,6 @@ trait TicketServiceInitializerTrait
         return TicketConstants::PRIORITY_LABELS;
     }
 
-    /**
-     * Status keys considered "resolved".
-     */
-    protected function getResolvedStatuses(): array
-    {
-        return TicketConstants::RESOLVED_STATUSES;
-    }
-
     // endregion
 
     // region: TicketSystemController helpers

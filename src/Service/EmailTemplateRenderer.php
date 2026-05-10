@@ -7,9 +7,7 @@ use App\Constants\CacheConstants;
 use App\Constants\SettingKeys;
 use App\Model\Entity\EmailTemplate;
 use App\Service\Traits\ConfigResolutionTrait;
-use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
-use Exception;
 
 /**
  * EmailTemplateRenderer
@@ -32,7 +30,6 @@ class EmailTemplateRenderer
      * @var array<string, \App\Model\Entity\EmailTemplate|null> In-memory template cache
      */
     private array $templateCache = [];
-    private bool $preloaded = false;
     private ?array $systemConfig = null;
 
     /**
@@ -44,34 +41,7 @@ class EmailTemplateRenderer
     }
 
     /**
-     * Preload all active templates into cache (avoids N+1 queries)
-     *
-     * @return void
-     */
-    public function preloadTemplates(): void
-    {
-        if ($this->preloaded) {
-            return;
-        }
-
-        try {
-            $templatesTable = $this->fetchTable('EmailTemplates');
-            $templates = $templatesTable->find()
-                ->where(['is_active' => true])
-                ->all();
-
-            foreach ($templates as $template) {
-                $this->templateCache[$template->template_key] = $template;
-            }
-
-            $this->preloaded = true;
-        } catch (Exception $e) {
-            Log::error('EmailTemplateRenderer: Failed to preload templates: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Get a template by key (uses cache if preloaded)
+     * Get a template by key (uses cache if previously fetched).
      *
      * @param string $templateKey Template key
      * @return \App\Model\Entity\EmailTemplate|null
@@ -112,28 +82,6 @@ class EmailTemplateRenderer
     }
 
     /**
-     * Load template and render subject + body in one call
-     *
-     * @param string $templateKey Template key
-     * @param array<string, string> $variables Template variables
-     * @return array{subject: string, body: string}|null Rendered content or null if template not found
-     */
-    public function renderTemplate(string $templateKey, array $variables): ?array
-    {
-        $template = $this->getTemplate($templateKey);
-        if (!$template) {
-            Log::error("EmailTemplateRenderer: Template not found: {$templateKey}");
-
-            return null;
-        }
-
-        return [
-            'subject' => $this->render($template->subject, $variables),
-            'body' => $this->render($template->body_html, $variables),
-        ];
-    }
-
-    /**
      * Get system-wide variables common to all templates
      *
      * @return array<string, string>
@@ -144,16 +92,5 @@ class EmailTemplateRenderer
             'system_title' => $this->resolveSettingValue(SettingKeys::SYSTEM_TITLE, CacheConstants::DEFAULT_SYSTEM_TITLE),
             'current_year' => date('Y'),
         ];
-    }
-
-    /**
-     * Clear the in-memory template cache
-     *
-     * @return void
-     */
-    public function clearCache(): void
-    {
-        $this->templateCache = [];
-        $this->preloaded = false;
     }
 }

@@ -61,8 +61,9 @@ class StatusHelper extends Helper
     {
         $key = strtolower($status);
 
-        return $this->getView()->element('tickets/status_badge', [
-            'status' => $key,
+        return $this->getView()->element('tickets/badge', [
+            'kind' => 'status',
+            'value' => $key,
             'label' => $this->statusLabel($key),
             'url' => $options['url'] ?? null,
         ]);
@@ -77,8 +78,9 @@ class StatusHelper extends Helper
     {
         $key = strtolower($priority);
 
-        return $this->getView()->element('tickets/priority_badge', [
-            'priority' => $key,
+        return $this->getView()->element('tickets/badge', [
+            'kind' => 'priority',
+            'value' => $key,
             'label' => $this->priorityLabel($key),
             'url' => $options['url'] ?? null,
         ]);

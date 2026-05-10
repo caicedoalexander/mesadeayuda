@@ -152,27 +152,4 @@ class ProfileImageService
 
         return false;
     }
-
-    /**
-     * Get profile image URL with fallback to default avatar.
-     *
-     * @param string|null $profileImage Profile image path
-     * @return string Public URL
-     */
-    public function getProfileImageUrl(?string $profileImage): string
-    {
-        if (empty($profileImage)) {
-            return '/img/default-avatar.png';
-        }
-
-        if (!str_starts_with($profileImage, 'uploads/')) {
-            return '/img/default-avatar.png';
-        }
-
-        if (file_exists(WWW_ROOT . $profileImage)) {
-            return '/' . str_replace(DS, '/', $profileImage);
-        }
-
-        return '/img/default-avatar.png';
-    }
 }

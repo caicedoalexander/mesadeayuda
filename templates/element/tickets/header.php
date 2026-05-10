@@ -2,11 +2,10 @@
 /**
  * Element: Header for Tickets view.
  *
- * @var object $entity Ticket entity
- * @var array $resolvedStatuses Array of statuses considered "resolved"
+ * @var \App\Model\Entity\Ticket $entity
  */
 
-$isResolved = in_array($entity->status, $resolvedStatuses);
+$isResolved = $entity->isResolved();
 ?>
 
 <!-- Fixed Header -->

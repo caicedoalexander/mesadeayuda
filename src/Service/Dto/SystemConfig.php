@@ -16,14 +16,12 @@ final readonly class SystemConfig
 {
     /**
      * @param \App\Service\Dto\GmailConfig $gmail Gmail sub-config
-     * @param \App\Service\Dto\SmtpConfig $smtp SMTP sub-config (placeholder)
      * @param \App\Service\Dto\N8nConfig $n8n n8n sub-config
      * @param \App\Service\Dto\WhatsappConfig $whatsapp WhatsApp sub-config
      * @param \App\Service\Dto\AppConfig $app App-level sub-config
      */
     public function __construct(
         public GmailConfig $gmail,
-        public SmtpConfig $smtp,
         public N8nConfig $n8n,
         public WhatsappConfig $whatsapp,
         public AppConfig $app,
@@ -44,7 +42,6 @@ final readonly class SystemConfig
 
         return new self(
             gmail: GmailConfig::fromArray($raw),
-            smtp: SmtpConfig::fromArray($raw),
             n8n: N8nConfig::fromArray($raw),
             whatsapp: WhatsappConfig::fromArray($raw),
             app: AppConfig::fromArray($raw),
@@ -71,7 +68,6 @@ final readonly class SystemConfig
     {
         return array_merge(
             $this->gmail->toArray(),
-            $this->smtp->toArray(),
             $this->n8n->toArray(),
             $this->whatsapp->toArray(),
             $this->app->toArray(),

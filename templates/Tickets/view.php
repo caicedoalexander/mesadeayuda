@@ -3,7 +3,6 @@
  * @var \App\View\AppView $this
  * @var \App\Model\Entity\Ticket $ticket
  * @var array $statuses Injected by controller trait
- * @var array $resolvedStatuses Injected by controller trait
  */
 $this->assign('title', $ticket->ticket_number);
 $user = $this->getRequest()->getAttribute('identity');
@@ -21,7 +20,6 @@ $user = $this->getRequest()->getAttribute('identity');
     <div class="main-content d-flex flex-column p-3 gap-2">
         <?= $this->element('tickets/header', [
             'entity' => $ticket,
-            'resolvedStatuses' => $resolvedStatuses
         ]) ?>
 
         <?= $this->element('tickets/comments_list', [

@@ -91,9 +91,15 @@ class Ticket extends Entity
     }
 
     /**
+     * Domain status check for the "nuevo" lifecycle state.
+     *
+     * Named `isStatusNew` (not `isNew`) to avoid shadowing
+     * `Cake\Datasource\EntityInterface::isNew()`, which returns the
+     * persistence flag for unsaved records.
+     *
      * @return bool
      */
-    public function isNew(): bool
+    public function isStatusNew(): bool
     {
         return $this->status === TicketConstants::STATUS_NUEVO;
     }

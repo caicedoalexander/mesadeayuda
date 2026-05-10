@@ -97,7 +97,6 @@ trait TicketViewTrait
         $viewVars = array_merge($viewVars, [
             'statuses' => $selectableStatuses,
             'priorities' => $this->getPriorityConfig(),
-            'resolvedStatuses' => $this->getResolvedStatuses(),
             'isLocked' => $entity->isLocked(),
             'isAssignmentDisabled' => $authService->isAssignmentDisabled($user),
         ]);
