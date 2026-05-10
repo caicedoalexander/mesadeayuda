@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Constants\RoleConstants;
 use App\Constants\TicketConstants;
 use App\Domain\Event\TicketCreated;
 use App\Model\Entity\Ticket;
@@ -286,12 +287,13 @@ class TicketIngestionService
             $lastName = $firstName; // Fallback if no last name
         }
 
-        // Create new user with role 'requester' and null password
+        // Auto-create as 'external': non-functional marker, never logs in.
+        // Exists so tickets.requester_id can FK to a real users row.
         $user = $usersTable->newEntity([
             'email' => $email,
             'first_name' => $firstName,
             'last_name' => $lastName,
-            'role' => 'requester',
+            'role' => RoleConstants::ROLE_EXTERNAL,
             'password' => null,
             'is_active' => true,
         ], ['accessibleFields' => ['role' => true, 'is_active' => true]]);
