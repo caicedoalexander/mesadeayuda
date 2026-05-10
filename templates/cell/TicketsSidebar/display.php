@@ -7,17 +7,20 @@
  * @var \App\Model\Entity\User|null $currentUser
  */
 ?>
-<div class="text-white overflow-auto sidebar-scroll" style="background-color: #273244; min-width: 300px; border-radius: 0 8px 8px 0;">
+<div class="app-sidebar overflow-auto sidebar-scroll">
     <div class="p-4">
     <?php if ($currentUser): ?>
-        <div class="text-center mb-3">
-            <?= $this->User->profileImageTag($currentUser, ['width' => '80', 'height' => '80', 'class' => 'rounded-circle object-fit-cover shadow']) ?>
-            <div class="mt-2">
-                <strong><?= h($currentUser->name) ?></strong>
+        <div class="sidebar-user">
+            <?= $this->User->profileImageTag($currentUser, ['width' => '36', 'height' => '36']) ?>
+            <div>
+                <div class="name"><?= h($currentUser->name) ?></div>
+                <?php if (!empty($userRole)): ?>
+                    <div class="role"><?= h($userRole) ?></div>
+                <?php endif; ?>
             </div>
         </div>
     <?php endif; ?>
-    <h6 class="mb-2 fs-6">Vistas</h6>
+    <h6 class="mb-2">Vistas</h6>
     <ul class="mt-2 list-group">
         <?php if ($userRole !== 'admin'): ?>
             <li class="list-group-item">
@@ -45,7 +48,7 @@
         </li>
     </ul>
     
-    <h6 class="mt-4 mb-2 fs-6">Estados</h6>
+    <h6 class="mt-4 mb-2">Estados</h6>
     <ul class="mt-2 list-group">
         <li class="list-group-item">
             <?= $this->Html->link(
