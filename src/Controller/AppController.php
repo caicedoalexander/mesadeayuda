@@ -17,6 +17,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Constants\CacheConstants;
+use App\Constants\RoleConstants;
 use App\Constants\SettingKeys;
 use App\Model\Entity\User;
 use App\Service\Traits\SettingsEncryptionTrait;
@@ -96,6 +97,14 @@ class AppController extends Controller
         $safeConfig = array_diff_key($systemConfig, array_flip($sensitiveKeys));
         $this->set('systemConfig', $safeConfig);
         $this->set('systemTitle', $systemConfig[SettingKeys::SYSTEM_TITLE] ?? CacheConstants::DEFAULT_SYSTEM_TITLE);
+
+        // Admins always see the admin header even on non-/admin routes (e.g.
+        // /tickets). Non-admins fall through to the default layout. The
+        // Admin/AppController forces 'admin' for /admin routes regardless.
+        $user = $identity?->getOriginalData();
+        if ($user instanceof User && $user->role === RoleConstants::ROLE_ADMIN) {
+            $this->viewBuilder()->setLayout('admin');
+        }
     }
 
     /**
