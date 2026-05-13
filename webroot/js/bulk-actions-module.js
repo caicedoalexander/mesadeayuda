@@ -192,36 +192,41 @@
     };
 
     /**
-     * Configurar asignación desde la tabla con Select2
+     * Configurar asignación desde la tabla con Select2.
+     *
+     * Espera al evento 'select2:ready' emitido por select2-init.js para
+     * adjuntar el listener al elemento ya envuelto por Select2. Si Select2
+     * ya terminó de inicializarse, ejecuta inmediatamente.
      */
     function setupTableAssignments() {
-        setTimeout(function() {
-            $('.table-agent-select').each(function() {
+        function bindTableAssignments() {
+            $('.table-agent-select').each(function () {
                 const $select = $(this);
-
-                if (!$select.prop('disabled')) {
-                    $select.on('select2:select select2:clear', function(e) {
-                        const form = this.closest('.table-assign-form');
-                        if (!form) return;
-
-                        let agentName = '';
-
-                        // Si es evento 'clear' o valor vacío
-                        if (e.type === 'select2:clear' || this.value === '') {
-                            LoadingSpinner.show('Desasignando ticket...');
-                        } else {
-                            // Obtener el texto de la opción seleccionada
-                            const selectedOption = this.options[this.selectedIndex];
-                            agentName = selectedOption ? selectedOption.text : '';
-                            LoadingSpinner.show(`Asignando a ${agentName}...`);
-                        }
-
-                        // Enviar el formulario
-                        form.submit();
-                    });
+                if ($select.prop('disabled')) {
+                    return;
                 }
+                $select.on('select2:select select2:clear', function (e) {
+                    const form = this.closest('.table-assign-form');
+                    if (!form) return;
+
+                    let agentName = '';
+                    if (e.type === 'select2:clear' || this.value === '') {
+                        LoadingSpinner.show('Desasignando ticket...');
+                    } else {
+                        const selectedOption = this.options[this.selectedIndex];
+                        agentName = selectedOption ? selectedOption.text : '';
+                        LoadingSpinner.show(`Asignando a ${agentName}...`);
+                    }
+                    form.submit();
+                });
             });
-        }, 500); // Esperar 500ms para que Select2 se inicialice
+        }
+
+        if (window.__select2Ready) {
+            bindTableAssignments();
+        } else {
+            document.addEventListener('select2:ready', bindTableAssignments, { once: true });
+        }
     }
 
     /**

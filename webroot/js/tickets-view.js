@@ -237,31 +237,34 @@
         }
     });
 
-    // Spinner: Show when assigning entity with Select2
-    setTimeout(function() {
+    // Spinner: Show when assigning entity with Select2. Run after Select2
+    // finishes initializing (event from select2-init.js) so the .on()
+    // handler attaches to the wrapped element, not the raw <select>.
+    function bindAgentSelectSpinner() {
         const $agentSelect = $('#agent-select');
-        if ($agentSelect.length) {
-            $agentSelect.on('select2:select select2:clear', function(e) {
-                const form = document.getElementById('assign-form');
-                if (!form) return;
-
-                let agentName = '';
-
-                // If 'clear' event or empty value
-                if (e.type === 'select2:clear' || this.value === '') {
-                    LoadingSpinner.show('Desasignando ticket...');
-                } else {
-                    // Get selected option text
-                    const selectedOption = this.options[this.selectedIndex];
-                    agentName = selectedOption ? selectedOption.text : '';
-                    LoadingSpinner.show(`Asignando a ${agentName}...`);
-                }
-
-                // Submit form
-                form.submit();
-            });
+        if (!$agentSelect.length) {
+            return;
         }
-    }, 500); // Wait for Select2 to initialize
+        $agentSelect.on('select2:select select2:clear', function (e) {
+            const form = document.getElementById('assign-form');
+            if (!form) return;
+
+            let agentName = '';
+            if (e.type === 'select2:clear' || this.value === '') {
+                LoadingSpinner.show('Desasignando ticket...');
+            } else {
+                const selectedOption = this.options[this.selectedIndex];
+                agentName = selectedOption ? selectedOption.text : '';
+                LoadingSpinner.show(`Asignando a ${agentName}...`);
+            }
+            form.submit();
+        });
+    }
+    if (window.__select2Ready) {
+        bindAgentSelectSpinner();
+    } else {
+        document.addEventListener('select2:ready', bindAgentSelectSpinner, { once: true });
+    }
 
     // Toggle recipients view (collapsed/expanded)
     function toggleRecipients(recipientsId) {

@@ -17,9 +17,15 @@
         dropdownAutoWidth: false,
     };
 
-    // Inicializar Select2 cuando el documento esté listo
+    // Inicializar Select2 cuando el documento esté listo. Después de
+    // inicializar, exponer una bandera global y disparar un CustomEvent
+    // 'select2:ready' para que los módulos dependientes (tickets-view,
+    // bulk-actions) puedan registrar sus listeners sin depender de un
+    // setTimeout arbitrario.
     $(document).ready(function() {
         initializeSelect2();
+        window.__select2Ready = true;
+        document.dispatchEvent(new CustomEvent('select2:ready'));
     });
 
     // Función principal de inicialización
