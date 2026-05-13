@@ -105,20 +105,44 @@ class NotificationRenderer
      * @return string HTML section
      */
     public function renderStatusChangeHtml(string $oldStatus, string $newStatus, string $assigneeName): string
-    {
-        $oldLabel = $this->getStatusLabel($oldStatus);
-        $newLabel = $this->getStatusLabel($newStatus);
+        {
+            $oldLabel = $this->getStatusLabel($oldStatus);
+            $newLabel = $this->getStatusLabel($newStatus);
 
-        return '<td>' .
-            '<p><strong>Cambio de Estado</strong></p>' .
-            '<p>' .
-            '<span class="status-badge status-' . $oldStatus . '">' . $oldLabel . '</span>' .
-            '<span style="margin: 0 10px;">→</span>' .
-            '<span class="status-badge status-' . $newStatus . '">' . $newLabel . '</span>' .
-            '</p>' .
-            '<p>Asignado a: <strong>' . $assigneeName . '</strong></p>' .
-            '</td>';
-    }
+            $statusColors = [
+                'open'        => ['bg' => '#dbeafe', 'fg' => '#1e40af'],
+                'in_progress' => ['bg' => '#fef3c7', 'fg' => '#92400e'],
+                'pending'     => ['bg' => '#fed7aa', 'fg' => '#9a3412'],
+                'resolved'    => ['bg' => '#d1fae5', 'fg' => '#065f46'],
+                'closed'      => ['bg' => '#f3f4f6', 'fg' => '#4b5563'],
+                'cancelled'   => ['bg' => '#fee2e2', 'fg' => '#991b1b'],
+            ];
+
+            $oldColor = $statusColors[$oldStatus] ?? ['bg' => '#f3f4f6', 'fg' => '#4b5563'];
+            $newColor = $statusColors[$newStatus] ?? ['bg' => '#d1fae5', 'fg' => '#065f46'];
+
+            $badgeStyle = 'display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; line-height: 1.4;';
+            $labelStyle = 'padding: 6px 0; font-size: 14px; color: #6b7280; vertical-align: top;';
+            $valueStyle = 'padding: 6px 0; font-size: 14px; color: #111827;';
+
+            $html = '<tr>'
+                . '<td style="' . $labelStyle . '">Estado</td>'
+                . '<td style="' . $valueStyle . '">'
+                    . '<span style="' . $badgeStyle . ' background-color: ' . $oldColor['bg'] . '; color: ' . $oldColor['fg'] . ';">' . h($oldLabel) . '</span>'
+                    . '<span style="color: #9ca3af; margin: 0 8px;">&rarr;</span>'
+                    . '<span style="' . $badgeStyle . ' background-color: ' . $newColor['bg'] . '; color: ' . $newColor['fg'] . ';">' . h($newLabel) . '</span>'
+                . '</td>'
+                . '</tr>';
+
+            if (!empty(trim($assigneeName))) {
+                $html .= '<tr>'
+                    . '<td style="' . $labelStyle . '">Asignado a</td>'
+                    . '<td style="' . $valueStyle . '"><strong>' . h($assigneeName) . '</strong></td>'
+                    . '</tr>';
+            }
+
+            return $html;
+        }
 
     /**
      * Render WhatsApp message for new ticket
