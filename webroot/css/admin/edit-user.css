@@ -1,8 +1,12 @@
 /**
  * Edit User Form - Modern Minimalist Design
+ *
+ * Tokens are scoped to .edit-user-container so they don't override the
+ * global :root declared in styles.css (--radius-md, --shadow-md and the
+ * grayscale ramp differ between the two designs).
  */
 
-:root {
+.edit-user-container {
     --edit-user-green: #00A85E;
     --edit-user-orange: #CD6A15;
     --gradient-primary: linear-gradient(135deg, #00A85E 0%, #00D477 100%);
