@@ -86,6 +86,17 @@
     // File management
     let selectedFiles = [];
 
+    // XSS sink guard: file names come from the user's filesystem and end up
+    // interpolated into innerHTML below (title attribute and text content).
+    function escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     function getFileIcon(filename) {
         const ext = filename.split('.').pop().toLowerCase();
         const iconMap = {
@@ -161,12 +172,13 @@
         selectedFiles.forEach((file, index) => {
             const icon = getFileIcon(file.name);
             const size = formatFileSize(file.size);
+            const safeName = escapeHtml(file.name);
 
             html += `
             <div class="file-item">
                 <i class="bi ${icon} file-item-icon"></i>
                 <div class="file-item-info">
-                    <div class="file-item-name" title="${file.name}">${file.name}</div>
+                    <div class="file-item-name" title="${safeName}">${safeName}</div>
                     <div class="file-item-size">${size}</div>
                 </div>
                 <button type="button" class="file-item-remove" onclick="removeFile(${index})" title="Eliminar archivo">
