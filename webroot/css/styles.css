@@ -771,6 +771,22 @@ body {
     font-size: 16px;
 }
 /* ============================================
+   SHARED ANIMATIONS
+   ============================================ */
+/* Used by every webroot/css/admin/*.css page wrapper; declared globally
+   so each admin sheet does not have to redeclare an identical keyframe. */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ============================================
    UTILITIES — replace repeated inline style=""
    See docs/audits/2026-05-09-code-review-src.md
    ============================================ */
