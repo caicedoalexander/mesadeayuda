@@ -47,20 +47,20 @@ $requesterEmail = $entity->requester->email;
             </button>
             <ul class="dropdown-menu w-100 shadow p-0 mb-2 rounded-md" aria-labelledby="comment-type-dropdown" >
                 <li>
-                    <a class="dropdown-item d-flex text-muted align-items-center gap-2 px-3" href="#" onclick="setCommentType('public'); return false;">
+                    <a class="dropdown-item d-flex text-muted align-items-center gap-2 px-3" href="#" data-action="comment-type" data-comment-type="public">
                         <i class="bi bi-reply-fill"></i>
                         <span class="">Respuesta pública</span>
                     </a>
                 </li>
                 <li>
-                    <a class="dropdown-item d-flex text-muted align-items-center gap-2 px-3 bg-warning bg-opacity-10" href="#" onclick="setCommentType('internal'); return false;">
+                    <a class="dropdown-item d-flex text-muted align-items-center gap-2 px-3 bg-warning bg-opacity-10" href="#" data-action="comment-type" data-comment-type="internal">
                         <i class="bi bi-pencil-square"></i>
                         <span class="">Nota interna</span>
                     </a>
                 </li>
             </ul>
         </div>
-        <div class="" id="comment-type-recipients" onclick="expandRecipients()" style="cursor: pointer;">
+        <div class="" id="comment-type-recipients" data-action="expand-recipients" style="cursor: pointer;">
             <span id="comment-type-recipients-text"
                   class="fs-sm"
                   data-original-text="<?= h($requesterName) ?>">
@@ -79,7 +79,7 @@ $requesterEmail = $entity->requester->email;
             <!-- Expanded View (Full Inputs) -->
             <div id="recipients-expanded" class="px-4 border-bottom" style="display: none; height: 170px; border-radius: 8px;">
                 <div class="d-flex justify-content-center align-items-center">
-                    <button type="button" class="btn btn-link text-decoration-none p-1 border my-2" onclick="collapseRecipients()">
+                    <button type="button" class="btn btn-link text-decoration-none p-1 border my-2" data-action="collapse-recipients">
                         <i class="bi bi-chevron-up"></i>
                     </button>
                 </div>
@@ -138,7 +138,6 @@ $requesterEmail = $entity->requester->email;
                         <?= $this->Form->file('attachments[]', [
                             'multiple' => true,
                             'id' => 'file-input',
-                            'onchange' => 'handleFileSelect(event)',
                             'style' => 'display: none;',
                             'accept' => '.jpg,.jpeg,.png,.gif,.bmp,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.7z'
                         ]) ?>
@@ -166,7 +165,7 @@ $requesterEmail = $entity->requester->email;
                         <ul class="dropdown-menu rounded shadow-sm p-0 mb-2" aria-labelledby="status-dropdown">
                             <?php foreach ($statuses as $statusKey => $statusConfig): ?>
                             <li>
-                                <a class="dropdown-item fw-bold d-flex align-items-center py-1 gap-2 fs-sm"  href="#" onclick="setStatus('<?= h($statusKey) ?>'); return false;">
+                                <a class="dropdown-item fw-bold d-flex align-items-center py-1 gap-2 fs-sm"  href="#" data-action="set-status" data-status-key="<?= h($statusKey) ?>">
                                     <i class="bi bi-circle-fill" style="color: <?= h($statusConfig['color']) ?>;"></i>
                                     <span><?= h($statusConfig['label']) ?></span>
                                 </a>

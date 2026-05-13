@@ -72,7 +72,7 @@ $requesterUser = $entity->requester ?? null;
                                     <span class="">
                                         <strong>Para:</strong> <?= $namesString ?>
                                     </span>
-                                    <a href="#" class="text-nowrap fs-xs"  onclick="toggleRecipients('<?= $recipientsId ?>'); return false;">
+                                    <a href="#" class="text-nowrap fs-xs" data-action="toggle-recipients" data-recipients-id="<?= h($recipientsId) ?>">
                                         Mostrar más
                                     </a>
                                 </div>
@@ -91,7 +91,7 @@ $requesterUser = $entity->requester ?? null;
                                     </div>
                                 <?php endif; ?>
                                 <div class="mb-0 fs-xs" >
-                                    <a href="#" class="text-nowrap fs-xs"  onclick="toggleRecipients('<?= $recipientsId ?>'); return false;">
+                                    <a href="#" class="text-nowrap fs-xs" data-action="toggle-recipients" data-recipients-id="<?= h($recipientsId) ?>">
                                         Mostrar menos
                                     </a>
                                 </div>
@@ -180,7 +180,7 @@ $requesterUser = $entity->requester ?? null;
                                                 <span class="">
                                                     <strong>Para:</strong> <?= $commentNamesString ?>
                                                 </span>
-                                                <a href="#" class="text-nowrap fs-xs"  onclick="toggleRecipients('<?= $commentRecipientsId ?>'); return false;">
+                                                <a href="#" class="text-nowrap fs-xs" data-action="toggle-recipients" data-recipients-id="<?= h($commentRecipientsId) ?>">
                                                     Mostrar más
                                                 </a>
                                             </div>
@@ -199,7 +199,7 @@ $requesterUser = $entity->requester ?? null;
                                                 </div>
                                             <?php endif; ?>
                                             <div class="mb-0 fs-xs" >
-                                                <a href="#" class="text-nowrap fs-xs"  onclick="toggleRecipients('<?= $commentRecipientsId ?>'); return false;">
+                                                <a href="#" class="text-nowrap fs-xs" data-action="toggle-recipients" data-recipients-id="<?= h($commentRecipientsId) ?>">
                                                     Mostrar menos
                                                 </a>
                                             </div>

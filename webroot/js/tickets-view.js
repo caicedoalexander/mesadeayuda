@@ -1,3 +1,12 @@
+/**
+ * Ticket view interactions: comment-type switch, status selector,
+ * file picker preview and recipients toggle. All handlers are
+ * registered via delegated [data-action] listeners so templates can
+ * stay free of inline onclick handlers (CSP-friendly).
+ */
+(function () {
+    'use strict';
+
     /**
      * Set comment type (public response or internal note)
      */
@@ -181,7 +190,7 @@
                     <div class="file-item-name" title="${safeName}">${safeName}</div>
                     <div class="file-item-size">${size}</div>
                 </div>
-                <button type="button" class="file-item-remove" onclick="removeFile(${index})" title="Eliminar archivo">
+                <button type="button" class="file-item-remove" data-action="remove-file" data-file-index="${index}" title="Eliminar archivo">
                     <i class="bi bi-x-lg"></i>
                 </button>
             </div>
@@ -277,4 +286,50 @@
         if (commentType && recipientsSection) {
             recipientsSection.style.display = (commentType.value === 'public') ? 'block' : 'none';
         }
+
+        // File picker: replace inline onchange='handleFileSelect(event)'.
+        const fileInput = document.getElementById('file-input');
+        if (fileInput) {
+            fileInput.addEventListener('change', handleFileSelect);
+        }
     });
+
+    // Delegated click handler for every [data-action] declared in the
+    // reply editor and comments thread. Replaces the inline onclick=""
+    // attributes that used to live in the PHP templates.
+    document.addEventListener('click', function (event) {
+        const trigger = event.target.closest('[data-action]');
+        if (!trigger) {
+            return;
+        }
+        switch (trigger.dataset.action) {
+            case 'comment-type':
+                event.preventDefault();
+                setCommentType(trigger.dataset.commentType);
+                break;
+            case 'set-status':
+                event.preventDefault();
+                setStatus(trigger.dataset.statusKey);
+                break;
+            case 'toggle-recipients':
+                event.preventDefault();
+                toggleRecipients(trigger.dataset.recipientsId);
+                break;
+            case 'expand-recipients':
+                if (typeof window.expandRecipients === 'function') {
+                    window.expandRecipients();
+                }
+                break;
+            case 'collapse-recipients':
+                event.preventDefault();
+                if (typeof window.collapseRecipients === 'function') {
+                    window.collapseRecipients();
+                }
+                break;
+            case 'remove-file':
+                event.preventDefault();
+                removeFile(Number(trigger.dataset.fileIndex));
+                break;
+        }
+    });
+})();
