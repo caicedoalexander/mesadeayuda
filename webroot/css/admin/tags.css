@@ -189,12 +189,12 @@
 
 .btn-action.delete {
     background: white;
-    color: #dc3545;
-    border: 1.5px solid #dc3545;
+    color: var(--danger-color);
+    border: 1.5px solid var(--danger-color);
 }
 
 .btn-action.delete:hover {
-    background: #dc3545;
+    background: var(--danger-color);
     color: white;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
