@@ -81,6 +81,39 @@
     font-weight: 600;
 }
 
+/* "Cambiar estado" dropdown */
+.ticket-topbar-status-wrap .dropdown-toggle::after { margin-left: 4px; }
+
+.ticket-topbar-status-menu {
+    border-radius: 8px;
+    border: 1px solid var(--gray-200);
+    padding: 4px;
+    min-width: 220px;
+    box-shadow: var(--shadow-md);
+}
+
+.ticket-topbar-status-item {
+    display: flex !important;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 10px !important;
+    border-radius: 6px !important;
+    font-size: 13px !important;
+    color: var(--gray-700) !important;
+}
+
+.ticket-topbar-status-item:hover {
+    background: var(--gray-50) !important;
+    color: var(--gray-900) !important;
+}
+
+.ticket-topbar-status-item .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
 /* ============================================================
    Thread column — scroll area with title + messages + composer
    ============================================================ */
@@ -378,6 +411,84 @@
 
 .composer-attach i { font-size: 16px; }
 .composer-attach input[type="file"] { display: none; }
+
+/* ── File list (rendered by tickets-view.js) ── */
+.file-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-left: 4px;
+    align-items: center;
+}
+
+.file-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px 5px 10px;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    background: var(--gray-50);
+    max-width: 260px;
+    transition: var(--transition);
+}
+
+.file-item:hover {
+    border-color: var(--gray-300);
+    background: #fff;
+}
+
+.file-item-icon {
+    font-size: 16px;
+    color: var(--admin-orange);
+    flex-shrink: 0;
+}
+
+.file-item-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.2;
+}
+
+.file-item-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--gray-900);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 180px;
+}
+
+.file-item-size {
+    font-size: 10px;
+    color: var(--gray-500);
+    font-variant-numeric: tabular-nums;
+}
+
+.file-item-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 0;
+    background: transparent;
+    color: var(--gray-500);
+    cursor: pointer;
+    transition: var(--transition);
+    flex-shrink: 0;
+    padding: 0;
+}
+
+.file-item-remove:hover {
+    background: var(--danger-soft);
+    color: var(--danger-color);
+}
+
+.file-item-remove i { font-size: 11px; }
 
 .composer-footer-spacer { flex: 1; }
 

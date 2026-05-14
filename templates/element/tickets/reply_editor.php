@@ -120,38 +120,9 @@ $requesterEmail = $entity->requester->email ?? '';
 
             <div class="composer-footer-spacer"></div>
 
-            <!-- Status selector — keeps existing IDs so tickets-view.js stays valid -->
+            <!-- Status is fixed: the comment keeps the current ticket status.
+                 State transitions live in the top bar (Resolver / Cambiar estado). -->
             <?= $this->Form->hidden('status', ['value' => $entity->status, 'id' => 'status-hidden']) ?>
-            <?php $currentConfig = $statuses[$entity->status] ?? $statuses[array_key_first($statuses)] ?? []; ?>
-            <div class="dropup composer-status-wrap">
-                <button class="composer-status-btn"
-                        type="button"
-                        id="status-dropdown"
-                        data-bs-toggle="dropdown"
-                        aria-expanded="false"
-                        data-current-status="<?= h($entity->status) ?>">
-                    <i class="bi bi-circle-fill" id="status-icon" style="color: <?= h($currentConfig['color'] ?? '#6c757d') ?>"></i>
-                    <span class="composer-status-text">Enviar como
-                        <strong id="status-label"><?= h($currentConfig['label'] ?? 'Estado') ?></strong>
-                    </span>
-                    <i class="bi bi-chevron-up chev"></i>
-                </button>
-                <ul class="dropdown-menu shadow-sm composer-status-menu" aria-labelledby="status-dropdown">
-                    <?php foreach ($statuses as $statusKey => $statusConfig): ?>
-                        <li>
-                            <a class="dropdown-item composer-status-item"
-                               href="#"
-                               data-action="set-status"
-                               data-status-key="<?= h($statusKey) ?>">
-                                <i class="bi bi-circle-fill" style="color: <?= h($statusConfig['color']) ?>"></i>
-                                <span><?= h($statusConfig['label']) ?></span>
-                            </a>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-
-            <span class="composer-shortcut mono" title="Atajo">⌘ ⏎</span>
 
             <?= $this->Form->button('<i class="bi bi-send-fill"></i> Enviar respuesta', [
                 'class'       => 'btn-brand-primary composer-send-btn',

@@ -34,15 +34,46 @@ $canPend    = !$isLocked && !$isPending;
 
     <!-- Right: actions -->
     <?php if (!$isLocked): ?>
-        <?php if ($canPend): ?>
-            <?= $this->Form->postLink(
-                'Marcar pendiente',
-                ['action' => 'changeStatus', $entity->id],
-                [
-                    'class' => 'btn-brand-secondary',
-                    'data' => ['status' => TicketConstants::STATUS_PENDIENTE],
-                ]
-            ) ?>
+        <?php
+        // States the user can switch to from this view (excludes the current
+        // one and the "resolver" terminal action which has its own button).
+        $switchableStates = [
+            TicketConstants::STATUS_ABIERTO   => 'Marcar como abierto',
+            TicketConstants::STATUS_PENDIENTE => 'Marcar como pendiente',
+        ];
+        $availableSwitches = array_filter(
+            $switchableStates,
+            fn($_, $key) => $key !== $entity->status,
+            ARRAY_FILTER_USE_BOTH
+        );
+        ?>
+
+        <?php if (!empty($availableSwitches)): ?>
+            <div class="dropdown ticket-topbar-status-wrap">
+                <button type="button"
+                        class="btn-brand-secondary dropdown-toggle ticket-topbar-status-btn"
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false">
+                    Cambiar estado
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end ticket-topbar-status-menu">
+                    <?php foreach ($availableSwitches as $statusKey => $label):
+                        $dotColor = TicketConstants::STATUS_COLORS[$statusKey] ?? 'var(--gray-500)';
+                    ?>
+                        <li>
+                            <?= $this->Form->postLink(
+                                '<span class="status-dot" style="background:' . h($dotColor) . '"></span> ' . h($label),
+                                ['action' => 'changeStatus', $entity->id],
+                                [
+                                    'class' => 'dropdown-item ticket-topbar-status-item',
+                                    'escape' => false,
+                                    'data' => ['status' => $statusKey],
+                                ]
+                            ) ?>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
         <?php endif; ?>
 
         <?php if ($canResolve): ?>
