@@ -1029,3 +1029,37 @@ body {
     font-variant-numeric: tabular-nums;
 }
 .tnum { font-variant-numeric: tabular-nums; }
+
+/* ── Agent avatar / chip (shared) ────────────── */
+/* Used by the tickets list (Select2 picker) AND the ticket detail
+   (right sidebar, thread). Color comes from UserHelper::avatarColor() in
+   PHP and AGENT_AVATAR_PALETTE in JS — same hash, same color. */
+.agent-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: #fff;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    font-family: inherit;
+    line-height: 1;
+}
+
+.agent-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.agent-chip .agent-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--gray-900);
+}
+
+.agent-chip.option .agent-name { font-weight: 500; font-size: 13px; }

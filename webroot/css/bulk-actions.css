@@ -95,7 +95,6 @@
     align-items: center;
     gap: 8px;
     margin-bottom: 4px;
-    min-width: 0;
 }
 
 .cell-subject .meta-row {
@@ -118,9 +117,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    max-width: 100%;
-    flex: 1 1 auto;
-    min-width: 0;
 }
 
 .ticket-subject-link:hover { color: var(--admin-green); }
@@ -301,35 +297,8 @@
 
 .agent-assign-pill i { font-size: 11px; line-height: 1; }
 
-/* ── Agent chip (used inside trigger and dropdown options) ── */
-.agent-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-}
-
-.agent-chip .agent-name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: var(--gray-900);
-}
-
-.agent-chip.option .agent-name { font-weight: 500; font-size: 13px; }
-
-.agent-avatar {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    color: #fff;
-    font-weight: 600;
-    letter-spacing: -0.3px;
-    flex-shrink: 0;
-    text-transform: uppercase;
-    font-family: inherit;
-}
+/* .agent-chip / .agent-avatar are shared primitives — defined globally in
+   webroot/css/styles.css so they apply to both the list and the detail view. */
 
 /* ── Dropdown styling (options) ── */
 .agent-picker-dropdown .select2-results__option {
