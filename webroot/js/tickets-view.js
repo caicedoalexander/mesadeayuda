@@ -212,7 +212,8 @@
     }
 
     // Spinner: Show when submitting comment/response or changing status
-    document.getElementById('reply-form').addEventListener('submit', function (e) {
+    const replyForm = document.getElementById('reply-form');
+    if (replyForm) replyForm.addEventListener('submit', function (e) {
         const commentBody = document.getElementById('comment-textarea').value.trim();
         const commentType = document.getElementById('comment-type').value;
         const statusHidden = document.getElementById('status-hidden');

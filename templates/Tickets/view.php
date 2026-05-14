@@ -32,7 +32,8 @@ $user = $this->getRequest()->getAttribute('identity');
         <?= $this->element('tickets/reply_editor', [
             'entity' => $ticket,
             'statuses' => $statuses,
-            'currentUser' => $currentUser
+            'currentUser' => $currentUser,
+            'isLocked' => $isLocked
         ]) ?>
     </div>
 
