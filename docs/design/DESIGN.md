@@ -486,7 +486,245 @@ tamaños personalizados, override por estilo inline (`style="width: 78%"`).
 
 ---
 
-## 8 · Reglas no-negociables
+## 8 · Tooltips
+
+> Estilos en `components.css` (sección _12 · TOOLTIPS_).
+
+Para iconos sin label visible, atajos o aclaraciones. Máximo **4 palabras**.
+Aparece a los 250 ms de hover/focus, desaparece al salir.
+
+### 8.1 · Variante simple — `data-tip` (CSS puro)
+
+```html
+<button data-tip="Resolver ticket" data-tip-side="top">
+    <i class="bi bi-check-lg"></i>
+</button>
+```
+
+Direcciones soportadas: `top` (default), `bottom`, `left`, `right`.
+Pegada al borde del trigger con 6 px de gap. Pill oscuro `--gray-900` /
+texto blanco / 11 px / shadow.
+
+### 8.2 · Con keycap — `.app-tip-bubble`
+
+Para casos que necesitan combinar texto con una tecla de atajo, usar
+markup explícito en lugar de `data-tip` (CSS attr no acepta HTML):
+
+```html
+<span class="app-tip-bubble">
+    Crear ticket <span class="app-tip-keycap">N</span>
+</span>
+```
+
+### 8.3 · Regla de uso
+
+- El tooltip **nunca sustituye** un label visible.
+- Sólo para iconos puros, atajos, o aclaraciones que no caben en la UI.
+- Máximo 4 palabras. Si necesitas más, repiensa la UI.
+
+---
+
+## 9 · File upload
+
+> Estilos en `components.css` (sección _13 · FILE UPLOAD_). Aplicado al
+> composer en `templates/element/tickets/reply_editor.php` + lógica de
+> drag-and-drop en `webroot/js/tickets-view.js (bindComposerDropzone)`.
+
+### 9.1 · Dropzone completo — `.app-dropzone`
+
+Idle: borde `2px dashed --gray-300` sobre `--gray-50`. Hover: borde
+verde sólido. Active (con archivo arrastrándose encima): clase
+`.is-active` aplica fondo `--admin-green-soft` y borde verde sólido.
+
+```html
+<label class="app-dropzone">
+    <span class="app-dropzone-icon"><i class="bi bi-upload"></i></span>
+    <div class="app-dropzone-title">
+        Arrastra archivos o <span class="app-dropzone-link">selecciona del equipo</span>
+    </div>
+    <div class="app-dropzone-hint">PNG, JPG, PDF hasta 10 MB</div>
+    <input type="file" multiple hidden />
+</label>
+```
+
+### 9.2 · Overlay drag — `.app-drop-overlay`
+
+Para containers que ya tienen contenido (como el composer) y sólo
+quieren mostrar feedback al arrastrar. El padre necesita
+`position: relative`. JS añade `.is-active` durante el drag.
+
+```html
+<div class="composer-body" style="position: relative">
+    <div class="app-drop-overlay" id="composer-drop-overlay">
+        <span><i class="bi bi-arrow-up-circle"></i> Suelta los archivos aquí</span>
+    </div>
+    <!-- textarea, etc. -->
+</div>
+```
+
+### 9.3 · File item — `.file-item`
+
+Card horizontal: icono cuadrado coloreado por estado + nombre + tamaño
+(o progreso) + botón eliminar.
+
+| Estado          | Clase        | Color icono                                       |
+| --------------- | ------------ | ------------------------------------------------- |
+| Pendiente       | `.file-item` | gris (`--gray-100` / `--gray-700`)                |
+| Subiendo        | `.uploading` | azul (`--admin-blue-soft` / `--admin-blue-ink`)   |
+| Subido          | `.done`      | verde (`--admin-green-soft` / `--admin-green-ink`)|
+| Error           | `.error`     | rojo (`--danger-soft` / `--danger-color`)         |
+
+Para mostrar progreso, dentro de `.file-item-info` reemplazar
+`.file-item-size` por `.file-item-progress` con `.file-item-progress-bar`
+y `.file-item-progress-pct`.
+
+### 9.4 · Chip compacto — `.file-chip`
+
+Variante reducida sólo-lectura, para mostrar adjuntos en un mensaje
+existente. Click descarga el archivo.
+
+```html
+<a href="…" class="file-chip">
+    <span class="file-chip-icon"><i class="bi bi-paperclip"></i></span>
+    <span class="file-chip-name">cafetera-14.jpg</span>
+    <span class="file-chip-size">1.2 MB</span>
+</a>
+```
+
+---
+
+## 10 · Rich-text toolbar
+
+> Estilos en `components.css` (sección _14 · RICH-TEXT TOOLBAR_). **Sólo
+> CSS** — listo para cuando se integre un editor real (Quill, Trix,
+> TipTap, etc.). Hoy el composer usa textarea plana.
+
+### 10.1 · Estructura
+
+```html
+<div class="rt-toolbar">
+    <button class="rt-btn"><strong>B</strong></button>
+    <button class="rt-btn active" aria-pressed="true"><em>I</em></button>
+    <button class="rt-btn"><u>U</u></button>
+    <span class="rt-divider"></span>
+    <button class="rt-btn"><i class="bi bi-list-ul"></i></button>
+    <button class="rt-btn"><i class="bi bi-list-ol"></i></button>
+    <button class="rt-btn"><i class="bi bi-quote"></i></button>
+    <span class="rt-divider"></span>
+    <button class="rt-btn"><i class="bi bi-link-45deg"></i></button>
+    <button class="rt-btn"><i class="bi bi-code"></i></button>
+</div>
+```
+
+### 10.2 · Variantes
+
+- `.rt-toolbar` — toolbar suelto (inline o agrupado por sección).
+- `.rt-toolbar.full` — pegado al header de un `.rt-editor`, fondo
+  `--gray-50` y radio sólo arriba.
+- `.rt-btn.active` o `[aria-pressed="true"]` — estilo presionado.
+- `.rt-btn-text` — botón con texto en vez de glifo (p. ej. _Plantilla_).
+
+### 10.3 · Editor completo — `.rt-editor`
+
+Container con toolbar arriba (`.rt-toolbar.full`) + `.rt-editor-body`
+de mínimo 120 px + `.rt-editor-footer` con acciones (`adjuntar`,
+contador, keycap `⌘⏎`, botón `Enviar`).
+
+### 10.4 · Regla de uso
+
+- Toolbar liviano — sólo lo esencial. Markdown shortcuts
+  (`**negrita**`, `*it*`, `> cita`, `- lista`) son más descubribles
+  que un toolbar enorme.
+- Si se integra un editor real, pasar el HTML resultante por
+  `HtmlSanitizerTrait` antes de persistir (CLAUDE.md).
+
+---
+
+## 11 · Paginación
+
+> Estilos en `components.css` (sección _15 · PAGINACIÓN_). Markup en
+> `templates/element/pagination.php`.
+
+### 11.1 · Clásica con números — `.app-pagination`
+
+Lista de `<li>` con botones tnum (mono), página activa en
+`--admin-green`. Soporta elipsis `…` para condensar rangos.
+
+CakePHP `Paginator::numbers([…])` con `modulus: 2, first: 1, last: 1`
+ya produce la estructura correcta. El parámetro `ellipsis` genera
+`<li class="ellipsis"><span>…</span></li>`.
+
+### 11.2 · Simple — `.app-pagination-simple`
+
+Para listas pequeñas: sólo _Anterior_ / `5 / 24` / _Siguiente_.
+
+### 11.3 · Resumen + page-size — `.app-pagination-summary`
+
+Para footer de tabla. Texto _Mostrando X–Y de N_ + selector
+_Por página_ + flechas prev/next.
+
+### 11.4 · Jump-to-page — `.app-pagination-jump`
+
+Para datasets de cientos de páginas: input numérico inline.
+Focus ring verde `--admin-green` automático.
+
+---
+
+## 12 · Iconografía
+
+> El proyecto usa **Bootstrap Icons** (no Lucide). El sistema de diseño
+> de claude.ai/design referencia Lucide; aquí está el mapeo y las
+> reglas que aplican a cualquier set con stroke configurable.
+
+### 12.1 · Reglas
+
+- **Stroke** 1.6 (default) o 1.8 (más visibles). Nunca menos de 1.4 ni
+  más de 2.0. Bootstrap Icons usa filled o lineal según el ítem; cuando
+  hay variantes (`bi-check-lg` vs `bi-check-circle`), preferir la lineal
+  fuera de pills coloridas.
+- **Tamaños recomendados** según contexto:
+
+  | Contexto                         | Tamaño |
+  | -------------------------------- | ------ |
+  | Rows densas / chips              | 12 px  |
+  | Inputs, badges, botones sm       | 14 px  |
+  | Botones default                  | 16 px  |
+  | Hero / dropzone / empty state    | 24–32 px |
+
+- **Color** vía `currentColor`. Cambia el color del padre y el icono
+  lo sigue. Nunca hardcodear `fill="…"` en el SVG.
+
+### 12.2 · Set en uso
+
+| Semántica            | Bootstrap Icon                  |
+| -------------------- | ------------------------------- |
+| Ticket / soporte     | `bi-ticket-detailed`            |
+| Buscar               | `bi-search`                     |
+| Crear, añadir        | `bi-plus-lg`                    |
+| Resolver, confirmar  | `bi-check-lg`                   |
+| Cerrar, quitar       | `bi-x-lg`                       |
+| Expandir, dropdown   | `bi-chevron-down`               |
+| Avanzar              | `bi-chevron-right`              |
+| Retroceder           | `bi-chevron-left`               |
+| Filtros              | `bi-funnel`                     |
+| Eliminar             | `bi-trash`                      |
+| Información          | `bi-info-circle`                |
+| Advertencia          | `bi-exclamation-triangle-fill`  |
+| SLA, hora            | `bi-clock`                      |
+| Fecha                | `bi-calendar`                   |
+| Bandeja              | `bi-inbox`                      |
+| Adjuntos             | `bi-paperclip`                  |
+| Subir archivo        | `bi-upload`                     |
+| Plantillas           | `bi-file-earmark-text`          |
+| Enlace               | `bi-link-45deg`                 |
+| Código inline        | `bi-code`                       |
+| Cita                 | `bi-quote`                      |
+| Lista viñetas        | `bi-list-ul`                    |
+| Lista numerada       | `bi-list-ol`                    |
+
+---
+
+## 13 · Reglas no-negociables
 
 1. **Tokens en CSS variables.** Nunca hardcodear hex en componentes — todo
    viene del `:root` de `styles.css`.
@@ -507,12 +745,13 @@ tamaños personalizados, override por estilo inline (`style="width: 78%"`).
 
 ---
 
-## 9 · Mapa de archivos
+## 14 · Mapa de archivos
 
 | Aspecto                     | Archivo                                                          |
 | --------------------------- | ---------------------------------------------------------------- |
 | Tokens + componentes globales | `webroot/css/styles.css` (sección _DESIGN SYSTEM_)             |
-| Toasts / Modales / Empty / Skeleton | `webroot/css/components.css`                             |
+| Componentes globales (08–15) | `webroot/css/components.css` (toasts, modales, empty, skeleton, tooltip, upload, rt-toolbar, pagination) |
+| Drag-and-drop composer      | `webroot/js/tickets-view.js` (`bindComposerDropzone`)            |
 | Pills de status/priority    | `webroot/css/badges.css`                                         |
 | Layout lista + tabla        | `webroot/css/bulk-actions.css`                                   |
 | Detalle de ticket           | `webroot/css/tickets-view.css`                                   |
@@ -531,20 +770,23 @@ tamaños personalizados, override por estilo inline (`style="width: 78%"`).
 
 ---
 
-## 10 · Próximos componentes a documentar
+## 15 · Próximos componentes a documentar
 
 Cuando se construyan, su spec va aquí antes del código:
 
 - Drawer lateral (variante de overlay, edición profunda sin perder contexto).
 - Date / Time pickers — tokens y comportamiento de calendar popover.
-- File upload con drag-and-drop.
-- Rich-text editor toolbar.
-- Tooltip global.
-- Paginación compleja (rangos largos, jump-to).
+- Rich-text editor real (integración con Quill o Trix; sanitizar HTML
+  con `HtmlSanitizerTrait`).
+- Combobox / autocomplete con fetch remoto.
+- Multi-select con chips.
+- Stepper / wizard.
+- Mention picker (@usuario en composer).
+- Cheat-sheet de atajos.
 
 ---
 
-## 11 · Procedencia
+## 16 · Procedencia
 
 - Handoff bundle generado en claude.ai/design, mayo 2026 (chat
   "Proyecto completo", dirección Workspace A).

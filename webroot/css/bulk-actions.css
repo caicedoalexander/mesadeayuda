@@ -665,9 +665,8 @@
 .tickets-table-footer .footer-summary strong { color: var(--gray-900); font-weight: 600; }
 .tickets-table-footer .footer-spacer { flex: 1; }
 
-/* ============================================
-   Pagination (inside footer)
-   ============================================ */
+/* Pagination: estilos en components.css (sección 15 · PAGINACIÓN).
+   Wrapper local sólo para layout dentro del footer del card. */
 .pagination {
     display: flex;
     align-items: center;
@@ -677,49 +676,4 @@
 .pagination-info {
     font-size: 12px;
     color: var(--gray-500);
-}
-
-.pagination-links {
-    display: flex;
-    gap: 4px;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.pagination-links li { display: inline-block; }
-
-.pagination-links a,
-.pagination-links span {
-    display: inline-flex;
-    align-items: center;
-    padding: 4px 9px;
-    border: 1px solid var(--gray-200);
-    border-radius: 6px;
-    text-decoration: none;
-    color: var(--gray-600);
-    font-size: 12px;
-    transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
-    font-weight: 500;
-    background: #fff;
-}
-
-.pagination-links a:hover {
-    border-color: var(--admin-green);
-    color: var(--admin-green);
-    background-color: var(--admin-green-soft);
-}
-
-.pagination-links .active a,
-.pagination-links .active span {
-    background: var(--admin-green);
-    color: #fff;
-    border-color: var(--admin-green);
-}
-
-.pagination-links .disabled span {
-    color: var(--gray-300);
-    border-color: var(--gray-100);
-    cursor: not-allowed;
-    background: #fff;
 }

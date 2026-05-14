@@ -110,29 +110,29 @@
         const ext = filename.split('.').pop().toLowerCase();
         const iconMap = {
             // Images
-            'jpg': 'bi-file-earmark-image text-success',
-            'jpeg': 'bi-file-earmark-image text-success',
-            'png': 'bi-file-earmark-image text-success',
-            'gif': 'bi-file-earmark-image text-success',
-            'bmp': 'bi-file-earmark-image text-success',
-            'webp': 'bi-file-earmark-image text-success',
+            'jpg': 'bi-file-earmark-image',
+            'jpeg': 'bi-file-earmark-image',
+            'png': 'bi-file-earmark-image',
+            'gif': 'bi-file-earmark-image',
+            'bmp': 'bi-file-earmark-image',
+            'webp': 'bi-file-earmark-image',
             // Documents
-            'pdf': 'bi-file-earmark-pdf text-danger',
-            'doc': 'bi-file-earmark-word text-primary',
-            'docx': 'bi-file-earmark-word text-primary',
-            'xls': 'bi-file-earmark-excel text-success',
-            'xlsx': 'bi-file-earmark-excel text-success',
-            'ppt': 'bi-file-earmark-ppt text-warning',
-            'pptx': 'bi-file-earmark-ppt text-warning',
+            'pdf': 'bi-file-earmark-pdf',
+            'doc': 'bi-file-earmark-word',
+            'docx': 'bi-file-earmark-word',
+            'xls': 'bi-file-earmark-excel',
+            'xlsx': 'bi-file-earmark-excel',
+            'ppt': 'bi-file-earmark-ppt',
+            'pptx': 'bi-file-earmark-ppt',
             // Text
-            'txt': 'bi-file-earmark-text text-secondary',
-            'csv': 'bi-file-earmark-spreadsheet text-success',
+            'txt': 'bi-file-earmark-text',
+            'csv': 'bi-file-earmark-spreadsheet',
             // Archives
-            'zip': 'bi-file-earmark-zip text-warning',
-            'rar': 'bi-file-earmark-zip text-warning',
-            '7z': 'bi-file-earmark-zip text-warning',
+            'zip': 'bi-file-earmark-zip',
+            'rar': 'bi-file-earmark-zip',
+            '7z': 'bi-file-earmark-zip',
         };
-        return iconMap[ext] || 'bi-file-earmark text-secondary';
+        return iconMap[ext] || 'bi-file-earmark';
     }
 
     function formatFileSize(bytes) {
@@ -185,12 +185,12 @@
 
             html += `
             <div class="file-item">
-                <i class="bi ${icon} file-item-icon"></i>
+                <span class="file-item-icon"><i class="bi ${icon}"></i></span>
                 <div class="file-item-info">
                     <div class="file-item-name" title="${safeName}">${safeName}</div>
                     <div class="file-item-size">${size}</div>
                 </div>
-                <button type="button" class="file-item-remove" data-action="remove-file" data-file-index="${index}" title="Eliminar archivo">
+                <button type="button" class="file-item-remove" data-action="remove-file" data-file-index="${index}" data-tip="Quitar">
                     <i class="bi bi-x-lg"></i>
                 </button>
             </div>
@@ -296,7 +296,65 @@
         if (fileInput) {
             fileInput.addEventListener('change', handleFileSelect);
         }
+
+        bindComposerDropzone();
     });
+
+    // Drag-and-drop attachments into the composer body. The overlay
+    // (.app-drop-overlay) is shown only while a file is being dragged over.
+    function bindComposerDropzone() {
+        const dropzone = document.getElementById('editor-container');
+        const overlay  = document.getElementById('composer-drop-overlay');
+        if (!dropzone || !overlay) {
+            return;
+        }
+
+        let dragDepth = 0;
+        const containsFiles = (e) => {
+            const types = e.dataTransfer && e.dataTransfer.types;
+            if (!types) return false;
+            for (let i = 0; i < types.length; i++) {
+                if (types[i] === 'Files') return true;
+            }
+            return false;
+        };
+
+        dropzone.addEventListener('dragenter', function (e) {
+            if (!containsFiles(e)) return;
+            e.preventDefault();
+            dragDepth++;
+            overlay.classList.add('is-active');
+        });
+
+        dropzone.addEventListener('dragover', function (e) {
+            if (!containsFiles(e)) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        });
+
+        dropzone.addEventListener('dragleave', function (e) {
+            if (!containsFiles(e)) return;
+            dragDepth = Math.max(0, dragDepth - 1);
+            if (dragDepth === 0) {
+                overlay.classList.remove('is-active');
+            }
+        });
+
+        dropzone.addEventListener('drop', function (e) {
+            if (!containsFiles(e)) return;
+            e.preventDefault();
+            dragDepth = 0;
+            overlay.classList.remove('is-active');
+
+            const files = Array.from(e.dataTransfer.files || []);
+            files.forEach(file => {
+                const exists = selectedFiles.some(f => f.name === file.name && f.size === file.size);
+                if (!exists) selectedFiles.push(file);
+            });
+            updateFileList();
+            updateFileInput();
+        });
+    }
 
     // Delegated click handler for every [data-action] declared in the
     // reply editor and comments thread. Replaces the inline onclick=""

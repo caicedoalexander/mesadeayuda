@@ -64,6 +64,11 @@ $requesterEmail = $entity->requester->email ?? '';
 
     <!-- Body / editor -->
     <div class="composer-body" id="editor-container">
+        <!-- Drag-and-drop overlay -->
+        <div class="app-drop-overlay" id="composer-drop-overlay">
+            <span><i class="bi bi-arrow-up-circle"></i> Suelta los archivos aquí</span>
+        </div>
+
         <!-- Email recipients (public reply only) -->
         <div id="email-recipients-section" class="composer-recipients" style="display: none;">
             <div id="recipients-collapsed"></div>
@@ -106,7 +111,7 @@ $requesterEmail = $entity->requester->email ?? '';
 
         <!-- Footer: attach + status + send -->
         <div class="composer-footer">
-            <label class="composer-attach" id="file-upload-btn" title="Adjuntar archivos">
+            <label class="composer-attach" id="file-upload-btn" data-tip="Arrastra o haz clic" data-tip-side="top">
                 <i class="bi bi-paperclip"></i>
                 <span>Adjuntar archivos</span>
                 <?= $this->Form->file('attachments[]', [

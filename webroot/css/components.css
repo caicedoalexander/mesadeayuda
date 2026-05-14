@@ -1,6 +1,7 @@
 /* ===========================================================
-   components.css — Sistema de Diseño · secciones 08–11
-   Toasts, Overlays (modales), Empty states, Skeleton loaders.
+   components.css — Sistema de Diseño · secciones 08–15
+   Toasts, Overlays, Empty states, Skeleton loaders,
+   Tooltips, File upload, Rich-text toolbar y Paginación.
    Tokens base viven en styles.css (:root).
    =========================================================== */
 
@@ -643,4 +644,616 @@
     display: flex;
     flex-direction: column;
     gap: 7px;
+}
+
+
+/* ===========================================================
+   12 · TOOLTIPS
+   Etiqueta breve sobre iconos sin label, atajos de teclado o
+   conceptos densos. Max 4 palabras. Aparece on hover/focus.
+   Activación: añadir data-tip="…" + (opcional) data-tip-side="top|bottom|left|right".
+   =========================================================== */
+
+[data-tip] {
+    position: relative;
+}
+
+[data-tip]::after {
+    content: attr(data-tip);
+    position: absolute;
+    background: var(--gray-900);
+    color: #fff;
+    padding: 5px 9px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.3;
+    letter-spacing: 0.1px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-2px);
+    transition: opacity 0.14s ease, transform 0.14s ease, visibility 0s linear 0.14s;
+    z-index: 1090;
+    box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.25);
+}
+
+[data-tip]:hover::after,
+[data-tip]:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    transition-delay: 0.25s, 0.25s, 0s;
+}
+
+/* Side: top (default) */
+[data-tip]::after,
+[data-tip][data-tip-side="top"]::after {
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translate(-50%, -2px);
+}
+[data-tip]:hover::after,
+[data-tip][data-tip-side="top"]:hover::after {
+    transform: translate(-50%, 0);
+}
+
+[data-tip][data-tip-side="bottom"]::after {
+    top: calc(100% + 6px);
+    bottom: auto;
+    left: 50%;
+    transform: translate(-50%, 2px);
+}
+[data-tip][data-tip-side="bottom"]:hover::after {
+    transform: translate(-50%, 0);
+}
+
+[data-tip][data-tip-side="left"]::after {
+    right: calc(100% + 6px);
+    left: auto;
+    bottom: auto;
+    top: 50%;
+    transform: translate(-2px, -50%);
+}
+[data-tip][data-tip-side="left"]:hover::after {
+    transform: translate(0, -50%);
+}
+
+[data-tip][data-tip-side="right"]::after {
+    left: calc(100% + 6px);
+    bottom: auto;
+    top: 50%;
+    transform: translate(2px, -50%);
+}
+[data-tip][data-tip-side="right"]:hover::after {
+    transform: translate(0, -50%);
+}
+
+/* Keycap pill — usar dentro del data-tip via <span class="keycap"> es imposible
+   (CSS attr no parsea HTML). Para tooltips con keycap, render un wrapper real
+   .app-tip-bubble en lugar del data-tip CSS. */
+.app-tip-bubble {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--gray-900);
+    color: #fff;
+    padding: 5px 9px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.25);
+}
+
+.app-tip-keycap {
+    font-family: "Geist Mono", ui-monospace, "SF Mono", monospace;
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.18);
+    font-variant-numeric: tabular-nums;
+}
+
+
+/* ===========================================================
+   13 · FILE UPLOAD
+   Dropzone (idle/active) + lista de archivos con estados +
+   chips compactos para mostrar en mensajes.
+   =========================================================== */
+
+/* Dropzone — área grande para arrastrar */
+.app-dropzone {
+    width: 100%;
+    padding: 28px 20px;
+    border: 2px dashed var(--gray-300);
+    border-radius: 12px;
+    background: var(--gray-50);
+    text-align: center;
+    color: var(--gray-600);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.app-dropzone:hover {
+    border-color: var(--admin-green);
+    background: #fff;
+}
+
+.app-dropzone.is-active {
+    border: 2px solid var(--admin-green);
+    background: var(--admin-green-soft);
+    color: var(--admin-green-ink);
+}
+
+.app-dropzone-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+    color: var(--gray-700);
+    font-size: 18px;
+}
+
+.app-dropzone.is-active .app-dropzone-icon {
+    border-color: var(--admin-green);
+    color: var(--admin-green);
+}
+
+.app-dropzone-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.app-dropzone.is-active .app-dropzone-title {
+    color: var(--admin-green-ink);
+    font-weight: 700;
+}
+
+.app-dropzone-link {
+    color: var(--admin-green-ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.app-dropzone-hint {
+    font-size: 12px;
+    margin-top: 4px;
+    opacity: 0.85;
+}
+
+/* Overlay drag — se muestra encima de un container al arrastrar archivos */
+.app-drop-overlay {
+    position: absolute;
+    inset: 0;
+    border: 2px dashed var(--admin-green);
+    background: rgba(0, 168, 94, 0.06);
+    border-radius: 10px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 5;
+    color: var(--admin-green-ink);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.app-drop-overlay.is-active {
+    display: flex;
+}
+
+
+/* File item — entrada en lista (card horizontal con estado) */
+.file-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px 5px 10px;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    background: var(--gray-50);
+    max-width: 260px;
+    transition: var(--transition);
+}
+
+.file-item:hover {
+    border-color: var(--gray-300);
+    background: #fff;
+}
+
+.file-item-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    background: var(--gray-100);
+    color: var(--gray-700);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 14px;
+}
+
+.file-item.done .file-item-icon     { background: var(--admin-green-soft); color: var(--admin-green-ink); }
+.file-item.uploading .file-item-icon { background: var(--admin-blue-soft);  color: var(--admin-blue-ink); }
+.file-item.error .file-item-icon    { background: var(--danger-soft);      color: var(--danger-color); }
+
+.file-item-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.2;
+    flex: 1;
+}
+
+.file-item-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--gray-900);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 180px;
+}
+
+.file-item-size {
+    font-size: 10px;
+    color: var(--gray-500);
+    font-variant-numeric: tabular-nums;
+}
+
+.file-item.error .file-item-size {
+    color: var(--danger-color);
+    font-weight: 500;
+}
+
+/* Progress bar (estado uploading) */
+.file-item-progress {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.file-item-progress-bar {
+    flex: 1;
+    height: 4px;
+    background: var(--gray-100);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.file-item-progress-bar > span {
+    display: block;
+    height: 100%;
+    background: var(--admin-blue);
+    border-radius: 2px;
+    transition: width 0.2s ease;
+}
+
+.file-item-progress-pct {
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 10px;
+    color: var(--gray-500);
+}
+
+.file-item-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 0;
+    background: transparent;
+    color: var(--gray-500);
+    cursor: pointer;
+    transition: var(--transition);
+    flex-shrink: 0;
+    padding: 0;
+}
+
+.file-item-remove:hover {
+    background: var(--danger-soft);
+    color: var(--danger-color);
+}
+
+.file-item-remove i { font-size: 11px; }
+
+/* Chip compacto — para mostrar adjuntos en un mensaje (sólo lectura) */
+.file-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px 6px 8px;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    background: #fff;
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: none;
+    color: var(--gray-900);
+    transition: var(--transition);
+}
+
+.file-chip:hover {
+    border-color: var(--gray-300);
+    background: var(--gray-50);
+}
+
+.file-chip-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    background: var(--gray-100);
+    color: var(--gray-600);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+}
+
+.file-chip-name {
+    font-weight: 500;
+    color: var(--gray-900);
+}
+
+.file-chip-size {
+    color: var(--gray-500);
+    font-size: 11px;
+}
+
+
+/* ===========================================================
+   14 · RICH-TEXT TOOLBAR (CSS-only)
+   Para cuando se integre un editor real. Tokens listos.
+   Estructura: <div class="rt-toolbar"><button class="rt-btn">…</button></div>
+   =========================================================== */
+
+.rt-toolbar {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    background: #fff;
+    flex-wrap: wrap;
+    gap: 2px;
+}
+
+.rt-toolbar.full {
+    display: flex;
+    width: 100%;
+    border-radius: 8px 8px 0 0;
+    background: var(--gray-50);
+    border-bottom: none;
+    padding: 6px 8px;
+}
+
+.rt-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--gray-600);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.rt-btn:hover {
+    background: var(--gray-100);
+    color: var(--gray-900);
+}
+
+.rt-btn.active,
+.rt-btn[aria-pressed="true"] {
+    background: var(--gray-200);
+    color: var(--gray-900);
+}
+
+.rt-btn.danger {
+    color: var(--danger-color);
+}
+
+.rt-divider {
+    width: 1px;
+    height: 18px;
+    background: var(--gray-200);
+    margin: 0 4px;
+}
+
+.rt-btn-text {
+    width: auto;
+    padding: 0 8px;
+    font-size: 12px;
+    color: var(--admin-green-ink);
+    font-weight: 600;
+    gap: 4px;
+}
+
+/* Container completo del editor: toolbar arriba, body abajo, footer */
+.rt-editor {
+    border: 1px solid var(--gray-200);
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.rt-editor-body {
+    padding: 14px 16px;
+    font-size: 13px;
+    color: var(--gray-800);
+    line-height: 1.6;
+    min-height: 120px;
+}
+
+.rt-editor-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--gray-100);
+    background: var(--gray-50);
+}
+
+.rt-editor-footer .spacer { flex: 1; }
+
+
+/* ===========================================================
+   15 · PAGINACIÓN
+   Botones tnum, página activa verde, soporta elipsis (…).
+   Reemplaza .pagination-links viejo de bulk-actions.css.
+   =========================================================== */
+
+.app-pagination {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.app-pagination li { display: inline-block; }
+
+.app-pagination a,
+.app-pagination span,
+.app-pagination .app-page-btn {
+    min-width: 32px;
+    height: 32px;
+    padding: 0 10px;
+    border-radius: 7px;
+    border: 1px solid var(--gray-200);
+    background: #fff;
+    color: var(--gray-700);
+    font-size: 13px;
+    font-weight: 500;
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.app-pagination a:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-300);
+    color: var(--gray-900);
+}
+
+.app-pagination .active a,
+.app-pagination .active span,
+.app-pagination .app-page-btn.active {
+    background: var(--admin-green);
+    border-color: var(--admin-green);
+    color: #fff;
+    font-weight: 700;
+    cursor: default;
+}
+
+.app-pagination .disabled a,
+.app-pagination .disabled span,
+.app-pagination .app-page-btn:disabled {
+    color: var(--gray-400);
+    background: var(--gray-50);
+    border-color: var(--gray-200);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.app-pagination .ellipsis,
+.app-pagination .ellipsis span {
+    border: none;
+    background: transparent;
+    color: var(--gray-400);
+    font-family: inherit;
+    cursor: default;
+    padding: 0 4px;
+    min-width: 18px;
+    font-size: 14px;
+}
+
+.app-pagination .ellipsis:hover {
+    background: transparent;
+    border-color: transparent;
+    color: var(--gray-400);
+}
+
+.app-pagination i {
+    font-size: 14px;
+}
+
+/* Paginación simple — Anterior / 5 / 24 / Siguiente */
+.app-pagination-simple {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 13px;
+    color: var(--gray-700);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Resumen + page-size para footer de tabla */
+.app-pagination-summary {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 13px;
+    color: var(--gray-600);
+    flex-wrap: wrap;
+}
+
+.app-pagination-summary strong {
+    color: var(--gray-900);
+    font-weight: 600;
+}
+
+.app-pagination-summary .spacer { flex: 1; }
+
+/* Jump-to-page */
+.app-pagination-jump {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--gray-700);
+}
+
+.app-pagination-jump input {
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid var(--gray-200);
+    border-radius: 7px;
+    background: #fff;
+    width: 70px;
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+}
+
+.app-pagination-jump input:focus {
+    outline: none;
+    border-color: var(--admin-green);
+    box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.18);
 }
