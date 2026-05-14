@@ -21,12 +21,21 @@
     --gray-600: #4B5563;
     --gray-700: #374151;
     --gray-900: #111827;
+    --gray-500: #6B7280;
+    --gray-800: #1F2937;
     --radius-lg: 12px;
     --radius-md: 8px;
     --radius-sm: 6px;
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Brand color variants */
+    --admin-green-light: #00D477;
+    --admin-green-hover: #008f50;
+    --admin-green-rgb: 0, 168, 94;
+    --admin-orange-light: #F07D2D;
+    --admin-orange-rgb: 205, 106, 21;
 
     /* App surface */
     --bg-color: #FAFAFA;
@@ -37,6 +46,13 @@
     --danger-color: #dc3545;
     --warning-color: #ffc107;
     --info-color: #0dcaf0;
+
+    /* Surfaces (Bootstrap grays) */
+    --surface-light: #f8f9fa;
+    --surface-hover: #e9ecef;
+    --border-color: #dee2e6;
+    --border-hover: #adb5bd;
+    --text-muted: #6c757d;
 }
 
 /* ============================================
