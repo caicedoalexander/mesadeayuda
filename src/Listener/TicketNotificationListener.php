@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Listener;
 
+use App\Domain\Event\TicketAssigned;
 use App\Domain\Event\TicketCreated;
 use App\Domain\Event\TicketStatusChanged;
 use App\Service\TicketNotificationService;
@@ -27,11 +28,10 @@ use Throwable;
  * TicketNotificationService at bootstrap.
  *
  * Scope: this listener only subscribes to events whose semantic is "notify
- * users via email/WhatsApp". Other domain events (e.g., TicketAssigned,
- * future TicketPriorityChanged) keep flowing through the global EventManager
- * for separate subscribers (audit, integrations) — they are NOT this
- * listener's concern. When/if assignment becomes a notification trigger,
- * add a real handler here rather than a log-only stub.
+ * users via email/WhatsApp". Other domain events (e.g., future
+ * TicketPriorityChanged) keep flowing through the global EventManager for
+ * separate subscribers (audit, integrations) — they are NOT this listener's
+ * concern.
  */
 final class TicketNotificationListener implements EventListenerInterface
 {
@@ -55,6 +55,7 @@ final class TicketNotificationListener implements EventListenerInterface
         return [
             TicketCreated::NAME => 'onCreated',
             TicketStatusChanged::NAME => 'onStatusChanged',
+            TicketAssigned::NAME => 'onAssigned',
         ];
     }
 
@@ -87,6 +88,26 @@ final class TicketNotificationListener implements EventListenerInterface
             ]);
         } catch (Throwable $e) {
             Log::error('TicketNotificationListener::onStatusChanged failed', [
+                'ticket_id' => $event->ticketId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * @param \App\Domain\Event\TicketAssigned $event Assigned event
+     */
+    public function onAssigned(TicketAssigned $event): void
+    {
+        try {
+            $ticket = $this->fetchTable('Tickets')->get($event->ticketId, contain: ['Assignees', 'Requesters']);
+            $this->notifications()->dispatchUpdateNotifications($ticket, 'assignment', [
+                'new_assignee_id' => $event->assigneeId,
+                'previous_assignee_id' => $event->previousAssigneeId,
+                'actor_id' => $event->actorId,
+            ]);
+        } catch (Throwable $e) {
+            Log::error('TicketNotificationListener::onAssigned failed', [
                 'ticket_id' => $event->ticketId,
                 'error' => $e->getMessage(),
             ]);

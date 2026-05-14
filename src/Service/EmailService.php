@@ -121,6 +121,33 @@ class EmailService
         return $this->sendCommentBasedNotification('ticket_respuesta', $entity, $comment, $oldStatus, $newStatus, $additionalTo, $additionalCc);
     }
 
+    /**
+     * Sends a notification to the agent that has just been assigned the ticket.
+     * Routed through the `ticket_asignacion` template; recipient is the
+     * assignee (not the requester). Returns false when the ticket has no
+     * assignee or no resolvable assignee email — both are valid no-ops, not
+     * error conditions, so the listener doesn't need to special-case them.
+     */
+    public function sendEntityAssignmentNotification(EntityInterface $entity): bool
+    {
+        $entityTable = $this->fetchTable(self::ENTITY_TABLE);
+        $entity = $entityTable->get($entity->id, contain: self::ENTITY_CONTAIN);
+
+        if (empty($entity->assignee) || empty($entity->assignee->email)) {
+            return false;
+        }
+
+        return $this->sendGenericTemplateEmail(
+            'ticket_asignacion',
+            $entity,
+            ['assignee_name' => $entity->assignee->name ?? ''],
+            [],
+            [],
+            [],
+            $entity->assignee->email,
+        );
+    }
+
     private function getTemplate(string $templateKey): ?EmailTemplate
     {
         return $this->templateRenderer->getTemplate($templateKey);
@@ -354,6 +381,7 @@ class EmailService
         array $attachments = [],
         array $additionalTo = [],
         array $additionalCc = [],
+        ?string $recipientEmail = null,
     ): bool {
         try {
             $table = $this->fetchTable(self::ENTITY_TABLE);
@@ -380,7 +408,7 @@ class EmailService
 
             $subject = $this->replaceVariables($template->subject, $variables);
             $body = $this->replaceVariables($template->body_html, $variables);
-            $recipientEmail = $entity->requester->email ?? '';
+            $recipientEmail = $recipientEmail ?? ($entity->requester->email ?? '');
 
             return $this->sendEmail($recipientEmail, $subject, $body, $attachments, $additionalTo, $additionalCc);
         } catch (Exception $e) {
