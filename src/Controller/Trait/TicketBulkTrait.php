@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace App\Controller\Trait;
 
-use App\Service\AuthorizationService;
 use App\Service\Exception\UnauthorizedAssignmentException;
 use Cake\Http\Response;
 use Cake\Log\Log;
@@ -66,8 +65,7 @@ trait TicketBulkTrait
         [$table, $service, $entityName] = $this->getEntityComponents();
 
         // Early actor guard: abort whole batch if actor cannot assign
-        $authService = new AuthorizationService();
-        if ($authService->isAssignmentDisabled($actor)) {
+        if ($this->authService->isAssignmentDisabled($actor)) {
             $this->Flash->error(__('No tienes permisos para asignar tickets.'));
 
             return $this->redirect(['action' => 'index']);

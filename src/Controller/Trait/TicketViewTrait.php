@@ -6,7 +6,6 @@ namespace App\Controller\Trait;
 use App\Constants\CacheConstants;
 use App\Constants\RoleConstants;
 use App\Model\Entity\Ticket;
-use App\Service\AuthorizationService;
 use Cake\Cache\Cache;
 use Cake\Http\Response;
 
@@ -80,12 +79,11 @@ trait TicketViewTrait
         }
         $selectableStatuses = $this->getStatusConfig();
         $user = $this->Authentication->getIdentity();
-        $authService = new AuthorizationService();
         $viewVars = array_merge($viewVars, [
             'statuses' => $selectableStatuses,
             'priorities' => $this->getPriorityConfig(),
             'isLocked' => $entity->isLocked(),
-            'isAssignmentDisabled' => $authService->isAssignmentDisabled($user),
+            'isAssignmentDisabled' => $this->authService->isAssignmentDisabled($user),
         ]);
         $this->set($viewVars);
 

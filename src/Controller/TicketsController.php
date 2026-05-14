@@ -10,6 +10,7 @@ use App\Controller\Trait\TicketHistoryTrait;
 use App\Controller\Trait\TicketListingTrait;
 use App\Controller\Trait\TicketServiceInitializerTrait;
 use App\Controller\Trait\TicketViewTrait;
+use App\Service\AuthorizationService;
 use App\Service\TicketPipelineService;
 use App\Service\Traits\GenericAttachmentTrait;
 use Cake\Event\EventInterface;
@@ -35,6 +36,8 @@ class TicketsController extends AppController
     use TicketHistoryTrait;
 
     private TicketPipelineService $ticketPipeline;
+
+    private AuthorizationService $authService;
 
     /**
      * @param \Cake\Event\EventInterface<\Cake\Controller\Controller> $event Event

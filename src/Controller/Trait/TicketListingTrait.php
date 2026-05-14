@@ -5,7 +5,6 @@ namespace App\Controller\Trait;
 
 use App\Constants\RoleConstants;
 use App\Constants\TicketConstants;
-use App\Service\AuthorizationService;
 
 /**
  * Listing region for TicketsController: index action and filter helpers.
@@ -104,8 +103,7 @@ trait TicketListingTrait
             $filterVarName = 'filter' . ucfirst($paramName);
             $filters[$filterVarName] = $this->request->getQuery($queryKey);
         }
-        $authService = new AuthorizationService();
-        $isAssignmentDisabled = $authService->isAssignmentDisabled($user);
+        $isAssignmentDisabled = $this->authService->isAssignmentDisabled($user);
 
         $viewVars = [
             $entityVariable => $entities,

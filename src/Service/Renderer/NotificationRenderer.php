@@ -105,7 +105,7 @@ class NotificationRenderer
      * @return string HTML section
      */
     public function renderStatusChangeHtml(string $oldStatus, string $newStatus, string $assigneeName): string
-        {
+    {
             $oldLabel = $this->getStatusLabel($oldStatus);
             $newLabel = $this->getStatusLabel($newStatus);
 
@@ -142,7 +142,7 @@ class NotificationRenderer
             }
 
             return $html;
-        }
+    }
 
     /**
      * Render WhatsApp message for new ticket

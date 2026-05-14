@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace App\Controller\Trait;
 
-use App\Service\AuthorizationService;
 use App\Service\Exception\InvalidStatusTransitionException;
 use App\Service\Exception\UnauthorizedAssignmentException;
 use Cake\Http\Exception\NotFoundException;
@@ -122,8 +121,7 @@ trait TicketActionsTrait
         $entityName = $components['displayName'];
 
         // Early actor guard: better UX than tripping the service exception
-        $authService = new AuthorizationService();
-        if ($authService->isAssignmentDisabled($actor)) {
+        if ($this->authService->isAssignmentDisabled($actor)) {
             $this->Flash->error(__('No tienes permisos para asignar tickets.'));
 
             return $this->redirect(['action' => $redirectAction]);

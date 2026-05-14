@@ -5,6 +5,7 @@ namespace App\Controller\Trait;
 
 use App\Constants\CacheConstants;
 use App\Constants\TicketConstants;
+use App\Service\AuthorizationService;
 use App\Service\Dto\SystemConfig;
 use App\Service\TicketPipelineService;
 use Cake\Cache\Cache;
@@ -40,6 +41,8 @@ trait TicketServiceInitializerTrait
         $this->initializeServices([
             'ticketPipeline' => TicketPipelineService::class,
         ]);
+
+        $this->authService = new AuthorizationService();
     }
 
     // endregion
