@@ -13,11 +13,11 @@
                 }
 
                 .circle-orange {
-                    background: radial-gradient(circle at 30% 30%, rgba(205, 106, 21, 1), rgba(205, 106, 21, 0.5));
+                    background: radial-gradient(circle at 30% 30%, rgba(var(--admin-orange-rgb), 1), rgba(var(--admin-orange-rgb), 0.5));
                 }
 
                 .circle-green {
-                    background: radial-gradient(circle at 30% 30%, rgba(0, 168, 94, 1), rgba(0, 168, 94, 0.5));
+                    background: radial-gradient(circle at 30% 30%, rgba(var(--admin-green-rgb), 1), rgba(var(--admin-green-rgb), 0.5));
                 }
 
                 .circle-brown {
