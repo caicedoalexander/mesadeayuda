@@ -261,25 +261,17 @@
     background: transparent !important;
 }
 
-/* Placeholder rendered as dashed orange "Asignar" pill (design system) */
+/* Select2 wraps the templateSelection output inside .select2-selection__placeholder
+   for the unselected state. We want only the inner `.agent-assign-pill` (rendered
+   by agentSelectionTemplate) to carry the dashed visual; the wrapper must stay
+   transparent so we don't end up with two nested pills. */
 .table-assign-form .select2-container.select2-container--bootstrap-5 .select2-selection__placeholder {
     display: inline-flex !important;
     align-items: center;
-    gap: 5px;
-    padding: 4px 10px !important;
-    border-radius: 6px;
-    background: var(--admin-orange-soft);
-    color: var(--admin-orange-ink) !important;
-    border: 1px dashed var(--admin-orange);
-    font-size: 12px !important;
-    font-weight: 600 !important;
-    line-height: 1;
-}
-
-.table-assign-form .select2-container.select2-container--bootstrap-5 .select2-selection__placeholder::before {
-    content: "+";
-    font-weight: 700;
-    font-size: 13px;
+    padding: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    color: inherit !important;
     line-height: 1;
 }
 
