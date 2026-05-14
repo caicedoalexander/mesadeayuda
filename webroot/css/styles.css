@@ -26,19 +26,28 @@
     --radius-lg: 12px;
     --radius-md: 8px;
     --radius-sm: 6px;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
-    /* Brand color variants */
+    /* Brand color variants — soft = pill bg, ink = text on soft */
     --admin-green-light: #00D477;
     --admin-green-hover: #008f50;
     --admin-green-rgb: 0, 168, 94;
+    --admin-green-soft: #E6F7EE;
+    --admin-green-ink: #00432a;
     --admin-orange-light: #F07D2D;
     --admin-orange-rgb: 205, 106, 21;
+    --admin-orange-soft: #FCEFE0;
+    --admin-orange-ink: #6b3306;
+    --admin-blue-soft: #E3EFFC;
+    --admin-blue-ink: #0a3a78;
+    --danger-soft: #FCE4E6;
+    --danger-ink: #7a1a25;
 
     /* App surface */
-    --bg-color: #FAFAFA;
+    --bg-color: #FFFFFF;
 
     /* Semantic colors (aligned with Bootstrap 5 alert palette) */
     --primary-color: #0d6efd;
@@ -85,7 +94,9 @@ body {
    ============================================ */
 .top-navbar {
     padding: 0;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background: #fff;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 20px rgba(0, 0, 0, 0.04);
     position: sticky;
     top: 0;
     display: flex;
@@ -94,30 +105,45 @@ body {
 }
 
 .nav-menu a {
-    color: var(--admin-green);
+    color: var(--gray-500);
     text-decoration: none;
-    padding: 6px 12px;
-    transition: all 0.3s ease;
-    font-weight: 700;
+    padding: 6px 11px;
+    transition: color 0.18s ease, background-color 0.18s ease;
+    font-weight: 500;
     font-size: 14px;
-    outline: 1px solid var(--admin-green);
-    border-radius: 8px;
-    box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+}
+
+.nav-menu a::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 2px;
+    background: var(--admin-green);
+    border-radius: 1px 1px 0 0;
+    transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .nav-menu a:hover {
-    transform: translateY(-1px);
-    background-color: var(--admin-green);
-    color: #fff;
+    color: var(--gray-800);
+    background-color: var(--gray-50);
+}
+
+.nav-menu a:hover::after {
+    width: 70%;
 }
 
 .nav-user {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-left: 10px;
-    padding-left: 10px;
     color: #333;
 }
 
@@ -125,97 +151,59 @@ body {
     border: none;
     padding: 6px 14px !important;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: 13px;
+    font-weight: 500;
     background-color: var(--admin-orange) !important;
     color: #fff !important;
     text-decoration: none;
-    transition: all 0.3s ease;
-    outline: 1px solid var(--admin-orange);
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 4px rgba(205, 106, 21, 0.22);
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
-
-
 
 .btn-logout:hover {
     transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(205, 106, 21, 0.32);
+    background-color: var(--admin-orange-light) !important;
 }
 
 /* Page Header */
 .page-header {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.875rem;
     margin-bottom: 1rem;
+    padding-bottom: 0.875rem;
+    border-bottom: 1px solid var(--gray-200);
+    animation: fadeIn 0.3s ease both;
 }
 
 .header-icon {
-    width: 48px;
-    height: 48px;
-    background: linear-gradient(135deg, #E6F7F0 0%, #CCF0E1 100%);
-    border: 2px solid var(--admin-green);
+    width: 40px;
+    height: 40px;
+    background: rgba(0, 168, 94, 0.1);
     border-radius: var(--radius-md);
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    transition: background 0.2s ease;
 }
 
 .header-icon i {
-    font-size: 28px;
+    font-size: 20px;
     color: var(--admin-green);
 }
 
 .header-text h3 {
-    font-size: 1.5rem;
+    font-size: 1.375rem;
     font-weight: 700;
     color: var(--gray-900);
     margin: 0;
     line-height: 1.2;
 }
-
-.list-group {
-    gap: 8px;
-}
-
-.list-group-item {
-    background-color: transparent;
-    font-size: 14px;
-    border: 0;
-    padding: 0;
-}
-
-.list-group-item a {
-    color: #fff;
-    text-decoration: none;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 12px;
-    border-radius: 8px !important;
-    font-weight: 400;
-    transition: all 0.3s ease;
-}
-
-.list-group-item a:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-    color: #fff;
-    text-decoration: none;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.list-group-item .active {
-    background-color: rgba(255, 255, 255, 0.1);
-    font-weight: bold;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.count {
-    background-color: rgba(255, 255, 255, 0.2);
-    font-size: 14px;
-    font-weight: bold;
-    padding: 0 4px;
-    border-radius: 8px;
-}
-
 
 /* ============================================
    ATTACHMENTS
@@ -633,19 +621,9 @@ body {
     }
 }
 
-.badge {
-    font-size: 12px;
-    font-weight: 600;
-    padding: 4px 8px;
-    border-radius: 8px;
-}
-
-/* Sidebar scrollbars with border-radius integration */
-.sidebar-scroll {
-    border-radius: 0 8px 8px 0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
+/* Sidebar scrollbars — applies to the outer layout wrapper and ticket-detail
+   side panels. Visual styling (rounding, shadow) lives on the inner card,
+   not on this scroll container, so we only style the scrollbar here. */
 .sidebar-scroll::-webkit-scrollbar {
     width: 6px;
 }
@@ -699,13 +677,8 @@ body {
     scrollbar-color: rgba(150, 150, 150, 0.3) var(--bg-color);
 }
 
-/* Table scrollbars with border-radius integration */
-.table-scroll {
-    border-radius: 8px;
-    background-color: #fff;
-    overflow: auto;
-}
-
+/* Table scroll container — visual styling (border/shadow/radius) lives on
+   the wrapping card (`.tickets-table-card`), not on the scroll element itself. */
 .table-scroll::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -813,10 +786,9 @@ body {
 
 .rounded-md { border-radius: var(--radius-md); }
 
-/* Layout: app shell is 55px topbar + scroll area below */
-.app-topbar { max-height: 55px; z-index: 1000; }
-.below-topbar-h { height: calc(100vh - 55px); }
-.below-topbar-mh { max-height: calc(100vh - 55px); }
+
+.below-topbar-h { height: 100vh }
+.below-topbar-mh { max-height: 100vh}
 
 /* Tag/label primitives */
 .tag-input-inline {
@@ -847,3 +819,213 @@ body {
     background: var(--gray-100);
     border-radius: var(--radius-md);
 }
+
+/* ============================================
+   DESIGN SYSTEM — components
+   Single source of truth for buttons, pills, tags, flags.
+   See docs/design/Sistema de Diseño (handoff).
+   ============================================ */
+
+/* ── Buttons ─────────────────────────────────── */
+.btn-brand-primary {
+    height: 36px;
+    padding: 0 14px;
+    border: none;
+    border-radius: var(--radius-md);
+    background: var(--admin-green);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 2px 6px -1px rgba(0, 168, 94, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    transition: var(--transition);
+}
+.btn-brand-primary:hover {
+    background: var(--admin-green-hover);
+    color: #fff;
+    box-shadow: 0 4px 10px -2px rgba(0, 168, 94, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+.btn-brand-primary:disabled,
+.btn-brand-primary.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-brand-secondary {
+    height: 36px;
+    padding: 0 13px;
+    border-radius: var(--radius-md);
+    background: #fff;
+    color: var(--gray-700);
+    border: 1px solid var(--gray-200);
+    font-size: 13px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+    text-decoration: none;
+}
+.btn-brand-secondary:hover {
+    border-color: var(--gray-300);
+    background: var(--gray-50);
+    color: var(--gray-900);
+}
+
+.btn-brand-ghost {
+    height: 36px;
+    padding: 0 12px;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--gray-700);
+    border: 1px solid transparent;
+    font-size: 13px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: var(--transition);
+    text-decoration: none;
+}
+.btn-brand-ghost:hover {
+    background: var(--gray-100);
+    color: var(--gray-900);
+}
+
+.btn-brand-dashed {
+    padding: 5px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--admin-orange-soft);
+    color: var(--admin-orange-ink);
+    border: 1px dashed var(--admin-orange);
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: var(--transition);
+}
+.btn-brand-dashed:hover {
+    background: #f8e1c8;
+    color: var(--admin-orange-ink);
+}
+
+.btn-brand-sm { height: 30px; padding: 0 11px; font-size: 12px; }
+.btn-brand-lg { height: 44px; padding: 0 18px; font-size: 14px; }
+
+/* ── Status pill — dot + soft bg + ink text ──── */
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.1px;
+    white-space: nowrap;
+    width: fit-content;
+}
+.status-pill::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+}
+.status-pill.sm { padding: 3px 9px; font-size: 11px; }
+.status-pill.nuevo     { background: var(--admin-orange-soft); color: var(--admin-orange-ink); }
+.status-pill.nuevo::before     { background: var(--admin-orange); }
+.status-pill.abierto   { background: var(--danger-soft);       color: var(--danger-ink); }
+.status-pill.abierto::before   { background: var(--danger-color); }
+.status-pill.pendiente { background: var(--admin-blue-soft);   color: var(--admin-blue-ink); }
+.status-pill.pendiente::before { background: var(--admin-blue); }
+.status-pill.resuelto  { background: var(--admin-green-soft);  color: var(--admin-green-ink); }
+.status-pill.resuelto::before  { background: var(--admin-green); }
+
+/* ── Priority flag — inline glyph + label ────── */
+.priority-flag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    line-height: 1;
+}
+.priority-flag .glyph { font-size: 13px; line-height: 1; }
+.priority-flag.baja    { color: var(--gray-500); }
+.priority-flag.media   { color: var(--admin-orange); }
+.priority-flag.alta    { color: var(--danger-color); }
+.priority-flag.urgente { color: var(--danger-color); }
+
+/* ── Tag chip — categoría ─────────────────────── */
+.tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    background: var(--gray-100);
+    color: var(--gray-700);
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+    line-height: 1.5;
+}
+.tag-chip.green  { background: var(--admin-green-soft);  color: var(--admin-green-ink); }
+.tag-chip.orange { background: var(--admin-orange-soft); color: var(--admin-orange-ink); }
+.tag-chip.blue   { background: var(--admin-blue-soft);   color: var(--admin-blue-ink); }
+
+/* ── Inline stat (header) ─────────────────────── */
+.stat-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--gray-600);
+}
+.stat-inline .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.stat-inline .value {
+    font-weight: 700;
+    color: var(--gray-700);
+    font-variant-numeric: tabular-nums;
+}
+.stat-inline.emphasis .value { color: var(--gray-900); }
+.stat-inline .label { color: var(--gray-500); }
+
+/* ── Focus ring (forms, inputs) ───────────────── */
+.focus-ring:focus,
+.focus-ring:focus-within {
+    outline: 2px solid rgba(0, 168, 94, 0.18);
+    outline-offset: 1px;
+    border-color: var(--admin-green) !important;
+}
+
+/* ── Mono utility (IDs, timestamps) ──────────── */
+.mono {
+    font-family: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+}
+.tnum { font-variant-numeric: tabular-nums; }

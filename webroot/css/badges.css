@@ -1,22 +1,83 @@
-/* Badges para tickets — extraido de StatusHelper inline (audit 4.4) */
-/* Colores derivados de TicketConstants::STATUS_COLORS y PRIORITY_COLORS */
+/**
+ * Ticket Badges — pill style with dot indicator.
+ * Selectors `.badge-status-{key}` and `.badge-priority-{key}` are produced by
+ * templates/element/tickets/badge.php; class names are kept stable for BC.
+ *
+ * Tokens live in webroot/css/styles.css (--*-soft / --*-ink families).
+ */
 
 .badge-status,
 .badge-priority {
-    color: white;
-    border-radius: 8px;
-    padding: 0.35rem 0.65rem;
-    font-size: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    border-radius: 999px;
+    font-size: 12px;
     font-weight: 600;
-    text-transform: uppercase;
+    line-height: 1;
+    letter-spacing: 0.1px;
+    white-space: nowrap;
+    width: fit-content;
+    text-transform: none;
 }
 
-.badge-status-nuevo     { background-color: var(--warning-color); }
-.badge-status-abierto   { background-color: var(--danger-color); }
-.badge-status-pendiente { background-color: var(--primary-color); }
-.badge-status-resuelto  { background-color: var(--success-color); }
+.badge-status::before,
+.badge-priority::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
 
-.badge-priority-baja    { background-color: var(--text-muted); }
-.badge-priority-media   { background-color: var(--info-color); }
-.badge-priority-alta    { background-color: var(--warning-color); }
-.badge-priority-urgente { background-color: var(--danger-color); }
+/* ── Status ─────────────────────────────────── */
+.badge-status-nuevo {
+    background-color: var(--admin-orange-soft);
+    color: var(--admin-orange-ink);
+}
+.badge-status-nuevo::before { background-color: var(--admin-orange); }
+
+.badge-status-abierto {
+    background-color: var(--danger-soft);
+    color: var(--danger-ink);
+}
+.badge-status-abierto::before { background-color: var(--danger-color); }
+
+.badge-status-pendiente {
+    background-color: var(--admin-blue-soft);
+    color: var(--admin-blue-ink);
+}
+.badge-status-pendiente::before { background-color: var(--admin-blue); }
+
+.badge-status-resuelto {
+    background-color: var(--admin-green-soft);
+    color: var(--admin-green-ink);
+}
+.badge-status-resuelto::before { background-color: var(--admin-green); }
+
+/* ── Priority ───────────────────────────────── */
+.badge-priority-baja {
+    background-color: var(--gray-100);
+    color: var(--gray-700);
+}
+.badge-priority-baja::before { background-color: var(--gray-500); }
+
+.badge-priority-media {
+    background-color: var(--admin-orange-soft);
+    color: var(--admin-orange-ink);
+}
+.badge-priority-media::before { background-color: var(--admin-orange); }
+
+.badge-priority-alta {
+    background-color: var(--danger-soft);
+    color: var(--danger-ink);
+}
+.badge-priority-alta::before { background-color: var(--danger-color); }
+
+.badge-priority-urgente {
+    background-color: var(--danger-soft);
+    color: var(--danger-ink);
+    font-weight: 700;
+}
+.badge-priority-urgente::before { background-color: var(--danger-color); }
