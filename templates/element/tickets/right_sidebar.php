@@ -123,6 +123,20 @@ $assignedToCurrent = $currentUser && $ticket->assignee_id === $currentUser->id;
     </section>
 
     <!-- Etiquetas -->
+    <?php
+    $assignedTagIds = [];
+    if (!empty($ticket->tags)) {
+        foreach ($ticket->tags as $t) {
+            $assignedTagIds[$t->id] = true;
+        }
+    }
+    $availableTags = [];
+    foreach (($tags ?? []) as $tagId => $tagName) {
+        if (!isset($assignedTagIds[$tagId])) {
+            $availableTags[$tagId] = $tagName;
+        }
+    }
+    ?>
     <section class="meta-section">
         <h4 class="meta-label">Etiquetas</h4>
         <div class="meta-tags">
@@ -140,21 +154,34 @@ $assignedToCurrent = $currentUser && $ticket->assignee_id === $currentUser->id;
                 <?php endforeach; ?>
             <?php endif; ?>
 
-            <?php if (!$isLocked && !empty($tags)): ?>
-                <button type="button" class="btn-add-tag" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="bi bi-plus"></i> añadir
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end add-tag-menu">
-                    <?php foreach ($tags as $tagId => $tagName): ?>
-                        <li>
-                            <?= $this->Form->postLink(
-                                h($tagName),
-                                ['action' => 'addTag', $ticket->id],
-                                ['data' => ['tag_id' => $tagId], 'class' => 'dropdown-item', 'escape' => false]
-                            ) ?>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
+            <?php if (!$isLocked && !empty($availableTags)): ?>
+                <div class="dropdown add-tag-dropdown">
+                    <button type="button"
+                            class="btn-add-tag"
+                            data-bs-toggle="dropdown"
+                            data-bs-auto-close="true"
+                            aria-expanded="false">
+                        <i class="bi bi-plus"></i> añadir
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end add-tag-menu shadow-sm">
+                        <li class="add-tag-menu-header">Disponibles</li>
+                        <?php foreach ($availableTags as $tagId => $tagName): ?>
+                            <li>
+                                <?= $this->Form->postLink(
+                                    '<i class="bi bi-tag-fill"></i> ' . h($tagName),
+                                    ['action' => 'addTag', $ticket->id],
+                                    [
+                                        'class'  => 'dropdown-item add-tag-item',
+                                        'escape' => false,
+                                        'data'   => ['tag_id' => $tagId],
+                                    ]
+                                ) ?>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php elseif (!$isLocked && empty($availableTags) && empty($ticket->tags)): ?>
+                <span class="meta-tags-empty">Sin etiquetas disponibles</span>
             <?php endif; ?>
         </div>
     </section>

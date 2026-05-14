@@ -862,20 +862,54 @@
     background: var(--admin-green-soft);
 }
 
+.add-tag-dropdown { display: inline-block; }
+
 .add-tag-menu {
     border-radius: 8px;
     border: 1px solid var(--gray-200);
     padding: 4px;
-    min-width: 180px;
-    max-height: 240px;
+    min-width: 200px;
+    max-height: 280px;
     overflow-y: auto;
     box-shadow: var(--shadow-md);
 }
 
-.add-tag-menu .dropdown-item {
+.add-tag-menu-header {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    padding: 6px 10px 4px;
+    list-style: none;
+}
+
+.add-tag-menu .add-tag-item {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
     padding: 6px 10px !important;
     border-radius: 6px !important;
     font-size: 12px !important;
+    color: var(--gray-700) !important;
+}
+
+.add-tag-menu .add-tag-item i {
+    color: var(--gray-400);
+    font-size: 11px;
+}
+
+.add-tag-menu .add-tag-item:hover {
+    background: var(--admin-green-soft) !important;
+    color: var(--admin-green-ink) !important;
+}
+
+.add-tag-menu .add-tag-item:hover i { color: var(--admin-green); }
+
+.meta-tags-empty {
+    font-size: 11px;
+    color: var(--gray-400);
+    font-style: italic;
 }
 
 /* Actividad timeline */
