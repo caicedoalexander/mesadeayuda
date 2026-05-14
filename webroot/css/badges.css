@@ -11,12 +11,12 @@
     text-transform: uppercase;
 }
 
-.badge-status-nuevo     { background-color: #ffc107; }
-.badge-status-abierto   { background-color: #dc3545; }
-.badge-status-pendiente { background-color: #0d6efd; }
-.badge-status-resuelto  { background-color: #198754; }
+.badge-status-nuevo     { background-color: var(--warning-color); }
+.badge-status-abierto   { background-color: var(--danger-color); }
+.badge-status-pendiente { background-color: var(--primary-color); }
+.badge-status-resuelto  { background-color: var(--success-color); }
 
-.badge-priority-baja    { background-color: #6c757d; }
-.badge-priority-media   { background-color: #0dcaf0; }
-.badge-priority-alta    { background-color: #ffc107; }
-.badge-priority-urgente { background-color: #dc3545; }
+.badge-priority-baja    { background-color: var(--text-muted); }
+.badge-priority-media   { background-color: var(--info-color); }
+.badge-priority-alta    { background-color: var(--warning-color); }
+.badge-priority-urgente { background-color: var(--danger-color); }
