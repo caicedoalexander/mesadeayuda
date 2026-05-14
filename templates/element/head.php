@@ -35,7 +35,7 @@
           crossorigin="anonymous" />
 
     <!-- Custom Styles -->
-    <?= $this->Html->css(['styles', 'badges', 'tickets-rail']) ?>
+    <?= $this->Html->css(['styles', 'components', 'badges', 'tickets-rail']) ?>
 
     <!-- jQuery (required for Select2) -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"

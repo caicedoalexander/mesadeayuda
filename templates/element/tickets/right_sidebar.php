@@ -194,11 +194,16 @@ $assignedToCurrent = $currentUser && $ticket->assignee_id === $currentUser->id;
              data-entity-type="ticket"
              data-entity-id="<?= $ticket->id ?>"
              data-loaded="false">
-            <div id="history-loader" class="meta-activity-loader">
-                <div class="spinner-border spinner-border-sm" role="status">
-                    <span class="visually-hidden">Cargando…</span>
-                </div>
-                <span>Cargando actividad…</span>
+            <div id="history-loader" class="skeleton-activity" aria-label="Cargando actividad" aria-busy="true">
+                <?php for ($i = 0; $i < 3; $i++): ?>
+                    <div class="skeleton-activity-item">
+                        <span class="skeleton skeleton-dot"></span>
+                        <div class="skeleton-activity-text">
+                            <span class="skeleton skeleton-line-sm" style="width: 78%"></span>
+                            <span class="skeleton skeleton-line-sm" style="width: 48%; height: 8px;"></span>
+                        </div>
+                    </div>
+                <?php endfor; ?>
             </div>
             <div id="history-content" class="meta-activity-content" style="display: none;"></div>
         </div>

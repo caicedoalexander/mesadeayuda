@@ -8,8 +8,16 @@ if (!isset($params['escape']) || $params['escape'] !== false) {
     $message = h($message);
 }
 ?>
-<div class="alert alert-success alert-dismissible fade show flash-message position-fixed end-0" role="alert">
-    <i class="bi bi-check-circle-fill me-2"></i>
-    <strong>¡Éxito!</strong> <?= $message ?>
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+<div class="app-toast success flash-message" role="status" aria-live="polite">
+    <div class="app-toast-bar"></div>
+    <div class="app-toast-body">
+        <div class="app-toast-icon"><i class="bi bi-check-lg"></i></div>
+        <div class="app-toast-content">
+            <div class="app-toast-title">Listo</div>
+            <div class="app-toast-message"><?= $message ?></div>
+        </div>
+        <button type="button" class="app-toast-close" aria-label="Cerrar">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
 </div>

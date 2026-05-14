@@ -1,0 +1,646 @@
+/* ===========================================================
+   components.css — Sistema de Diseño · secciones 08–11
+   Toasts, Overlays (modales), Empty states, Skeleton loaders.
+   Tokens base viven en styles.css (:root).
+   =========================================================== */
+
+
+/* ===========================================================
+   Botón destructivo — variante semántica del primary.
+   Sirve para "Eliminar", confirmaciones críticas, etc.
+   =========================================================== */
+
+.btn-brand-danger {
+    height: 36px;
+    padding: 0 14px;
+    border: none;
+    border-radius: var(--radius-md);
+    background: var(--danger-color);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 2px 6px -1px rgba(220, 53, 69, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    transition: var(--transition);
+}
+.btn-brand-danger:hover {
+    background: #b02230;
+    color: #fff;
+    box-shadow: 0 4px 10px -2px rgba(220, 53, 69, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+.btn-brand-danger:disabled,
+.btn-brand-danger.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+
+/* ===========================================================
+   08 · OVERLAYS — Modal / Confirm dialog / Popover
+   Sobrescribe la skin por defecto de Bootstrap para que coincida
+   con el sistema de diseño. La mecánica de Bootstrap (data-bs-*)
+   sigue funcionando.
+   =========================================================== */
+
+.modal-backdrop.show {
+    opacity: 0.5;
+}
+
+.modal-content {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08),
+                0 8px 10px -6px rgba(0, 0, 0, 0.04),
+                0 0 0 1px var(--gray-200);
+    overflow: hidden;
+    background: #fff;
+}
+
+.modal-dialog-centered-small {
+    max-width: 420px;
+}
+
+.modal-header {
+    background: #fff;
+    color: var(--gray-900);
+    border-bottom: 1px solid var(--gray-100);
+    padding: 16px 18px 14px;
+    border-radius: 12px 12px 0 0;
+}
+
+.modal-header .modal-title {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--gray-900);
+    margin: 0;
+}
+
+.modal-header .modal-title i {
+    color: var(--admin-green);
+    font-size: 16px;
+}
+
+.modal-header .btn-close {
+    background: none;
+    border: none;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    color: var(--gray-500);
+    opacity: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
+    transition: background 0.15s ease;
+}
+
+.modal-header .btn-close::before {
+    content: "\F62A"; /* bi-x-lg */
+    font-family: "bootstrap-icons";
+    font-size: 16px;
+    line-height: 1;
+}
+
+.modal-header .btn-close:hover {
+    background: var(--gray-100);
+    color: var(--gray-800);
+}
+
+.modal-body {
+    padding: 16px 18px;
+    font-size: 13px;
+    color: var(--gray-700);
+}
+
+.modal-body .form-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--gray-700);
+    letter-spacing: 0.2px;
+    margin-bottom: 5px;
+}
+
+.modal-footer {
+    padding: 12px 18px;
+    border-top: 1px solid var(--gray-100);
+    background: var(--gray-50);
+    gap: 8px;
+    border-radius: 0 0 12px 12px;
+}
+
+.modal-footer > * {
+    margin: 0;
+}
+
+/* Confirm dialog — variante destructiva, icono circular a la izquierda */
+.modal.confirm-dialog .modal-header {
+    background: #fff;
+    padding: 18px 18px 0;
+    border-bottom: none;
+}
+
+.modal.confirm-dialog .modal-body {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px 18px 4px;
+}
+
+.modal.confirm-dialog .confirm-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--danger-soft);
+    color: var(--danger-color);
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.modal.confirm-dialog .confirm-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.modal.confirm-dialog .confirm-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: 4px;
+}
+
+.modal.confirm-dialog .confirm-message {
+    font-size: 12px;
+    color: var(--gray-600);
+    line-height: 1.5;
+}
+
+@keyframes modalSlideDown {
+    from { transform: translateY(-12px); opacity: 0; }
+    to   { transform: translateY(0);     opacity: 1; }
+}
+
+.modal.show .modal-dialog {
+    animation: modalSlideDown 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Popover / menú contextual ── */
+.app-popover {
+    position: absolute;
+    min-width: 200px;
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 10px;
+    box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04));
+    padding: 5px;
+    z-index: 1050;
+}
+
+.app-popover-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    padding: 7px 9px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--gray-800);
+    font-size: 13px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+
+.app-popover-item:hover {
+    background: var(--gray-100);
+}
+
+.app-popover-item i {
+    color: var(--gray-500);
+    font-size: 14px;
+}
+
+.app-popover-item.danger {
+    color: var(--danger-color);
+}
+
+.app-popover-item.danger i {
+    color: var(--danger-color);
+}
+
+.app-popover-divider {
+    height: 1px;
+    background: var(--gray-100);
+    margin: 4px 2px;
+}
+
+
+/* ===========================================================
+   09 · TOASTS / NOTIFICATIONS
+   Sustituye flash-message viejos: barra lateral 4px, icono pill,
+   ancho fijo, anclados abajo-derecha. Las 4 variantes semánticas
+   comparten estructura y cambian sólo de color.
+   =========================================================== */
+
+.app-toast {
+    position: fixed;
+    right: 20px;
+    z-index: 1080;
+    width: 360px;
+    max-width: calc(100vw - 40px);
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 10px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08),
+                0 2px 4px -1px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+    display: flex;
+    animation: toastSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.app-toast.hiding {
+    animation: toastSlideOut 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.app-toast-bar {
+    width: 4px;
+    flex-shrink: 0;
+}
+
+.app-toast-body {
+    padding: 12px 14px;
+    display: flex;
+    gap: 11px;
+    align-items: flex-start;
+    flex: 1;
+    min-width: 0;
+}
+
+.app-toast-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.app-toast-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-toast-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-900);
+    line-height: 1.3;
+}
+
+.app-toast-message {
+    font-size: 12px;
+    color: var(--gray-600);
+    margin-top: 2px;
+    line-height: 1.45;
+    word-wrap: break-word;
+}
+
+.app-toast-close {
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    border: none;
+    background: transparent;
+    color: var(--gray-400);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    padding: 0;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.app-toast-close:hover {
+    background: var(--gray-100);
+    color: var(--gray-700);
+}
+
+/* Variantes semánticas */
+.app-toast.success .app-toast-bar  { background: var(--admin-green); }
+.app-toast.success .app-toast-icon { background: var(--admin-green-soft); color: var(--admin-green-ink); }
+
+.app-toast.info    .app-toast-bar  { background: var(--admin-blue); }
+.app-toast.info    .app-toast-icon { background: var(--admin-blue-soft); color: var(--admin-blue-ink); }
+
+.app-toast.warning .app-toast-bar  { background: var(--admin-orange); }
+.app-toast.warning .app-toast-icon { background: var(--admin-orange-soft); color: var(--admin-orange-ink); }
+
+.app-toast.danger  .app-toast-bar  { background: var(--danger-color); }
+.app-toast.danger  .app-toast-icon { background: var(--danger-soft); color: #7a1a25; }
+
+.app-toast.neutral .app-toast-bar  { background: var(--gray-400); }
+.app-toast.neutral .app-toast-icon { background: var(--gray-100); color: var(--gray-700); }
+
+/* Stack: cada toast asume su top desde JS o lo offsetea automático.
+   Si sólo hay uno, ancla a top: 55px (debajo de la topbar). */
+.app-toast { top: 55px; }
+.app-toast + .app-toast { top: calc(55px + 76px); }
+.app-toast + .app-toast + .app-toast { top: calc(55px + 76px * 2); }
+
+@keyframes toastSlideIn {
+    from { transform: translateX(110%); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+}
+
+@keyframes toastSlideOut {
+    from { transform: translateX(0);    opacity: 1; }
+    to   { transform: translateX(110%); opacity: 0; }
+}
+
+/* Toast con acción (Deshacer, Ver, etc.) */
+.app-toast-action {
+    height: 26px;
+    padding: 0 10px;
+    border-radius: 5px;
+    border: 1px solid var(--gray-200);
+    background: #fff;
+    color: var(--gray-800);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.app-toast-action:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-300);
+}
+
+/* Inline banner — contexto permanente, no anclado, no animado */
+.app-banner {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--admin-orange-soft);
+    border: 1px solid var(--admin-orange);
+    color: var(--admin-orange-ink);
+    font-size: 13px;
+}
+
+.app-banner.info    { background: var(--admin-blue-soft);  border-color: var(--admin-blue);  color: var(--admin-blue-ink); }
+.app-banner.danger  { background: var(--danger-soft);      border-color: var(--danger-color); color: #7a1a25; }
+.app-banner.success { background: var(--admin-green-soft); border-color: var(--admin-green); color: var(--admin-green-ink); }
+
+.app-banner-title { font-weight: 600; }
+
+.app-banner-message {
+    opacity: 0.85;
+    margin-top: 1px;
+    font-size: 12px;
+}
+
+.app-banner-action {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0;
+}
+
+
+/* ===========================================================
+   10 · EMPTY STATES
+   Reutilizable. Cinco tonos: success, neutral, danger, info,
+   plus la variante inline (dentro de tabla).
+   =========================================================== */
+
+.app-empty {
+    padding: 32px 20px;
+    text-align: center;
+    width: 100%;
+    background: var(--bg-color, #fff);
+    border-radius: 10px;
+    border: 1px solid var(--gray-200);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.app-empty-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+    font-size: 26px;
+}
+
+.app-empty-icon.success { background: var(--admin-green-soft); color: var(--admin-green-ink); }
+.app-empty-icon.neutral { background: var(--gray-100);         color: var(--gray-500); }
+.app-empty-icon.danger  { background: var(--danger-soft);      color: var(--danger-color); }
+.app-empty-icon.info    { background: var(--admin-blue-soft);  color: var(--admin-blue-ink); }
+.app-empty-icon.warning { background: var(--admin-orange-soft); color: var(--admin-orange-ink); }
+
+.app-empty-title {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    color: var(--gray-900);
+}
+
+.app-empty-message {
+    font-size: 13px;
+    color: var(--gray-600);
+    margin: 6px auto 16px;
+    max-width: 320px;
+    line-height: 1.5;
+}
+
+.app-empty-message .mono {
+    background: var(--gray-100);
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+
+.app-empty-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Variante inline — dentro de tabla, una sola línea */
+.app-empty-inline {
+    padding: 28px 14px;
+    text-align: center;
+    color: var(--gray-500);
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.app-empty-inline i {
+    font-size: 15px;
+    color: var(--gray-400);
+}
+
+.app-empty-inline a,
+.app-empty-inline .app-empty-inline-link {
+    color: var(--admin-green-ink);
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+
+/* ===========================================================
+   11 · SKELETON LOADERS
+   Shimmer suave. La forma del skeleton imita la del contenido
+   real (ver _row, _hero, _stat, _avatar). Usar sólo para la
+   primera carga >300ms; no para re-fetch silencioso.
+   =========================================================== */
+
+.skeleton {
+    display: inline-block;
+    border-radius: 4px;
+    background: linear-gradient(
+        90deg,
+        var(--gray-100) 0%,
+        var(--gray-200) 50%,
+        var(--gray-100) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.4s linear infinite;
+}
+
+@keyframes skeletonShimmer {
+    0%   { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+}
+
+.skeleton-line   { height: 12px; width: 100%; }
+.skeleton-line-sm { height: 9px;  width: 100%; }
+.skeleton-line-lg { height: 18px; width: 100%; border-radius: 6px; }
+.skeleton-pill   { height: 20px; width: 70px; border-radius: 10px; }
+.skeleton-avatar { height: 36px; width: 36px; border-radius: 50%; }
+.skeleton-avatar-sm { height: 22px; width: 22px; border-radius: 50%; }
+.skeleton-bar    { height: 4px; border-radius: 2px; }
+
+/* Skeleton row para listas de tickets — coincide con el grid real */
+.skeleton-ticket-row {
+    display: grid;
+    grid-template-columns: 32px 60px 80px 1fr 120px 80px;
+    gap: 14px;
+    align-items: center;
+    padding: 10px 0;
+}
+
+.skeleton-ticket-row .skeleton-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.skeleton-ticket-row .skeleton-agent {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Skeleton para el detalle de ticket */
+.skeleton-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.skeleton-detail-pills {
+    display: flex;
+    gap: 8px;
+}
+
+.skeleton-detail-author {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.skeleton-detail-author-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 4px;
+}
+
+/* Skeleton para la timeline de actividad (sidebar derecho) */
+.skeleton-activity {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 4px 0;
+}
+
+.skeleton-activity-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.skeleton-activity-item .skeleton-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-top: 5px;
+    flex-shrink: 0;
+}
+
+.skeleton-activity-item .skeleton-activity-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+/* Skeleton para stats */
+.skeleton-stats {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+}
+
+.skeleton-stat {
+    flex: 1;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}

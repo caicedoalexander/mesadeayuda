@@ -65,15 +65,16 @@ $this->assign('title', 'Gestión de Etiquetas');
             <?php endforeach; ?>
         </div>
     <?php else: ?>
-        <div class="empty-state">
-            <i class="bi bi-tags empty-state-icon"></i>
-            <h3>No hay etiquetas creadas</h3>
-            <p>Las etiquetas te ayudan a organizar y categorizar tus tickets.</p>
-            <?= $this->Html->link(
+        <?= $this->element('empty_state', [
+            'icon'    => 'tags',
+            'tone'    => 'success',
+            'title'   => 'No hay etiquetas creadas',
+            'message' => 'Las etiquetas te ayudan a organizar y categorizar tus tickets.',
+            'action'  => $this->Html->link(
                 '<i class="bi bi-plus-lg"></i> Crear primera etiqueta',
                 ['controller' => 'Tags', 'action' => 'add'],
-                ['class' => 'btn-empty-state', 'escape' => false]
-            ) ?>
-        </div>
+                ['class' => 'btn-brand-primary btn-brand-sm', 'escape' => false]
+            ),
+        ]) ?>
     <?php endif; ?>
 </div>

@@ -4,16 +4,20 @@
  * @var array $params
  * @var string $message
  */
-$class = 'alert alert-primary alert-dismissible fade show flash-message position-fixed end-0';
-if (!empty($params['class'])) {
-    $class .= ' ' . $params['class'];
-}
+$extraClass = !empty($params['class']) ? ' ' . $params['class'] : '';
 if (!isset($params['escape']) || $params['escape'] !== false) {
     $message = h($message);
 }
 ?>
-<div class="<?= h($class) ?>" role="alert">
-    <i class="bi bi-bell-fill me-2"></i>
-    <?= $message ?>
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+<div class="app-toast neutral flash-message<?= h($extraClass) ?>" role="status" aria-live="polite">
+    <div class="app-toast-bar"></div>
+    <div class="app-toast-body">
+        <div class="app-toast-icon"><i class="bi bi-bell-fill"></i></div>
+        <div class="app-toast-content">
+            <div class="app-toast-message"><?= $message ?></div>
+        </div>
+        <button type="button" class="app-toast-close" aria-label="Cerrar">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
 </div>

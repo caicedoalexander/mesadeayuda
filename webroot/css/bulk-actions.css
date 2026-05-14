@@ -327,33 +327,8 @@
     font-style: italic;
 }
 
-/* ── Empty state ── */
-.tickets-empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 64px 40px;
-    text-align: center;
-    background: var(--bg-color);
-    border-radius: 10px;
-    border: 1px solid var(--gray-200);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-    animation: fadeIn 0.3s ease both;
-}
-
-.tickets-empty-state i {
-    font-size: 44px;
-    color: var(--gray-300);
-    margin-bottom: 12px;
-}
-
-.tickets-empty-state p {
-    font-size: 15px;
-    margin: 0;
-    color: var(--gray-500);
-    font-weight: 500;
-}
+/* Empty states: ver components.css (sección 10 · Empty states)
+   y templates/element/empty_state.php. */
 
 /* ============================================
    Content Area Layout
@@ -635,74 +610,8 @@
     transform: scale(1.2);
 }
 
-/* ============================================
-   Modal Animations
-   ============================================ */
-@keyframes modalSlideDown {
-    from {
-        transform: translateY(-50px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-.modal.show .modal-dialog {
-    animation: modalSlideDown 0.3s ease-out;
-}
-
-.modal-dialog-centered-small {
-    max-width: 420px;
-}
-
-.modal-content {
-    border-radius: 12px;
-    border: none;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-}
-
-.modal-header {
-    background: linear-gradient(135deg, var(--admin-green) 0%, var(--admin-green-light) 100%);
-    color: #fff;
-    border-radius: 12px 12px 0 0;
-    padding: 1rem 1.5rem;
-    border-bottom: none;
-}
-
-.modal-header .modal-title {
-    font-size: 1rem;
-    font-weight: 600;
-    display: flex;
-}
-
-.modal-header .modal-title i {
-    margin-right: 0.5rem;
-    font-size: 1.1rem;
-}
-
-.modal-body {
-    padding: 1.5rem;
-}
-
-.modal-footer {
-    padding: 1rem 1.5rem;
-    border-top: 1px solid var(--surface-hover);
-    background-color: var(--surface-light);
-    border-radius: 0 0 12px 12px;
-}
-
-.modal-footer .btn {
-    padding: 0.5rem 1.5rem;
-    border-radius: 6px;
-    font-weight: 500;
-}
-
-/* Modal de eliminación */
-.modal-header.bg-danger-gradient {
-    background: linear-gradient(135deg, var(--danger-color) 0%, #b02230 100%);
-}
+/* Modals: estilos y animación viven en components.css
+   (sección 08 · Overlays). */
 
 /* ============================================
    Form Styles

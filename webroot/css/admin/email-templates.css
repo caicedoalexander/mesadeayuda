@@ -239,33 +239,8 @@
     transform: translateY(-2px);
 }
 
-/* Empty State */
-.empty-state {
-    text-align: center;
-    padding: 4rem 2rem;
-    background: white;
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
-}
-
-.empty-state-icon {
-    font-size: 4rem;
-    color: var(--gray-300);
-    margin-bottom: 1rem;
-}
-
-.empty-state h3 {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: var(--gray-900);
-    margin-bottom: 0.75rem;
-}
-
-.empty-state p {
-    font-size: 1rem;
-    color: var(--gray-600);
-    margin: 0;
-}
+/* Empty state: usa templates/element/empty_state.php
+   (estilos en components.css, sección 10). */
 
 /* Responsive */
 @media (max-width: 768px) {

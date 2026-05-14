@@ -21,8 +21,7 @@ $showTagModal = $showTagModal ?? false;
                     <i class="bi bi-person-fill-add"></i>
                     Asignar a agente
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                    aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <?= $this->Form->create(null, ['url' => ['action' => 'bulkAssign'], 'id' => 'bulkAssignForm']) ?>
             <div class="modal-body">
@@ -36,14 +35,14 @@ $showTagModal = $showTagModal ?? false;
                     <?= $this->Form->select('agent_id', $agents, [
                         'empty' => 'Seleccionar...',
                         'class' => 'form-select',
-                        'required' => true
+                        'required' => true,
                     ]) ?>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-sm btn-primary">
-                    <i class="bi bi-check-lg me-1"></i>Asignar
+                <button type="button" class="btn-brand-ghost btn-brand-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn-brand-primary btn-brand-sm">
+                    <i class="bi bi-check-lg"></i> Asignar
                 </button>
             </div>
             <?= $this->Form->end() ?>
@@ -60,8 +59,7 @@ $showTagModal = $showTagModal ?? false;
                     <i class="bi bi-exclamation-triangle"></i>
                     Cambiar prioridad
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                    aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <?= $this->Form->create(null, ['url' => ['action' => 'bulkChangePriority'], 'id' => 'bulkPriorityForm']) ?>
             <div class="modal-body">
@@ -76,18 +74,18 @@ $showTagModal = $showTagModal ?? false;
                         'baja' => 'Baja',
                         'media' => 'Media',
                         'alta' => 'Alta',
-                        'urgente' => 'Urgente'
+                        'urgente' => 'Urgente',
                     ], [
                         'empty' => 'Seleccionar...',
                         'class' => 'form-select',
-                        'required' => true
+                        'required' => true,
                     ]) ?>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-sm btn-primary">
-                    <i class="bi bi-check-lg me-1"></i>Cambiar
+                <button type="button" class="btn-brand-ghost btn-brand-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn-brand-primary btn-brand-sm">
+                    <i class="bi bi-check-lg"></i> Cambiar
                 </button>
             </div>
             <?= $this->Form->end() ?>
@@ -105,8 +103,7 @@ $showTagModal = $showTagModal ?? false;
                     <i class="bi bi-tag"></i>
                     Agregar etiqueta
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                    aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <?= $this->Form->create(null, ['url' => ['action' => 'bulkAddTag'], 'id' => 'bulkTagForm']) ?>
             <div class="modal-body">
@@ -128,9 +125,9 @@ $showTagModal = $showTagModal ?? false;
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-sm btn-primary">
-                    <i class="bi bi-check-lg me-1"></i>Agregar
+                <button type="button" class="btn-brand-ghost btn-brand-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn-brand-primary btn-brand-sm">
+                    <i class="bi bi-check-lg"></i> Agregar
                 </button>
             </div>
             <?= $this->Form->end() ?>
@@ -139,37 +136,27 @@ $showTagModal = $showTagModal ?? false;
 </div>
 <?php endif; ?>
 
-<!-- Modal: Confirmar eliminación -->
-<div class="modal fade" id="bulkDeleteModal" tabindex="-1" aria-hidden="true">
+<!-- Confirm dialog: eliminación -->
+<div class="modal fade confirm-dialog" id="bulkDeleteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-centered-small">
         <div class="modal-content">
-            <div class="modal-header bg-danger-gradient">
-                <h5 class="modal-title">
-                    <i class="bi bi-trash"></i>
-                    Confirmar eliminación
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                    aria-label="Close"></button>
-            </div>
             <?= $this->Form->create(null, ['url' => ['action' => 'bulkDelete'], 'id' => 'bulkDeleteForm']) ?>
             <div class="modal-body">
-                <input type="hidden" name="ticket_ids" id="deleteTicketIds" value="">
-                <div class="alert alert-danger mb-3">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                    <strong>¿Está seguro?</strong>
+                <div class="confirm-icon">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
                 </div>
-                <p class="mb-2">
-                    Está a punto de eliminar <strong><span id="deleteCount">0</span> ticket(s)</strong>.
-                </p>
-                <p class="text-muted small mb-0">
-                    <i class="bi bi-info-circle me-1"></i>
-                    Esta acción no se puede deshacer.
-                </p>
+                <div class="confirm-text">
+                    <div class="confirm-title">¿Eliminar <span id="deleteCount">0</span> ticket(s)?</div>
+                    <div class="confirm-message">
+                        Esta acción no se puede deshacer. El historial de mensajes también se eliminará.
+                    </div>
+                </div>
+                <input type="hidden" name="ticket_ids" id="deleteTicketIds" value="">
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-sm btn-danger">
-                    <i class="bi bi-trash me-1"></i>Eliminar
+                <button type="button" class="btn-brand-ghost btn-brand-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn-brand-danger btn-brand-sm">
+                    <i class="bi bi-trash"></i> Eliminar
                 </button>
             </div>
             <?= $this->Form->end() ?>

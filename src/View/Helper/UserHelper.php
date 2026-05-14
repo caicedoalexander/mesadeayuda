@@ -130,7 +130,7 @@ class UserHelper extends Helper
      * @param int $max Maximum number of initials to return (default 2)
      * @return string Initials (max 2 characters)
      */
-    public function initials($userOrName, int $max = 2): string
+    public function initials(User|string|null $userOrName, int $max = 2): string
     {
         $name = $userOrName instanceof User ? $userOrName->name : (string)$userOrName;
         $name = trim($name);
@@ -160,7 +160,7 @@ class UserHelper extends Helper
      * @param \App\Model\Entity\User|string|null $userOrName User entity or name string
      * @return string Hex color
      */
-    public function avatarColor($userOrName): string
+    public function avatarColor(User|string|null $userOrName): string
     {
         $palette = [
             '#00A85E', // admin-green

@@ -75,10 +75,11 @@ $this->assign('title', 'Plantillas de Email');
             <?php endforeach; ?>
         </div>
     <?php else: ?>
-        <div class="empty-state">
-            <i class="bi bi-envelope-x empty-state-icon"></i>
-            <h3>No hay plantillas configuradas</h3>
-            <p>Las plantillas de email se configuran automáticamente al inicializar el sistema.</p>
-        </div>
+        <?= $this->element('empty_state', [
+            'icon'    => 'envelope-x',
+            'tone'    => 'neutral',
+            'title'   => 'No hay plantillas configuradas',
+            'message' => 'Las plantillas de email se configuran automáticamente al inicializar el sistema.',
+        ]) ?>
     <?php endif; ?>
 </div>

@@ -274,20 +274,8 @@
     box-shadow: 0 4px 12px rgba(0, 168, 94, 0.3);
 }
 
-/* Empty State */
-.empty-state {
-    text-align: center;
-    padding: 4rem 2rem;
-    color: var(--gray-600);
-    font-size: 1rem;
-}
-
-.empty-state i {
-    font-size: 3rem;
-    color: var(--gray-300);
-    margin-bottom: 1rem;
-    display: block;
-}
+/* Empty state: usa templates/element/empty_state.php
+   (estilos en components.css, sección 10). */
 
 /* Pagination */
 .pagination-wrapper {

@@ -23,7 +23,7 @@
             }, AUTO_HIDE_DELAY);
 
             // También permitir cerrar manualmente con el botón close
-            const closeButton = message.querySelector('.btn-close');
+            const closeButton = message.querySelector('.app-toast-close, .btn-close');
             if (closeButton) {
                 closeButton.addEventListener('click', function() {
                     hideFlashMessage(message);

@@ -257,10 +257,12 @@ $activeFiltersCount = (int)!empty($filters['filterPriority'])
             </div>
 
         <?php else: ?>
-            <div class="tickets-empty-state">
-                <i class="bi bi-ticket-detailed"></i>
-                <p>No hay tickets en esta vista</p>
-            </div>
+            <?= $this->element('empty_state', [
+                'icon'    => 'ticket-detailed',
+                'tone'    => 'neutral',
+                'title'   => 'Nada por aquí',
+                'message' => 'No hay tickets en esta vista. Prueba ajustando filtros o esperando nueva actividad.',
+            ]) ?>
         <?php endif; ?>
     </div>
 </section>

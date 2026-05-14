@@ -110,9 +110,12 @@ $this->assign('title', 'Usuarios');
                     <?php endforeach; ?>
                 <?php else : ?>
                     <tr>
-                        <td colspan="7" class="empty-state">
-                            <i class="bi bi-people"></i>
-                            <div>No hay usuarios registrados.</div>
+                        <td colspan="7">
+                            <?= $this->element('empty_state', [
+                                'inline' => true,
+                                'icon'   => 'people',
+                                'title'  => 'No hay usuarios registrados.',
+                            ]) ?>
                         </td>
                     </tr>
                 <?php endif; ?>

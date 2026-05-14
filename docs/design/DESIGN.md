@@ -279,8 +279,8 @@ Una sola fila con: search expandido + botón **Filtros** con badge de conteo
 
 ### 3.3 · Empty state
 
-`.tickets-empty-state` — icono grande gris claro + mensaje en `--gray-500`.
-Centrado vertical y horizontal, sobre fondo blanco con borde sutil.
+Ver sección **6 · Empty states** (componente reutilizable
+`element('empty_state')`).
 
 ### 3.4 · Paginación
 
@@ -289,7 +289,204 @@ Centrado vertical y horizontal, sobre fondo blanco con borde sutil.
 
 ---
 
-## 4 · Reglas no-negociables
+## 4 · Overlays
+
+> Estilos en `webroot/css/components.css` (sección _08 · OVERLAYS_).
+> Bootstrap 5 sigue manejando la mecánica (`data-bs-toggle="modal"`),
+> sólo se sobrescribe la skin.
+
+### 4.1 · Modal centrado — `.modal-dialog-centered-small`
+
+Ancho máximo **420px**. Header blanco con título en `--gray-900` + icono
+verde 16px. Body 16px de padding, label 11px uppercase. Footer en
+`--gray-50` con dos botones (`.btn-brand-ghost btn-brand-sm` izquierda,
+`.btn-brand-primary btn-brand-sm` derecha).
+
+```html
+<div class="modal fade" id="…">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-centered-small">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-…"></i> Título</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">…</div>
+      <div class="modal-footer">
+        <button class="btn-brand-ghost btn-brand-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn-brand-primary btn-brand-sm">Confirmar</button>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+### 4.2 · Confirm dialog — `.modal.confirm-dialog`
+
+Para acciones destructivas. Sin header tradicional: el body usa
+`.confirm-icon` (círculo `--danger-soft`) + `.confirm-text` con
+`.confirm-title` y `.confirm-message`. CTA destructiva en
+`.btn-brand-danger`.
+
+```html
+<div class="modal fade confirm-dialog" id="…">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-centered-small">
+    <div class="modal-content">
+      <div class="modal-body">
+        <div class="confirm-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+        <div class="confirm-text">
+          <div class="confirm-title">¿Eliminar #1284?</div>
+          <div class="confirm-message">Esta acción no se puede deshacer.</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-brand-ghost btn-brand-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn-brand-danger btn-brand-sm"><i class="bi bi-trash"></i> Eliminar</button>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+### 4.3 · Popover / menú — `.app-popover`
+
+Aparece sobre un trigger, ancho mínimo 200px, sombra `--shadow-md`.
+Cada item `.app-popover-item`; variante destructiva `.danger`.
+Separadores `.app-popover-divider`.
+
+### 4.4 · Cuándo usar cada uno
+
+| Overlay         | Cuándo                                                  |
+| --------------- | ------------------------------------------------------- |
+| `modal`         | Acciones que **bloquean** el flujo (crear, importar).   |
+| `confirm-dialog`| Confirmaciones de **una sola decisión** destructiva.    |
+| `app-popover`   | Acciones contextuales **rápidas** (menús de fila).      |
+
+---
+
+## 5 · Toasts / Notificaciones
+
+> Estilos en `components.css` (sección _09 · TOASTS_). Markup vive en
+> `templates/element/flash/{success,error,warning,info,default}.php`,
+> rendereado por `FlashHelper` de CakePHP. Auto-hide en
+> `webroot/js/flash-messages.js`.
+
+Ancho fijo 360px, anclados arriba-derecha (top 55px). Barra lateral de
+4px del color del tono + icono en pill cuadrado redondeado + título +
+mensaje + cerrar. 3s de auto-ocultamiento (`AUTO_HIDE_DELAY`).
+
+### 5.1 · Variantes
+
+| Clase              | Tono     | Token barra/pill                       | Uso típico                   |
+| ------------------ | -------- | -------------------------------------- | ---------------------------- |
+| `.app-toast.success` | success  | `--admin-green` / `--admin-green-soft` | Operación completada         |
+| `.app-toast.info`    | info     | `--admin-blue` / `--admin-blue-soft`   | Nueva asignación, novedad    |
+| `.app-toast.warning` | warning  | `--admin-orange` / `--admin-orange-soft` | SLA por vencer, advertencias |
+| `.app-toast.danger`  | error    | `--danger-color` / `--danger-soft`     | Error de operación           |
+| `.app-toast.neutral` | default  | `--gray-400` / `--gray-100`            | Notificación genérica        |
+
+### 5.2 · Toast con acción
+
+Añadir `.app-toast-action` antes del `.app-toast-close` para una CTA
+secundaria (Deshacer, Ver lista). En ese caso, prolongar el delay a
+6 s o desactivar auto-hide.
+
+### 5.3 · Inline banner — `.app-banner`
+
+Para alertas globales del workspace que **no** desaparecen.
+Modificadores `.info`, `.danger`, `.success`. Estructura:
+icono + `.app-banner-title` + `.app-banner-message` + `.app-banner-action`.
+
+### 5.4 · Regla de uso
+
+- Anchor: `top: 55px` (bajo la topbar). Stack hacia abajo, gap 8px.
+- Máximo 5 visibles simultáneos. Los más viejos se cierran primero.
+- No usar para validaciones de formulario — esas son inline.
+
+---
+
+## 6 · Empty states
+
+> Estilos en `components.css` (sección _10 · EMPTY STATES_). Componente
+> reutilizable en `templates/element/empty_state.php`.
+
+### 6.1 · Variante centrada — `.app-empty`
+
+Icono circular de 64px con tono semántico, título en 16px bold, mensaje
+descriptivo y CTA opcional.
+
+```php
+<?= $this->element('empty_state', [
+    'icon'    => 'ticket-detailed',
+    'tone'    => 'neutral',          // success|neutral|danger|info|warning
+    'title'   => 'Nada por aquí',
+    'message' => 'No hay tickets en esta vista.',
+    'action'  => $this->Html->link('+ Crear', […], ['class' => 'btn-brand-primary btn-brand-sm']),
+]) ?>
+```
+
+### 6.2 · Variante inline — `.app-empty-inline`
+
+Una sola línea, para tablas vacías sin romper el layout.
+
+```php
+<?= $this->element('empty_state', [
+    'inline' => true,
+    'icon'   => 'people',
+    'title'  => 'No hay usuarios registrados.',
+]) ?>
+```
+
+### 6.3 · Tonos
+
+| Tono      | Cuándo                                                     |
+| --------- | ---------------------------------------------------------- |
+| `success` | Primer uso / vacío saludable (no hay nada porque todo está bien). |
+| `neutral` | Sin datos por defecto.                                     |
+| `info`    | Vista filtrada o secundaria sin resultados.                |
+| `warning` | Algo necesita acción pero no es error.                     |
+| `danger`  | Error de carga / fallo recuperable.                        |
+
+---
+
+## 7 · Skeleton loaders
+
+> Estilos en `components.css` (sección _11 · SKELETON LOADERS_).
+> Animación shimmer 1.4 s lineal infinita.
+
+### 7.1 · Bloques base
+
+| Clase                  | Tamaño por defecto         |
+| ---------------------- | -------------------------- |
+| `.skeleton-line`       | 12px alto, 100% ancho      |
+| `.skeleton-line-sm`    | 9px alto                   |
+| `.skeleton-line-lg`    | 18px alto, radio 6px       |
+| `.skeleton-pill`       | 20×70px, radio 10px        |
+| `.skeleton-avatar`     | 36×36, círculo             |
+| `.skeleton-avatar-sm`  | 22×22, círculo             |
+| `.skeleton-bar`        | 4px alto, radio 2px        |
+
+Todas heredan de `.skeleton` (el `background` + `animation`). Para
+tamaños personalizados, override por estilo inline (`style="width: 78%"`).
+
+### 7.2 · Composiciones documentadas
+
+- `.skeleton-ticket-row` — grid 6 columnas reemplazando una fila real.
+- `.skeleton-detail` + `.skeleton-detail-pills` + `.skeleton-detail-author`.
+- `.skeleton-activity` + `.skeleton-activity-item` — timeline del
+  sidebar derecho (usado en `right_sidebar.php`).
+- `.skeleton-stats` + `.skeleton-stat` — cards de KPIs.
+
+### 7.3 · Regla de uso
+
+- Sólo en la **primera carga > 300 ms**. Cargas más rápidas: ir directo
+  a contenido — el parpadeo loading→contenido se siente más lento.
+- Nunca usar skeleton en re-fetch silencioso o refresh de tabla.
+- La forma del skeleton debe imitar la del contenido — nunca un
+  rectángulo genérico.
+
+---
+
+## 8 · Reglas no-negociables
 
 1. **Tokens en CSS variables.** Nunca hardcodear hex en componentes — todo
    viene del `:root` de `styles.css`.
@@ -310,16 +507,22 @@ Centrado vertical y horizontal, sobre fondo blanco con borde sutil.
 
 ---
 
-## 5 · Mapa de archivos
+## 9 · Mapa de archivos
 
 | Aspecto                     | Archivo                                                          |
 | --------------------------- | ---------------------------------------------------------------- |
 | Tokens + componentes globales | `webroot/css/styles.css` (sección _DESIGN SYSTEM_)             |
+| Toasts / Modales / Empty / Skeleton | `webroot/css/components.css`                             |
 | Pills de status/priority    | `webroot/css/badges.css`                                         |
 | Layout lista + tabla        | `webroot/css/bulk-actions.css`                                   |
+| Detalle de ticket           | `webroot/css/tickets-view.css`                                   |
 | Rail oscuro                 | `webroot/css/tickets-rail.css`                                   |
 | Plantilla lista             | `templates/Tickets/index.php`                                    |
+| Plantilla detalle           | `templates/Tickets/view.php`                                     |
 | Cell del rail               | `templates/cell/TicketsSidebar/display.php`                      |
+| Flash messages              | `templates/element/flash/*.php`                                  |
+| Empty state reutilizable    | `templates/element/empty_state.php`                              |
+| Modales bulk                | `templates/element/tickets/bulk_modals.php`                      |
 | Helper de badges            | `src/View/Helper/StatusHelper.php`                               |
 | Render badge                | `templates/element/tickets/badge.php`                            |
 | Constantes (status/priority)| `src/Constants/TicketConstants.php`                              |
@@ -328,21 +531,20 @@ Centrado vertical y horizontal, sobre fondo blanco con borde sutil.
 
 ---
 
-## 6 · Próximos componentes a documentar
+## 10 · Próximos componentes a documentar
 
 Cuando se construyan, su spec va aquí antes del código:
 
-- Detalle del ticket (Workspace A.2) — hilo conversacional, composer con
-  tabs Responder / Nota interna / Reasignar, sidebar de metadatos.
-- Modal / Drawer / Dialog.
-- Toast / Notification.
-- Skeleton loaders.
-- Date / Time pickers.
-- Avatar con halo + color personal por usuario.
+- Drawer lateral (variante de overlay, edición profunda sin perder contexto).
+- Date / Time pickers — tokens y comportamiento de calendar popover.
+- File upload con drag-and-drop.
+- Rich-text editor toolbar.
+- Tooltip global.
+- Paginación compleja (rangos largos, jump-to).
 
 ---
 
-## 7 · Procedencia
+## 11 · Procedencia
 
 - Handoff bundle generado en claude.ai/design, mayo 2026 (chat
   "Proyecto completo", dirección Workspace A).
