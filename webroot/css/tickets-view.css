@@ -20,20 +20,20 @@
 
     /* Editor tabs active state */
     .editor-tab {
-        background: #f8f9fa;
-        color: #495057;
+        background: var(--surface-light);
+        color: var(--gray-700);
         font-size: 13px;
         font-weight: 500;
     }
 
     .editor-tab:hover {
-        background: #e9ecef;
+        background: var(--surface-hover);
     }
 
     .editor-tab.active {
         background: white;
-        color: #555;
-        border-bottom: 2px solid #555 !important;
+        color: var(--gray-700);
+        border-bottom: 2px solid var(--gray-700) !important;
         margin-bottom: -1px;
     }
 
@@ -54,7 +54,7 @@
         top: 20px;
         bottom: -15px;
         width: 2px;
-        background: #dee2e6;
+        background: var(--border-color);
     }
 
     /* File upload styles */
@@ -70,15 +70,15 @@
         align-items: center;
         gap: 4px;
         padding: 4px 6px;
-        background: #f8f9fa;
-        border: 1px solid #dee2e6;
+        background: var(--surface-light);
+        border: 1px solid var(--border-color);
         border-radius: 8px;
         transition: all 0.2s ease;
     }
 
     .file-item:hover {
-        background: #e9ecef;
-        border-color: #adb5bd;
+        background: var(--surface-hover);
+        border-color: var(--border-hover);
     }
 
     .file-item-icon {
@@ -96,7 +96,7 @@
     .file-item-name {
         font-size: 13px;
         font-weight: 500;
-        color: #212529;
+        color: var(--gray-900);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -105,14 +105,14 @@
 
     .file-item-size {
         font-size: 11px;
-        color: #6c757d;
+        color: var(--text-muted);
     }
 
     .file-item-remove {
         flex-shrink: 0;
         background: none;
         border: none;
-        color: #dc3545;
+        color: var(--danger-color);
         cursor: pointer;
         padding: 4px;
         border-radius: 8px;
@@ -122,7 +122,7 @@
     }
 
     .file-item-remove:hover {
-        background: #dc3545;
+        background: var(--danger-color);
         color: white;
     }
 
@@ -146,7 +146,7 @@
     }
 
     .cursor-pointer:hover {
-        background-color: #f8f9fa;
+        background-color: var(--surface-light);
     }
 
     /* Recipients collapsed view styling */
@@ -155,7 +155,7 @@
     }
 
     #recipients-collapsed:hover {
-        background-color: #f8f9fa;
+        background-color: var(--surface-light);
     }
 
 
@@ -167,15 +167,15 @@
 
     /* Comment Type Selector (Dropdown Button) */
     .comment-type-selector {
-        border-color: #dee2e6;
+        border-color: var(--border-color);
         background-color: white;
         font-weight: 500;
         min-width: 180px;
     }
 
     .comment-type-selector:hover {
-        background-color: #f8f9fa;
-        border-color: #adb5bd;
+        background-color: var(--surface-light);
+        border-color: var(--border-hover);
     }
 
     .comment-type-selector:focus {
@@ -185,5 +185,5 @@
     /* Recipients text in header */
     #comment-type-recipients-text {
         font-size: 13px;
-        color: #6c757d;
+        color: var(--text-muted);
     }
