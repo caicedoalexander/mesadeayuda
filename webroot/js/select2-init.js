@@ -28,41 +28,53 @@
         document.dispatchEvent(new CustomEvent('select2:ready'));
     });
 
+    // Build the Select2 config for a single <select>, applying special-case
+    // behavior (agent picker etc.). Centralised so both initial mount and
+    // AJAX-driven reinits stay in sync.
+    function buildConfigFor($select) {
+        const config = { ...defaultConfig };
+
+        if ($select.data('placeholder')) {
+            config.placeholder = $select.data('placeholder');
+        }
+        if ($select.data('allow-clear') === false) {
+            config.allowClear = false;
+        }
+        if ($select.data('tags')) {
+            config.tags = true;
+            config.tokenSeparators = [','];
+        }
+
+        // Table agent picker: render avatar + name, dashed orange
+        // "Asignar" chip when unassigned. See DESIGN.md §2.8.
+        if ($select.hasClass('table-agent-select')) {
+            config.placeholder = 'Asignar';
+            config.allowClear = false;
+            config.minimumResultsForSearch = 5;
+            config.templateResult = window.agentOptionTemplate;
+            config.templateSelection = window.agentSelectionTemplate;
+            config.dropdownCssClass = 'agent-picker-dropdown';
+        }
+        return config;
+    }
+
+    function wireAgentPicker($select) {
+        if (!$select.hasClass('table-agent-select')) return;
+        const $form = $select.closest('.table-assign-form');
+        if (!$form.length) return;
+        const syncUnassigned = function() {
+            $form.toggleClass('is-unassigned', !$select.val());
+        };
+        syncUnassigned();
+        $select.off('change.agentPicker').on('change.agentPicker', syncUnassigned);
+    }
+
     // Función principal de inicialización
     function initializeSelect2() {
-        // Selectores simples
         $('select:not(.select2-hidden-accessible):not([data-select2-ignore])').each(function() {
             const $select = $(this);
-            const config = { ...defaultConfig };
-
-            if ($select.data('placeholder')) {
-                config.placeholder = $select.data('placeholder');
-            }
-
-            if ($select.data('allow-clear') === false) {
-                config.allowClear = false;
-            }
-
-            if ($select.data('tags')) {
-                config.tags = true;
-                config.tokenSeparators = [','];
-            }
-
-            // Table agent picker: render avatar + name, dashed orange "Asignar"
-            // chip as placeholder. Lives next to the design tokens in DESIGN.md.
-            if ($select.hasClass('table-agent-select')) {
-                config.placeholder = 'Asignar';
-                config.allowClear = false;
-                config.minimumResultsForSearch = 5;
-                config.templateResult = window.agentOptionTemplate;
-                config.templateSelection = window.agentSelectionTemplate;
-                config.dropdownCssClass = 'agent-picker-dropdown';
-                config.selectionCssClass = 'agent-picker-selection';
-                config.containerCssClass = 'agent-picker-container';
-            }
-
-            // Inicializar Select2
-            $select.select2(config);
+            $select.select2(buildConfigFor($select));
+            wireAgentPicker($select);
         });
 
         // Selectores con búsqueda de usuarios (AJAX)
@@ -127,7 +139,8 @@
         $container.find('select:not(.select2-hidden-accessible):not([data-select2-ignore])').each(function() {
             const $select = $(this);
             if (!$select.hasClass('select2-hidden-accessible')) {
-                $select.select2(defaultConfig);
+                $select.select2(buildConfigFor($select));
+                wireAgentPicker($select);
             }
         });
     };

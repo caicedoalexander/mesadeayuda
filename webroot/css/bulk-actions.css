@@ -191,7 +191,7 @@
 }
 
 /* Select2 container scoped to the agent picker */
-.agent-picker-container.select2-container--bootstrap-5 .select2-selection {
+.table-assign-form .select2-container.select2-container--bootstrap-5 .select2-selection {
     min-height: 32px !important;
     height: 32px !important;
     border: 1px solid transparent !important;
@@ -203,19 +203,19 @@
     cursor: pointer;
 }
 
-.agent-picker-container.select2-container--bootstrap-5 .select2-selection:hover {
+.table-assign-form .select2-container.select2-container--bootstrap-5 .select2-selection:hover {
     border-color: var(--gray-200) !important;
     background: var(--gray-50) !important;
 }
 
-.agent-picker-container.select2-container--bootstrap-5.select2-container--open .select2-selection,
-.agent-picker-container.select2-container--bootstrap-5.select2-container--focus .select2-selection {
+.table-assign-form .select2-container.select2-container--bootstrap-5.select2-container--open .select2-selection,
+.table-assign-form .select2-container.select2-container--bootstrap-5.select2-container--focus .select2-selection {
     border-color: var(--admin-green) !important;
     background: #fff !important;
     box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.12) !important;
 }
 
-.agent-picker-container.select2-container--bootstrap-5 .select2-selection__rendered {
+.table-assign-form .select2-container.select2-container--bootstrap-5 .select2-selection__rendered {
     line-height: 30px !important;
     padding: 0 6px !important;
     height: 30px !important;
@@ -226,7 +226,7 @@
     font-weight: 500;
 }
 
-.agent-picker-container.select2-container--bootstrap-5 .select2-selection__arrow {
+.table-assign-form .select2-container.select2-container--bootstrap-5 .select2-selection__arrow {
     height: 30px !important;
     width: 22px;
     right: 2px !important;
@@ -234,22 +234,35 @@
     transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
-.agent-picker-container.select2-container--bootstrap-5 .select2-selection:hover .select2-selection__arrow {
+.table-assign-form .select2-container.select2-container--bootstrap-5 .select2-selection:hover .select2-selection__arrow {
     opacity: 0.85;
 }
 
-.agent-picker-container.select2-container--bootstrap-5.select2-container--open .select2-selection__arrow {
+.table-assign-form .select2-container.select2-container--bootstrap-5.select2-container--open .select2-selection__arrow {
     opacity: 1;
 }
 
-/* Hide the arrow when the "Asignar" pill is showing — the dashed pill is the
-   visual cue; the caret would clutter it. */
-.agent-picker-container.select2-container--bootstrap-5 .select2-selection:has(.agent-assign-pill) .select2-selection__arrow {
-    display: none;
+/* Hide the chevron when no agent is assigned — the dashed pill is the
+   visual cue. `.is-unassigned` is toggled by select2-init.js on change. */
+.table-assign-form.is-unassigned .select2-selection__arrow {
+    display: none !important;
+}
+
+/* When unassigned, also drop the hover border/background so only the
+   dashed pill remains visible. */
+.table-assign-form.is-unassigned .select2-container.select2-container--bootstrap-5 .select2-selection {
+    border-color: transparent !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.table-assign-form.is-unassigned .select2-container.select2-container--bootstrap-5 .select2-selection:hover {
+    border-color: transparent !important;
+    background: transparent !important;
 }
 
 /* Placeholder rendered as dashed orange "Asignar" pill (design system) */
-.agent-picker-container.select2-container--bootstrap-5 .select2-selection__placeholder {
+.table-assign-form .select2-container.select2-container--bootstrap-5 .select2-selection__placeholder {
     display: inline-flex !important;
     align-items: center;
     gap: 5px;
@@ -263,7 +276,7 @@
     line-height: 1;
 }
 
-.agent-picker-container.select2-container--bootstrap-5 .select2-selection__placeholder::before {
+.table-assign-form .select2-container.select2-container--bootstrap-5 .select2-selection__placeholder::before {
     content: "+";
     font-weight: 700;
     font-size: 13px;
@@ -271,7 +284,7 @@
 }
 
 /* When the select is disabled (locked ticket / assignment disabled) */
-.agent-picker-container.select2-container--bootstrap-5.select2-container--disabled .select2-selection {
+.table-assign-form .select2-container.select2-container--bootstrap-5.select2-container--disabled .select2-selection {
     opacity: 0.5;
     cursor: not-allowed;
     background: transparent !important;
