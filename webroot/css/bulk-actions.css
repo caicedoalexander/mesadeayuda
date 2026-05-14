@@ -175,32 +175,182 @@
 }
 
 /* ── Assignee select inside table ── */
-.table-agent-select {
-    font-size: 12px !important;
-    border: 1px solid var(--gray-200) !important;
-    border-radius: 6px !important;
-    padding: 3px 24px 3px 8px !important;
-    color: var(--gray-700) !important;
-    background-color: transparent !important;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-    max-width: 145px;
-    cursor: pointer;
+/* ── Agent picker (Select2 inline in tickets table) ──
+   The agent_select2_template (webroot/js/select2-init.js) renders an avatar
+   chip; the styles below make the Select2 container blend into the row. */
+
+/* Fallback for the raw <select> before Select2 boots — keep it invisible-ish */
+.table-agent-select:not(.select2-hidden-accessible) {
+    font-size: 12px;
+    border: 1px solid var(--gray-200);
+    border-radius: 6px;
+    padding: 3px 24px 3px 8px;
+    color: var(--gray-700);
+    background-color: transparent;
+    max-width: 170px;
+}
+
+/* Select2 container scoped to the agent picker */
+.agent-picker-container.select2-container--bootstrap-5 .select2-selection {
+    min-height: 32px !important;
+    height: 32px !important;
+    border: 1px solid transparent !important;
+    background: transparent !important;
     box-shadow: none !important;
+    border-radius: 7px !important;
+    padding: 0 !important;
+    transition: var(--transition);
+    cursor: pointer;
 }
 
-.table-agent-select:hover:not(:disabled) {
+.agent-picker-container.select2-container--bootstrap-5 .select2-selection:hover {
+    border-color: var(--gray-200) !important;
+    background: var(--gray-50) !important;
+}
+
+.agent-picker-container.select2-container--bootstrap-5.select2-container--open .select2-selection,
+.agent-picker-container.select2-container--bootstrap-5.select2-container--focus .select2-selection {
     border-color: var(--admin-green) !important;
+    background: #fff !important;
+    box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.12) !important;
 }
 
-.table-agent-select:focus:not(:disabled) {
-    border-color: var(--admin-green) !important;
-    box-shadow: 0 0 0 2px rgba(0, 168, 94, 0.12) !important;
-    outline: none;
+.agent-picker-container.select2-container--bootstrap-5 .select2-selection__rendered {
+    line-height: 30px !important;
+    padding: 0 6px !important;
+    height: 30px !important;
+    display: flex !important;
+    align-items: center;
+    color: var(--gray-900);
+    font-size: 13px;
+    font-weight: 500;
 }
 
-.table-agent-select:disabled {
+.agent-picker-container.select2-container--bootstrap-5 .select2-selection__arrow {
+    height: 30px !important;
+    width: 22px;
+    right: 2px !important;
     opacity: 0.45;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.agent-picker-container.select2-container--bootstrap-5 .select2-selection:hover .select2-selection__arrow {
+    opacity: 0.85;
+}
+
+.agent-picker-container.select2-container--bootstrap-5.select2-container--open .select2-selection__arrow {
+    opacity: 1;
+}
+
+/* Hide the arrow when the "Asignar" pill is showing — the dashed pill is the
+   visual cue; the caret would clutter it. */
+.agent-picker-container.select2-container--bootstrap-5 .select2-selection:has(.agent-assign-pill) .select2-selection__arrow {
+    display: none;
+}
+
+/* Placeholder rendered as dashed orange "Asignar" pill (design system) */
+.agent-picker-container.select2-container--bootstrap-5 .select2-selection__placeholder {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px !important;
+    border-radius: 6px;
+    background: var(--admin-orange-soft);
+    color: var(--admin-orange-ink) !important;
+    border: 1px dashed var(--admin-orange);
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    line-height: 1;
+}
+
+.agent-picker-container.select2-container--bootstrap-5 .select2-selection__placeholder::before {
+    content: "+";
+    font-weight: 700;
+    font-size: 13px;
+    line-height: 1;
+}
+
+/* When the select is disabled (locked ticket / assignment disabled) */
+.agent-picker-container.select2-container--bootstrap-5.select2-container--disabled .select2-selection {
+    opacity: 0.5;
     cursor: not-allowed;
+    background: transparent !important;
+}
+
+/* Dashed orange "Asignar" pill rendered by agentSelectionTemplate when
+   no agent is assigned (replaces the empty option's text). */
+.agent-assign-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: var(--admin-orange-soft);
+    color: var(--admin-orange-ink);
+    border: 1px dashed var(--admin-orange);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.agent-assign-pill i { font-size: 11px; line-height: 1; }
+
+/* ── Agent chip (used inside trigger and dropdown options) ── */
+.agent-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.agent-chip .agent-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--gray-900);
+}
+
+.agent-chip.option .agent-name { font-weight: 500; font-size: 13px; }
+
+.agent-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: #fff;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    font-family: inherit;
+}
+
+/* ── Dropdown styling (options) ── */
+.agent-picker-dropdown .select2-results__option {
+    padding: 8px 10px !important;
+    border-radius: 6px !important;
+    margin: 2px 0 !important;
+}
+
+.agent-picker-dropdown .select2-results__option--highlighted {
+    background-color: var(--admin-green-soft) !important;
+    color: var(--gray-900) !important;
+}
+
+.agent-picker-dropdown .select2-results__option--selected {
+    background-color: var(--admin-green) !important;
+    color: #fff !important;
+}
+
+.agent-picker-dropdown .select2-results__option--selected .agent-name {
+    color: #fff !important;
+}
+
+/* The "Sin asignar" (empty) option keeps neutral palette */
+.agent-picker-dropdown .select2-results__option[role="option"]:first-child {
+    color: var(--gray-500);
+    font-style: italic;
 }
 
 /* ── Empty state ── */

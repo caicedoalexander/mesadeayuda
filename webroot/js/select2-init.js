@@ -48,6 +48,19 @@
                 config.tokenSeparators = [','];
             }
 
+            // Table agent picker: render avatar + name, dashed orange "Asignar"
+            // chip as placeholder. Lives next to the design tokens in DESIGN.md.
+            if ($select.hasClass('table-agent-select')) {
+                config.placeholder = 'Asignar';
+                config.allowClear = false;
+                config.minimumResultsForSearch = 5;
+                config.templateResult = window.agentOptionTemplate;
+                config.templateSelection = window.agentSelectionTemplate;
+                config.dropdownCssClass = 'agent-picker-dropdown';
+                config.selectionCssClass = 'agent-picker-selection';
+                config.containerCssClass = 'agent-picker-container';
+            }
+
             // Inicializar Select2
             $select.select2(config);
         });
@@ -134,6 +147,63 @@
             '<span><i class="bi bi-' + icon + '"></i> ' + state.text + '</span>'
         );
         return $state;
+    };
+
+    // ─── Agent picker (table inline assignment) ───────────────────
+    // Deterministic palette so the same name always gets the same color.
+    const AGENT_AVATAR_PALETTE = [
+        '#00A85E', // admin-green
+        '#CD6A15', // admin-orange
+        '#0066cc', // admin-blue
+        '#7c3aed', // violet
+        '#0891b2', // cyan
+        '#dc3545', // danger
+        '#6366f1', // indigo
+    ];
+
+    function hashString(s) {
+        let h = 0;
+        for (let i = 0; i < s.length; i++) {
+            h = (h * 31 + s.charCodeAt(i)) | 0;
+        }
+        return Math.abs(h);
+    }
+
+    function buildAgentAvatar(name, size) {
+        if (!name) return '';
+        const initials = name.trim().split(/\s+/)
+            .map(function(w) { return w[0] || ''; })
+            .slice(0, 2)
+            .join('')
+            .toUpperCase();
+        const color = AGENT_AVATAR_PALETTE[hashString(name) % AGENT_AVATAR_PALETTE.length];
+        return '<span class="agent-avatar" style="width:' + size + 'px;height:' + size + 'px;' +
+            'background:' + color + ';font-size:' + Math.round(size * 0.42) + 'px">' +
+            $('<span/>').text(initials).html() + '</span>';
+    }
+
+    window.agentSelectionTemplate = function(state) {
+        if (!state.id) {
+            // Empty value (or "Sin asignar" empty option) renders as the
+            // dashed orange "Asignar" pill from the design system.
+            return $('<span class="agent-assign-pill"><i class="bi bi-plus-lg"></i> Asignar</span>');
+        }
+        const html = '<span class="agent-chip">' +
+            buildAgentAvatar(state.text, 22) +
+            '<span class="agent-name">' + $('<span/>').text(state.text).html() + '</span>' +
+            '</span>';
+        return $(html);
+    };
+
+    window.agentOptionTemplate = function(state) {
+        if (!state.id) {
+            return state.text;
+        }
+        const html = '<span class="agent-chip option">' +
+            buildAgentAvatar(state.text, 26) +
+            '<span class="agent-name">' + $('<span/>').text(state.text).html() + '</span>' +
+            '</span>';
+        return $(html);
     };
 
     // Template personalizado para resultados con avatar

@@ -15,7 +15,7 @@ $isAgent = $userRole === RoleConstants::ROLE_ASESOR_TIC;
     <!-- Brand -->
     <div class="rail-brand">
         <div class="rail-brand-mark">
-            <i class="bi bi-life-preserver"></i>
+            <?= $this->Html->image('favicon.png', ['alt' => 'Mesa de Ayuda', 'width' => 38, 'height' => 38, 'class' => 'rounded-circle']) ?>
         </div>
         <div class="rail-brand-text">
             <div class="rail-brand-title">Mesa de Ayuda</div>

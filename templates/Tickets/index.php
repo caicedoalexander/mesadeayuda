@@ -177,7 +177,7 @@ $activeFiltersCount = (int)!empty($filters['filterPriority'])
                                     </td>
 
                                     <td>
-                                        <span class="mono ticket-id">#<?= h($ticket->ticket_number ?? $ticket->id) ?></span>
+                                        <span class="mono ticket-id">#1000</span>
                                     </td>
 
                                     <td>
