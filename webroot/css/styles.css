@@ -29,7 +29,7 @@
     --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
     /* App surface */
-    --bg-color: #F3F4F6;
+    --bg-color: #FAFAFA;
 
     /* Semantic colors (aligned with Bootstrap 5 alert palette) */
     --primary-color: #0d6efd;
