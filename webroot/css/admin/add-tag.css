@@ -60,7 +60,7 @@
     left: 0;
     right: 0;
     height: 4px;
-    background: var(--gradient-celebrate);
+    background: linear-gradient(135deg, var(--admin-green) 0%, var(--admin-orange) 100%);
     box-shadow: 0 4px 15px rgba(0, 168, 94, 0.3);
 }
 
@@ -218,7 +218,7 @@
     color: white;
     font-size: 1.125rem;
     font-weight: 700;
-    background-color: #0066cc;
+    background-color: var(--admin-blue);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     transition: var(--transition);
     animation: previewPulse 2s ease-in-out infinite;
@@ -243,7 +243,7 @@
 }
 
 .btn-submit {
-    background: var(--gradient-celebrate);
+    background: linear-gradient(135deg, var(--admin-green) 0%, var(--admin-orange) 100%);
     color: white;
     border: none;
     padding: 0.875rem 2rem;
