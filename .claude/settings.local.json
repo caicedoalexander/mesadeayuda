@@ -5,7 +5,11 @@
       "mcp__claude_ai_n8n__search_nodes",
       "mcp__claude_ai_n8n__get_node_types",
       "mcp__claude_ai_n8n__get_sdk_reference",
-      "mcp__claude_ai_n8n__search_projects"
+      "mcp__claude_ai_n8n__search_projects",
+      "Bash(mkdir -p /tmp/design-pkg2)",
+      "Read(//tmp/**)",
+      "Bash(curl -sL \"https://api.anthropic.com/v1/design/h/nHJzWTJEO0P4aqUkjEMBmQ\" -o pkg.tar.gz)",
+      "Bash(tar -xzf pkg.tar.gz)"
     ]
   }
 }
