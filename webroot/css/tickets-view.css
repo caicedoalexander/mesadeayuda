@@ -1,189 +1,876 @@
-    /* Only custom CSS that Bootstrap doesn't provide */
+/**
+ * Ticket Detail View — Workspace A.2 from claude.ai/design handoff.
+ *
+ * Layout: dark rail (shared with the list view) + thread column + right
+ * metadata sidebar. See docs/design/DESIGN.md for tokens and rules.
+ */
 
-    /* Main Container - Fixed height viewport */
-    .ticket-view-container {
-        display: grid;
-        grid-template-columns: 288px 1fr 288px;
-        gap: 0;
-        height: calc(100vh - 55px);
-        max-height: calc(100vh - 55px);
-        overflow: hidden;
-        width: 100%;
-    }
+/* ============================================================
+   Layout shell
+   ============================================================ */
 
-    /* Fixed heights for columns */
-    .sidebar-left,
-    .sidebar-right,
-    .main-content {
-        height: calc(100dvh - 55px);
-    }
+.ticket-detail {
+    background: var(--gray-50);
+    min-width: 0;
+    overflow: hidden;
+    height: 100%;
+}
 
-    /* Editor tabs active state */
-    .editor-tab {
-        background: var(--surface-light);
-        color: var(--gray-700);
-        font-size: 13px;
-        font-weight: 500;
-    }
+.ticket-detail-body {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+    overflow: hidden;
+}
 
-    .editor-tab:hover {
-        background: var(--surface-hover);
-    }
+.ticket-thread-column {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--gray-50);
+}
 
-    .editor-tab.active {
-        background: white;
-        color: var(--gray-700);
-        border-bottom: 2px solid var(--gray-700) !important;
-        margin-bottom: -1px;
-    }
+/* ============================================================
+   Top bar (header.php)
+   ============================================================ */
 
-    /* Timeline styles */
-    .timeline {
-        position: relative;
-    }
+.ticket-topbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 24px;
+    background: #fff;
+    border-bottom: 1px solid var(--gray-200);
+    flex-shrink: 0;
+}
 
-    .timeline-item {
-        position: relative;
-        padding-left: 8px;
-    }
+.ticket-topbar > .btn-brand-secondary {
+    padding: 0 11px 0 8px;
+}
 
-    .timeline-item:not(:last-child)::before {
-        content: '';
-        position: absolute;
-        left: 13px;
-        top: 20px;
-        bottom: -15px;
-        width: 2px;
-        background: var(--border-color);
-    }
+.ticket-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--gray-500);
+}
 
-    /* File upload styles */
-    .file-list {
-        display: grid;
-        gap: 12px;
-        grid-template-columns: 1fr 1fr 1fr;
-        margin-top: 8px;
-    }
+.ticket-breadcrumb .separator {
+    font-size: 10px;
+    color: var(--gray-400);
+}
 
-    .file-item {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        padding: 4px 6px;
-        background: var(--surface-light);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        transition: all 0.2s ease;
-    }
+.ticket-breadcrumb .current {
+    color: var(--gray-900);
+    font-weight: 600;
+}
 
-    .file-item:hover {
-        background: var(--surface-hover);
-        border-color: var(--border-hover);
-    }
+.ticket-topbar-spacer { flex: 1; }
 
-    .file-item-icon {
-        flex-shrink: 0;
-        font-size: 20px;
-        width: 20px;
-        text-align: center;
-    }
+.ticket-locked-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--gray-100);
+    color: var(--gray-700);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
 
-    .file-item-info {
-        flex-grow: 1;
-        min-width: 0;
-    }
+/* ============================================================
+   Thread column — scroll area with title + messages + composer
+   ============================================================ */
 
-    .file-item-name {
-        font-size: 13px;
-        font-weight: 500;
-        color: var(--gray-900);
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        max-width: 75px;
-    }
+.thread-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 26px 40px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    min-height: 0;
+}
 
-    .file-item-size {
-        font-size: 11px;
-        color: var(--text-muted);
-    }
+/* ── Title block ── */
+.thread-title-block {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
 
-    .file-item-remove {
-        flex-shrink: 0;
-        background: none;
-        border: none;
-        color: var(--danger-color);
-        cursor: pointer;
-        padding: 4px;
-        border-radius: 8px;
-        transition: all 0.2s ease;
-        font-size: 14px;
-        line-height: 1;
-    }
+.thread-title-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
 
-    .file-item-remove:hover {
-        background: var(--danger-color);
-        color: white;
-    }
+.thread-meta-sep {
+    width: 3px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--gray-300);
+}
 
-    /* Reply Editor - Internal Note Mode (Yellow Background) */
-    #editor-container {
-        background-color: #ffffff;
-        transition: background-color 0.3s ease;
-    }
+.thread-meta-time {
+    font-size: 12px;
+    color: var(--gray-500);
+}
 
-    #editor-container.internal-note-mode {
-        background-color: #fff9e6;
-    }
+.thread-title {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+    margin: 0;
+    color: var(--gray-900);
+}
 
-    #editor-container.internal-note-mode #comment-textarea {
-        background-color: #fff9e6 !important;
-    }
+.thread-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
 
-    /* Cursor pointer for clickable elements */
-    .cursor-pointer {
-        cursor: pointer;
-    }
+/* ── Messages ── */
+.thread-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    position: relative;
+}
 
-    .cursor-pointer:hover {
-        background-color: var(--surface-light);
-    }
+.thread-messages::before {
+    content: "";
+    position: absolute;
+    left: 17px;
+    top: 40px;
+    bottom: 60px;
+    width: 1px;
+    background: var(--gray-200);
+    z-index: 0;
+}
 
-    /* Recipients collapsed view styling */
-    #recipients-collapsed {
-        transition: background-color 0.2s ease;
-    }
+.thread-message {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    position: relative;
+    z-index: 1;
+}
 
-    #recipients-collapsed:hover {
-        background-color: var(--surface-light);
-    }
+.thread-message-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--gray-200);
+    box-shadow: 0 0 0 3px #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
 
+.thread-message-body {
+    flex: 1;
+    min-width: 0;
+}
 
-    /* Recipients expanded/collapsed animation */
-    #recipients-expanded,
-    #recipients-collapsed {
-        transition: all 0.3s ease-in-out;
-    }
+.thread-message-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
 
-    /* Comment Type Selector (Dropdown Button) */
-    .comment-type-selector {
-        border-color: var(--border-color);
-        background-color: white;
-        font-weight: 500;
-        min-width: 180px;
-    }
+.thread-message-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-900);
+}
 
-    .comment-type-selector:hover {
-        background-color: var(--surface-light);
-        border-color: var(--border-hover);
-    }
+.thread-message-role {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    line-height: 1.4;
+}
 
-    .comment-type-selector:focus {
-        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-    }
+.thread-role-solicitante  { background: var(--gray-100);         color: var(--gray-700); }
+.thread-role-agente       { background: var(--admin-green-soft); color: var(--admin-green-ink); }
+.thread-role-nota-interna { background: var(--admin-orange-soft);color: var(--admin-orange-ink); }
 
-    /* Recipients text in header */
-    #comment-type-recipients-text {
-        font-size: 13px;
-        color: var(--text-muted);
-    }
+.thread-message-spacer { flex: 1; }
+
+.thread-message-time {
+    font-size: 11px;
+    color: var(--gray-500);
+}
+
+.thread-message-card {
+    padding: 14px 16px;
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--gray-800);
+}
+
+.thread-message-content > *:first-child { margin-top: 0; }
+.thread-message-content > *:last-child  { margin-bottom: 0; }
+
+/* Internal note variant — dashed orange */
+.thread-message-nota-interna .thread-message-card {
+    background: #fffbf2;
+    border: 1px dashed var(--admin-orange);
+}
+
+.thread-message-attachments { margin-top: 14px; }
+
+.thread-message-recipients {
+    font-size: 11px;
+    color: var(--gray-500);
+    margin-bottom: 8px;
+}
+
+.thread-message-recipients a {
+    color: var(--admin-blue);
+    text-decoration: none;
+    margin-left: 6px;
+}
+
+.thread-system-message {
+    align-self: center;
+    max-width: 60%;
+    padding: 8px 14px;
+    background: var(--admin-orange-soft);
+    color: var(--admin-orange-ink);
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+}
+
+/* ============================================================
+   Composer
+   ============================================================ */
+
+.composer {
+    margin: 4px 40px 24px;
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+    flex-shrink: 0;
+}
+
+.composer-tabs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.composer-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--gray-600);
+    background: transparent;
+    text-decoration: none;
+    transition: var(--transition);
+    border: 0;
+    cursor: pointer;
+}
+
+.composer-tab:hover {
+    background: rgba(0,0,0,0.04);
+    color: var(--gray-900);
+}
+
+.composer-tab.active {
+    background: #fff;
+    color: var(--gray-900);
+    font-weight: 600;
+    box-shadow: var(--shadow-sm);
+}
+
+.composer-tab i { font-size: 13px; }
+.composer-tab-reassign { color: var(--admin-blue); }
+
+.composer-tabs-spacer { flex: 1; }
+
+.composer-recipient-hint {
+    font-size: 12px;
+    color: var(--gray-500);
+    cursor: pointer;
+}
+
+.composer-recipient-hint .mono { color: var(--gray-700); font-weight: 500; }
+
+.composer-body { position: relative; padding: 0; }
+
+.composer-textarea {
+    width: 100%;
+    border: 0 !important;
+    outline: none !important;
+    resize: vertical;
+    min-height: 110px;
+    padding: 16px 18px !important;
+    font-size: 13px !important;
+    line-height: 1.6 !important;
+    color: var(--gray-900);
+    background: #fff !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+}
+
+.composer-textarea:focus { box-shadow: none !important; }
+
+.composer-body.internal-note-mode .composer-textarea { background: #fffbf2 !important; }
+
+.composer-footer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-top: 1px solid var(--gray-200);
+    background: #fff;
+    flex-wrap: wrap;
+}
+
+.composer-attach {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 7px;
+    color: var(--gray-600);
+    background: transparent;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-size: 12px;
+    transition: var(--transition);
+}
+
+.composer-attach:hover {
+    background: var(--gray-100);
+    color: var(--gray-900);
+}
+
+.composer-attach i { font-size: 16px; }
+.composer-attach input[type="file"] { display: none; }
+
+.composer-footer-spacer { flex: 1; }
+
+.composer-status-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 32px;
+    padding: 0 11px;
+    border-radius: 7px;
+    border: 1px solid var(--gray-200);
+    background: #fff;
+    color: var(--gray-700);
+    font-size: 12px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.composer-status-btn:hover {
+    border-color: var(--gray-300);
+    background: var(--gray-50);
+}
+
+.composer-status-btn .chev { font-size: 10px; color: var(--gray-400); }
+.composer-status-btn strong { font-weight: 600; color: var(--gray-900); }
+
+.composer-status-menu {
+    border-radius: 8px;
+    border: 1px solid var(--gray-200);
+    padding: 4px;
+    min-width: 200px;
+}
+
+.composer-status-item {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px !important;
+    border-radius: 6px !important;
+    font-size: 12px !important;
+    color: var(--gray-700) !important;
+}
+
+.composer-status-item:hover {
+    background: var(--gray-50) !important;
+    color: var(--gray-900) !important;
+}
+
+.composer-shortcut {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    color: var(--gray-500);
+    line-height: 1.2;
+}
+
+.composer-send-btn { height: 32px; padding: 0 14px; font-size: 12px; }
+.composer-send-btn i { font-size: 12px; }
+
+.composer-locked {
+    margin: 20px 40px;
+    padding: 16px 18px;
+    border: 1px solid var(--danger-soft);
+    background: var(--danger-soft);
+    color: var(--danger-ink);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+}
+
+.composer-locked i { font-size: 18px; }
+
+/* Recipients (To / CC) when public reply */
+.composer-recipients-expanded {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.composer-recipient-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.composer-recipient-label {
+    width: 36px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gray-600);
+    margin: 0;
+}
+
+.composer-recipient-field {
+    flex: 1;
+    min-width: 0;
+}
+
+.tag-input-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border: 1px solid var(--gray-200);
+    border-radius: 7px;
+    background: #fff;
+    min-height: 32px;
+}
+
+.tag-input-container:focus-within {
+    border-color: var(--admin-green);
+    box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.12);
+}
+
+.tag-input-field {
+    border: 0;
+    outline: none;
+    flex: 1;
+    min-width: 100px;
+    font-size: 12px;
+    padding: 2px 4px;
+}
+
+.btn-icon-collapse {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1px solid var(--gray-200);
+    background: #fff;
+    color: var(--gray-500);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-icon-collapse:hover {
+    border-color: var(--admin-green);
+    color: var(--admin-green);
+}
+
+/* ============================================================
+   Right metadata sidebar (right_sidebar.php)
+   ============================================================ */
+
+.ticket-meta-sidebar {
+    width: 304px;
+    flex-shrink: 0;
+    border-left: 1px solid var(--gray-200);
+    background: #fff;
+    padding: 22px 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.meta-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.meta-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    margin: 0 0 4px;
+}
+
+/* Solicitante */
+.meta-requester {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.meta-requester-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.meta-requester-text {
+    min-width: 0;
+    flex: 1;
+}
+
+.meta-requester-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.meta-requester-email {
+    font-size: 11px;
+    color: var(--gray-500);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.meta-requester-phone {
+    font-size: 12px;
+    color: var(--gray-600);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Asignado a */
+.btn-self-assign {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 8px 10px;
+    background: var(--admin-green-soft);
+    color: var(--admin-green-ink);
+    border: 1px dashed var(--admin-green);
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.btn-self-assign:hover {
+    background: #d6f1e2;
+    color: var(--admin-green-ink);
+}
+
+.meta-assignee-current {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 7px;
+    font-size: 13px;
+}
+
+.meta-assignee-name {
+    font-weight: 600;
+    color: var(--gray-900);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.meta-assignee-you {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--admin-green);
+    color: #fff;
+    text-transform: uppercase;
+}
+
+.meta-reassign-form {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.meta-reassign-label {
+    font-size: 11px;
+    color: var(--gray-500);
+    margin: 0;
+}
+
+/* Prioridad — segmented */
+.priority-segmented {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+}
+
+.priority-seg {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 7px 6px;
+    border-radius: 6px;
+    border: 1px solid var(--gray-200);
+    background: #fff;
+    color: var(--gray-600);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.priority-seg .glyph { font-size: 12px; line-height: 1; }
+
+.priority-seg:hover { border-color: var(--gray-300); background: var(--gray-50); }
+
+.priority-seg.active.priority-seg-baja    { border-color: var(--gray-300);     background: var(--gray-100);          color: var(--gray-700); }
+.priority-seg.active.priority-seg-media   { border-color: var(--admin-orange); background: var(--admin-orange-soft); color: var(--admin-orange); }
+.priority-seg.active.priority-seg-alta    { border-color: var(--danger-color); background: var(--danger-soft);       color: var(--danger-color); }
+.priority-seg.active.priority-seg-urgente { border-color: var(--danger-color); background: var(--danger-color);      color: #fff; }
+
+/* Etiquetas */
+.meta-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.ticket-tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 6px;
+    background: var(--gray-100);
+    color: var(--gray-700);
+    border: 1px solid transparent;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.ticket-tag-chip .tag-remove {
+    color: inherit;
+    opacity: 0.55;
+    font-size: 11px;
+    margin-left: 2px;
+    text-decoration: none;
+}
+
+.ticket-tag-chip .tag-remove:hover { opacity: 1; }
+
+.btn-add-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 6px;
+    border: 1px dashed var(--gray-300);
+    background: transparent;
+    color: var(--gray-500);
+    font-size: 11px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-add-tag:hover {
+    border-color: var(--admin-green);
+    color: var(--admin-green);
+    background: var(--admin-green-soft);
+}
+
+.add-tag-menu {
+    border-radius: 8px;
+    border: 1px solid var(--gray-200);
+    padding: 4px;
+    min-width: 180px;
+    max-height: 240px;
+    overflow-y: auto;
+    box-shadow: var(--shadow-md);
+}
+
+.add-tag-menu .dropdown-item {
+    padding: 6px 10px !important;
+    border-radius: 6px !important;
+    font-size: 12px !important;
+}
+
+/* Actividad timeline */
+.meta-activity-section { gap: 12px; }
+
+.meta-activity-timeline {
+    position: relative;
+    padding-left: 18px;
+}
+
+.meta-activity-timeline::before {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 6px;
+    bottom: 6px;
+    width: 1px;
+    background: var(--gray-200);
+}
+
+.meta-activity-loader,
+.meta-activity-empty {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--gray-500);
+    font-size: 12px;
+    padding: 4px 0;
+}
+
+.meta-activity-item {
+    position: relative;
+    padding-bottom: 12px;
+}
+
+.meta-activity-item:last-child { padding-bottom: 0; }
+
+.meta-activity-item::before {
+    content: "";
+    position: absolute;
+    left: -18px;
+    top: 4px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--admin-green);
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px var(--gray-200);
+}
+
+.meta-activity-item.color-blue::before   { background: var(--admin-blue); }
+.meta-activity-item.color-orange::before { background: var(--admin-orange); }
+.meta-activity-item.color-danger::before { background: var(--danger-color); }
+
+.meta-activity-text {
+    font-size: 12px;
+    color: var(--gray-700);
+    line-height: 1.4;
+}
+
+.meta-activity-time {
+    font-size: 10px;
+    color: var(--gray-500);
+    margin-top: 1px;
+}
+
+/* ============================================================
+   Attachments inside thread messages
+   ============================================================ */
+
+.thread-message-attachments .attachment-item,
+.thread-message-attachments .attachment-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 7px;
+    border: 1px solid var(--gray-200);
+    background: #fff;
+    font-size: 12px;
+    color: var(--gray-700);
+    text-decoration: none;
+    margin: 2px;
+    transition: var(--transition);
+}
+
+.thread-message-attachments .attachment-item:hover,
+.thread-message-attachments .attachment-link:hover {
+    border-color: var(--gray-300);
+    background: var(--gray-50);
+}
+
+/* ============================================================
+   Scrollbars (thread and sidebar)
+   ============================================================ */
+
+.thread-scroll::-webkit-scrollbar,
+.ticket-meta-sidebar::-webkit-scrollbar { width: 8px; }
+
+.thread-scroll::-webkit-scrollbar-thumb,
+.ticket-meta-sidebar::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.12);
+    border-radius: 8px;
+}
+
+.thread-scroll::-webkit-scrollbar-thumb:hover,
+.ticket-meta-sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.22);
+}

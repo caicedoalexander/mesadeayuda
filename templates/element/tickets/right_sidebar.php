@@ -1,60 +1,180 @@
-<!-- Right Sidebar - User Info (with independent scroll) -->
-<div class="sidebar-right d-flex flex-column p-3">
-    <div class="bg-white p-3 text-start shadow-sm rounded-md" >
-        <div class="avatar-large text-white rounded-circle d-flex align-items-center justify-content-center fw-bold mb-2"
-            style="width: 60px; height: 60px; font-size: 28px; background-color: #CD6A15">
-            <?= strtoupper(substr($ticket->requester->name, 0, 2)) ?>
-        </div>
-        <div class="fw-semibold"><?= h($ticket->requester->name) ?></div>
-        <small class="text-muted"><?= h($ticket->requester->email) ?></small>
-    </div>
+<?php
+/**
+ * Element: Ticket detail right sidebar (metadata panel).
+ *
+ * @var \App\View\AppView $this
+ * @var \App\Model\Entity\Ticket $ticket
+ * @var array $agents
+ * @var array $tags
+ * @var bool $isLocked
+ * @var bool $isAssignmentDisabled
+ * @var \App\Model\Entity\User|null $currentUser
+ */
 
-    <div class="sidebar-scroll flex-grow-1 overflow-auto mt-3 bg-white shadow-sm rounded-md" >
-        <div class="p-3">
-        <section class="mb-3">
-            <h3 class="fs-6 mb-3">Información del Usuario</h3>
+use App\Constants\TicketConstants;
 
-            <?php if ($ticket->requester->phone): ?>
-                <div class="mb-2">
-                    <label class="small text-muted fw-semibold mb-1">Teléfono</label>
-                    <div class="small"><?= h($ticket->requester->phone) ?></div>
+$priorities = TicketConstants::PRIORITY_LABELS;
+$priorityGlyphs = [
+    TicketConstants::PRIORITY_BAJA    => '↓',
+    TicketConstants::PRIORITY_MEDIA   => '→',
+    TicketConstants::PRIORITY_ALTA    => '↑',
+    TicketConstants::PRIORITY_URGENTE => '↑',
+];
+
+$assignedToCurrent = $currentUser && $ticket->assignee_id === $currentUser->id;
+?>
+<aside class="ticket-meta-sidebar">
+
+    <!-- Solicitante -->
+    <section class="meta-section">
+        <h4 class="meta-label">Solicitante</h4>
+        <div class="meta-requester">
+            <?= $this->User->profileImageTag($ticket->requester, [
+                'width' => '36', 'height' => '36',
+                'class' => 'meta-requester-avatar',
+            ]) ?>
+            <div class="meta-requester-text">
+                <div class="meta-requester-name"><?= h($ticket->requester->name ?? '—') ?></div>
+                <div class="meta-requester-email" title="<?= h($ticket->requester->email ?? '') ?>">
+                    <?= h($ticket->requester->email ?? '') ?>
                 </div>
-            <?php endif; ?>
-
-            <div class="mb-2">
-                <label class="small text-muted fw-semibold mb-1">Usuario desde:</label>
-                <div class="small"><?= $this->TimeHuman->long($ticket->requester->created) ?></div>
             </div>
-        </section>
+        </div>
+        <?php if (!empty($ticket->requester->phone)): ?>
+            <div class="meta-requester-phone">
+                <i class="bi bi-telephone"></i> <?= h($ticket->requester->phone) ?>
+            </div>
+        <?php endif; ?>
+    </section>
 
-        <?php if (!empty($ticket->ticket_followers)): ?>
-            <section class="mb-3">
-                <h3 class="fs-6 fw-semibold mb-3">Seguidores</h3>
-                <?php foreach ($ticket->ticket_followers as $follower): ?>
-                    <div class="d-flex align-items-center gap-2 py-2">
-                        <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold flex-shrink-0"
-                            style="width: 28px; height: 28px; font-size: 11px;">
-                            <?= strtoupper(substr($follower->user->name, 0, 1)) ?>
-                        </div>
-                        <small><?= h($follower->user->name) ?></small>
-                    </div>
-                <?php endforeach; ?>
-            </section>
+    <!-- Asignado a -->
+    <section class="meta-section">
+        <h4 class="meta-label">Asignado a</h4>
+
+        <?php if (!$ticket->hasAssignee() && !$isAssignmentDisabled && !$isLocked && $currentUser): ?>
+            <?= $this->Form->postLink(
+                '<i class="bi bi-plus-lg"></i> Asignarme este ticket',
+                ['action' => 'assign', $ticket->id],
+                [
+                    'class' => 'btn-self-assign',
+                    'escape' => false,
+                    'data' => ['assignee_id' => $currentUser->id],
+                ]
+            ) ?>
+        <?php elseif ($ticket->hasAssignee()): ?>
+            <div class="meta-assignee-current">
+                <span class="agent-avatar"
+                      style="width:28px;height:28px;font-size:12px;background:<?= h($this->User->avatarColor($ticket->assignee)) ?>">
+                    <?= h($this->User->initials($ticket->assignee, 2)) ?>
+                </span>
+                <span class="meta-assignee-name"><?= h($ticket->assignee->name) ?></span>
+                <?php if ($assignedToCurrent): ?>
+                    <span class="meta-assignee-you">tú</span>
+                <?php endif; ?>
+            </div>
         <?php endif; ?>
 
-        <section class="mb-3">
-            <h3 class="fs-6 fw-semibold mb-3">Historial de cambios</h3>
-            <!-- PERFORMANCE FIX: Lazy load history on scroll -->
-            <div id="history-container" data-entity-type="ticket" data-entity-id="<?= $ticket->id ?>" data-loaded="false">
-                <div id="history-loader" class="text-center py-3">
-                    <div class="spinner-border spinner-border-sm text-primary" role="status">
-                        <span class="visually-hidden">Cargando...</span>
-                    </div>
-                    <p class="small text-muted mt-2">Cargando historial...</p>
-                </div>
-                <div id="history-content" style="display: none;"></div>
-            </div>
-        </section>
+        <?php if (!$isAssignmentDisabled && !$isLocked): ?>
+            <?= $this->Form->create(null, [
+                'url' => ['action' => 'assign', $ticket->id],
+                'class' => 'meta-reassign-form',
+                'id' => 'assign-form',
+            ]) ?>
+            <label class="meta-reassign-label" for="agent-select">
+                <?= $ticket->hasAssignee() ? 'o reasignar a:' : 'o elige a otro agente:' ?>
+            </label>
+            <?= $this->Form->select('assignee_id', $agents, [
+                'empty'    => '— Seleccionar agente —',
+                'value'    => $ticket->assignee_id,
+                'class'    => 'form-select form-select-sm meta-assignee-select',
+                'id'       => 'agent-select',
+                'disabled' => $isAssignmentDisabled || $isLocked,
+            ]) ?>
+            <?= $this->Form->end() ?>
+        <?php endif; ?>
+    </section>
+
+    <!-- Prioridad -->
+    <section class="meta-section">
+        <h4 class="meta-label">Prioridad</h4>
+        <?php if (!$isLocked): ?>
+            <?= $this->Form->create(null, [
+                'url' => ['action' => 'changePriority', $ticket->id],
+                'class' => 'priority-segmented',
+                'id' => 'priority-form',
+            ]) ?>
+            <?php foreach ($priorities as $key => $label): ?>
+                <?php $isActive = $ticket->priority === $key; ?>
+                <button type="submit"
+                        name="priority"
+                        value="<?= h($key) ?>"
+                        class="priority-seg priority-seg-<?= h($key) ?><?= $isActive ? ' active' : '' ?>"
+                        title="<?= h($label) ?>">
+                    <span class="glyph"><?= $priorityGlyphs[$key] ?? '' ?></span>
+                    <span class="lbl"><?= h($label) ?></span>
+                </button>
+            <?php endforeach; ?>
+            <?= $this->Form->end() ?>
+        <?php else: ?>
+            <span class="badge badge-priority badge-priority-<?= h($ticket->priority) ?>">
+                <?= h($priorities[$ticket->priority] ?? ucfirst($ticket->priority)) ?>
+            </span>
+        <?php endif; ?>
+    </section>
+
+    <!-- Etiquetas -->
+    <section class="meta-section">
+        <h4 class="meta-label">Etiquetas</h4>
+        <div class="meta-tags">
+            <?php if (!empty($ticket->tags)): ?>
+                <?php foreach ($ticket->tags as $tag): ?>
+                    <span class="ticket-tag-chip" style="background:<?= h($tag->color) ?>20; color:<?= h($tag->color) ?>; border-color:<?= h($tag->color) ?>40">
+                        <?= h($tag->name) ?>
+                        <?php if (!$isLocked): ?>
+                            <?= $this->Form->postLink('<i class="bi bi-x"></i>',
+                                ['action' => 'removeTag', $ticket->id, $tag->id],
+                                ['confirm' => '¿Eliminar etiqueta?', 'escape' => false, 'class' => 'tag-remove']
+                            ) ?>
+                        <?php endif; ?>
+                    </span>
+                <?php endforeach; ?>
+            <?php endif; ?>
+
+            <?php if (!$isLocked && !empty($tags)): ?>
+                <button type="button" class="btn-add-tag" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-plus"></i> añadir
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end add-tag-menu">
+                    <?php foreach ($tags as $tagId => $tagName): ?>
+                        <li>
+                            <?= $this->Form->postLink(
+                                h($tagName),
+                                ['action' => 'addTag', $ticket->id],
+                                ['data' => ['tag_id' => $tagId], 'class' => 'dropdown-item', 'escape' => false]
+                            ) ?>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
         </div>
-    </div>
-</div>
+    </section>
+
+    <!-- Actividad -->
+    <section class="meta-section meta-activity-section">
+        <h4 class="meta-label">Actividad</h4>
+        <div id="history-container"
+             class="meta-activity-timeline"
+             data-entity-type="ticket"
+             data-entity-id="<?= $ticket->id ?>"
+             data-loaded="false">
+            <div id="history-loader" class="meta-activity-loader">
+                <div class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden">Cargando…</span>
+                </div>
+                <span>Cargando actividad…</span>
+            </div>
+            <div id="history-content" class="meta-activity-content" style="display: none;"></div>
+        </div>
+    </section>
+
+</aside>

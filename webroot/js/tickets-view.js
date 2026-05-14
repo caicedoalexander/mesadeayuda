@@ -310,6 +310,23 @@
             case 'comment-type':
                 event.preventDefault();
                 setCommentType(trigger.dataset.commentType);
+                document.querySelectorAll('.composer-tab').forEach(t => t.classList.remove('active'));
+                trigger.classList.add('active');
+                break;
+            case 'focus-reassign':
+                event.preventDefault();
+                {
+                    const sel = document.getElementById('agent-select');
+                    if (sel) {
+                        sel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        const $sel = window.jQuery ? window.jQuery(sel) : null;
+                        if ($sel && $sel.data('select2')) {
+                            $sel.select2('open');
+                        } else {
+                            sel.focus();
+                        }
+                    }
+                }
                 break;
             case 'set-status':
                 event.preventDefault();

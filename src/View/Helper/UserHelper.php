@@ -123,18 +123,66 @@ class UserHelper extends Helper
     }
 
     /**
-     * Generate initials from user name for fallback display.
+     * Generate initials for fallback avatars. Accepts either a User entity or
+     * a raw name string.
      *
-     * @param string $name User name
+     * @param \App\Model\Entity\User|string|null $userOrName User entity or name string
+     * @param int $max Maximum number of initials to return (default 2)
      * @return string Initials (max 2 characters)
      */
-    public function initials(string $name): string
+    public function initials($userOrName, int $max = 2): string
     {
-        $words = explode(' ', trim($name));
-        if (count($words) >= 2) {
-            return strtoupper(substr($words[0], 0, 1) . substr($words[1], 0, 1));
+        $name = $userOrName instanceof User ? $userOrName->name : (string)$userOrName;
+        $name = trim($name);
+        if ($name === '') {
+            return '?';
+        }
+        $words = preg_split('/\s+/', $name) ?: [];
+        $initials = '';
+        foreach ($words as $w) {
+            if ($w === '') {
+                continue;
+            }
+            $initials .= mb_substr($w, 0, 1);
+            if (mb_strlen($initials) >= $max) {
+                break;
+            }
         }
 
-        return strtoupper(substr($name, 0, 2));
+        return mb_strtoupper($initials);
+    }
+
+    /**
+     * Deterministic avatar color from a name. Same palette as the JS agent
+     * picker (webroot/js/select2-init.js) so the same person always gets the
+     * same color across the app.
+     *
+     * @param \App\Model\Entity\User|string|null $userOrName User entity or name string
+     * @return string Hex color
+     */
+    public function avatarColor($userOrName): string
+    {
+        $palette = [
+            '#00A85E', // admin-green
+            '#CD6A15', // admin-orange
+            '#0066cc', // admin-blue
+            '#7c3aed', // violet
+            '#0891b2', // cyan
+            '#dc3545', // danger
+            '#6366f1', // indigo
+        ];
+        $name = $userOrName instanceof User ? $userOrName->name : (string)$userOrName;
+        $name = trim($name);
+        if ($name === '') {
+            return $palette[0];
+        }
+        $hash = 0;
+        $len = mb_strlen($name);
+        for ($i = 0; $i < $len; $i++) {
+            $char = mb_ord(mb_substr($name, $i, 1)) ?: 0;
+            $hash = (($hash * 31 + $char) & 0x7FFFFFFF);
+        }
+
+        return $palette[$hash % count($palette)];
     }
 }

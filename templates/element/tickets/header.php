@@ -1,35 +1,64 @@
 <?php
 /**
- * Element: Header for Tickets view.
+ * Element: Ticket detail top bar.
  *
+ * @var \App\View\AppView $this
  * @var \App\Model\Entity\Ticket $entity
+ * @var bool $isLocked
  */
 
+use App\Constants\TicketConstants;
+
 $isResolved = $entity->isResolved();
+$isPending  = $entity->isPending();
+$canResolve = !$isLocked && !$isResolved;
+$canPend    = !$isLocked && !$isPending;
 ?>
+<header class="ticket-topbar">
+    <!-- Left: Volver + breadcrumb -->
+    <?= $this->Html->link(
+        '<i class="bi bi-chevron-left"></i> Volver',
+        ['action' => 'index'],
+        ['class' => 'btn-brand-secondary btn-brand-sm', 'escape' => false]
+    ) ?>
 
-<!-- Fixed Header -->
-<div class="py-3 px-4 shadow-sm bg-white rounded-md" >
-    <div class="d-flex justify-content-between gap-5 small">
-        <div class="d-flex flex-column justify-content-between" style="min-width: 0; flex: 1;">
-            <div class="marquee-container ticket-subject-container" style="max-width: 600px;">
-                <h1 class="fs-5 fw-semibold m-0 ticket-subject-text"><?= h($entity->subject) ?></h1>
-            </div>
-            <span><strong class="text-muted">Ticket:</strong> <?= h($entity->ticket_number) ?></span>
-        </div>
-        <div class="d-flex flex-column justify-content-between">
-            <span class="text-muted lh-1">
-                <strong class="text-muted">Creado:</strong>
-                <?= $this->TimeHuman->long($entity->created) ?>
-            </span>
-            <?php if ($entity->resolved_at && $isResolved): ?>
-                <span class="text-success lh-1">
-                    <strong>Resuelto:</strong>
-                    <?= $this->TimeHuman->long($entity->resolved_at) ?>
-                </span>
-            <?php endif; ?>
-        </div>
-    </div>
-</div>
+    <nav class="ticket-breadcrumb" aria-label="breadcrumb">
+        <span>Tickets</span>
+        <i class="bi bi-chevron-right separator"></i>
+        <span>Sin resolver</span>
+        <i class="bi bi-chevron-right separator"></i>
+        <span class="mono current">#<?= h($entity->ticket_number ?? $entity->id) ?></span>
+    </nav>
 
-<?= $this->Html->script('tickets-marquee', ['block' => 'script']) ?>
+    <div class="ticket-topbar-spacer"></div>
+
+    <!-- Right: actions -->
+    <?php if (!$isLocked): ?>
+        <?php if ($canPend): ?>
+            <?= $this->Form->postLink(
+                'Marcar pendiente',
+                ['action' => 'changeStatus', $entity->id],
+                [
+                    'class' => 'btn-brand-secondary',
+                    'data' => ['status' => TicketConstants::STATUS_PENDIENTE],
+                ]
+            ) ?>
+        <?php endif; ?>
+
+        <?php if ($canResolve): ?>
+            <?= $this->Form->postLink(
+                '<i class="bi bi-check-lg"></i> Resolver ticket',
+                ['action' => 'changeStatus', $entity->id],
+                [
+                    'class' => 'btn-brand-primary',
+                    'escape' => false,
+                    'data' => ['status' => TicketConstants::STATUS_RESUELTO],
+                ]
+            ) ?>
+        <?php endif; ?>
+    <?php else: ?>
+        <span class="ticket-locked-pill">
+            <i class="bi bi-lock-fill"></i> Cerrado
+        </span>
+    <?php endif; ?>
+</header>

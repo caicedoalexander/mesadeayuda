@@ -164,74 +164,48 @@
      * @returns {string} HTML string
      */
     function renderHistory(history, entityType) {
-        let html = '<div class="timeline">';
+        if (!history || history.length === 0) {
+            return '<div class="meta-activity-empty">Sin actividad reciente</div>';
+        }
+        let html = '';
 
         history.forEach(entry => {
-            // Icon based on field changed
-            let icon = 'circle-fill';
-            let iconColor = 'text-secondary';
+            // Color of the timeline dot (mapped to .meta-activity-item.color-*)
+            let colorClass = '';
+            if (entry.field_name === 'status')          colorClass = ' color-blue';
+            else if (entry.field_name === 'assignee_id') colorClass = '';
+            else if (entry.field_name === 'priority')    colorClass = ' color-orange';
+            else                                         colorClass = ' color-orange';
 
-            if (entry.field_name === 'status') {
-                icon = 'arrow-repeat';
-                iconColor = 'text-primary';
-            } else if (entry.field_name === 'assignee_id') {
-                icon = 'person-fill';
-                iconColor = 'text-success';
-            } else if (entry.field_name === 'priority') {
-                icon = 'exclamation-triangle-fill';
-                iconColor = 'text-warning';
-            }
-
-            html += `
-                <div class="timeline-item mb-3">
-                    <div class="d-flex gap-2">
-                        <div class="timeline-icon flex-shrink-0 position-relative">
-                            <i class="bi bi-${icon} ${iconColor}" style="font-size: 12px; position: absolute; top: 0;"></i>
-                        </div>
-                        <div class="flex-grow-1" style="margin-left: 18px;">
-                            <div class="small mb-1">
-                                <strong>${escapeHtml(entry.user.name)}</strong>
-                            </div>
-            `;
+            html += `<div class="meta-activity-item${colorClass}">`;
+            html += `<div class="meta-activity-text">`;
 
             if (entry.description) {
-                html += `<div class="small text-muted mb-1">${escapeHtml(entry.description)}</div>`;
+                html += `<strong>${escapeHtml(entry.user.name)}</strong> ${escapeHtml(entry.description)}`;
             } else {
                 const fieldName = entry.field_name.replace(/_/g, ' ');
                 const isColoredField = ['status', 'priority', 'type'].includes(entry.field_name);
 
-                html += `<div class="small text-muted mb-1">`;
-                html += `<strong>${escapeHtml(fieldName.charAt(0).toUpperCase() + fieldName.slice(1))}:</strong> `;
-
+                html += `<strong>${escapeHtml(entry.user.name)}</strong> cambió ${escapeHtml(fieldName)}: `;
                 if (isColoredField) {
-                    // Show colored badges for status/priority/type
                     if (entry.old_value) {
                         html += getFieldBadge(entry.field_name, entry.old_value, entityType, true) + ' → ';
                     }
                     html += getFieldBadge(entry.field_name, entry.new_value, entityType, false);
                 } else {
-                    // Plain text for other fields
                     if (entry.old_value) {
                         html += `<span class="text-decoration-line-through">${escapeHtml(entry.old_value)}</span> → `;
                     }
                     html += `<span>${escapeHtml(entry.new_value)}</span>`;
                 }
-                html += `</div>`;
             }
+            html += `</div>`;
 
-            // Format timestamp
             const date = new Date(entry.created);
-            const formattedDate = formatRelativeTime(date);
-
-            html += `
-                            <div class="small text-muted fw-bold">${formattedDate}</div>
-                        </div>
-                    </div>
-                </div>
-            `;
+            html += `<div class="meta-activity-time mono">${formatRelativeTime(date)}</div>`;
+            html += `</div>`;
         });
 
-        html += '</div>';
         return html;
     }
 
