@@ -461,7 +461,7 @@
     padding-right: 12px !important;
     height: 36px !important;
     border: 1px solid var(--gray-200) !important;
-    border-radius: 9px !important;
+    border-radius: var(--radius-md) !important;
     font-size: 13px !important;
     background-color: var(--gray-50) !important;
     box-shadow: none !important;
@@ -472,6 +472,7 @@
 .search-input-clean:focus {
     border-color: var(--admin-green) !important;
     background-color: #fff !important;
+    border-radius: var(--radius-md) !important;
     box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.1) !important;
     outline: none;
 }
