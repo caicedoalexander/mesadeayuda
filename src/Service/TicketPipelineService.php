@@ -487,6 +487,29 @@ class TicketPipelineService
     }
 
     /**
+     * Best-effort removal of attachment files that were written to disk during
+     * a transaction that subsequently rolled back. Failures are logged but never
+     * propagated — the caller's primary error is more important than cleanup.
+     *
+     * @param array<int, string> $relativePaths Relative paths as stored in attachments.file_path
+     *        (e.g., "uploads/attachments/T-0001/uuid.pdf"). Resolved against WWW_ROOT.
+     */
+    private function cleanupOrphanedFiles(array $relativePaths): void
+    {
+        foreach ($relativePaths as $relativePath) {
+            $absolute = WWW_ROOT . $relativePath;
+            if (!file_exists($absolute)) {
+                continue;
+            }
+            if (@unlink($absolute) === false) {
+                Log::warning('Failed to cleanup orphaned attachment after TX rollback', [
+                    'path' => $absolute,
+                ]);
+            }
+        }
+    }
+
+    /**
      * Decode email recipients from JSON string or array.
      *
      * @param mixed $data Raw recipients value
