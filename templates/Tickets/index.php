@@ -13,10 +13,7 @@
 use App\Constants\TicketConstants;
 
 $this->assign('title', 'Tickets');
-
-$user = $this->getRequest()->getAttribute('identity');
-$userRole = $user ? $user->get('role') : null;
-$userId = $user ? $user->get('id') : null;
+$this->assign('current_view', $view);
 
 $titles = [
     'sin_asignar'        => 'Tickets sin asignar',
@@ -57,24 +54,20 @@ $activeFiltersCount = (int)!empty($filters['filterPriority'])
 <?= $this->Html->css('bulk-actions') ?>
 <?= $this->Html->script('bulk-actions-module') ?>
 
-<?= $this->cell('TicketsSidebar::display', [$view, $userRole, $userId]) ?>
-
-<section class="tickets-content-area flex-grow-1 d-flex flex-column">
-
     <!-- Header: breadcrumb + title + inline stats + primary actions -->
-    <header class="tickets-header">
-        <nav class="tickets-breadcrumb" aria-label="breadcrumb">
+    <header class="app-page-header">
+        <nav class="app-breadcrumb" aria-label="breadcrumb">
             <i class="bi bi-ticket"></i>
             <span>Tickets</span>
             <i class="bi bi-chevron-right separator"></i>
             <span class="current"><?= h($titles[$view] ?? 'Tickets') ?></span>
         </nav>
 
-        <div class="tickets-header-row">
-            <div class="tickets-header-text">
-                <h1 class="tickets-title"><?= h($titles[$view] ?? 'Tickets') ?></h1>
+        <div class="app-page-header-row">
+            <div class="app-page-header-text">
+                <h1 class="app-page-title"><?= h($titles[$view] ?? 'Tickets') ?></h1>
 
-                <div class="tickets-stats">
+                <div class="app-page-stats">
                     <span class="stat-inline">
                         <span class="dot" style="background: var(--gray-400);"></span>
                         <span class="value"><?= $this->Paginator->counter('{{count}}') ?: $tickets->count() ?></span>
@@ -104,7 +97,7 @@ $activeFiltersCount = (int)!empty($filters['filterPriority'])
                 </div>
             </div>
 
-            <div class="tickets-header-actions">
+            <div class="app-page-actions">
                 <button type="button" id="btn-refresh-list" class="btn-brand-secondary" title="Actualizar">
                     <i class="bi bi-arrow-clockwise"></i>
                     <span class="d-none d-md-inline">Actualizar</span>
@@ -265,7 +258,6 @@ $activeFiltersCount = (int)!empty($filters['filterPriority'])
             ]) ?>
         <?php endif; ?>
     </div>
-</section>
 
 <?= $this->element('tickets/bulk_modals', [
     'agents'       => $agents,

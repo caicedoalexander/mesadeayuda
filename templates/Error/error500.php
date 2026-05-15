@@ -2,7 +2,6 @@
 /**
  * @var \App\View\AppView $this
  * @var string $message
- * @var string $url
  */
 use Cake\Core\Configure;
 use Cake\Error\Debugger;
@@ -28,9 +27,27 @@ if (Configure::read('debug')) :
 
     $this->end();
 endif;
+
+$displayMessage = Configure::read('debug')
+    ? $message
+    : __d('cake', 'An Internal Error Has Occurred.');
+
+$this->assign('title', __d('cake', 'An Internal Error Has Occurred.'));
 ?>
-<h2><?= __d('cake', 'An Internal Error Has Occurred.') ?></h2>
-<p class="error">
-    <strong><?= __d('cake', 'Error') ?>: </strong>
-    <?= Configure::read('debug') ? h($message) : __d('cake', 'An Internal Error Has Occurred.') ?>
-</p>
+<div class="app-empty">
+    <div class="app-empty-icon danger">
+        <i class="bi bi-exclamation-octagon"></i>
+    </div>
+    <div class="app-empty-title"><?= __d('cake', 'An Internal Error Has Occurred.') ?></div>
+    <div class="app-empty-message">
+        <?= h($displayMessage) ?>
+    </div>
+    <div class="app-empty-action">
+        <a href="javascript:history.back()" class="btn-brand-secondary btn-brand-sm">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+        <a href="<?= $this->Url->build('/') ?>" class="btn-brand-primary btn-brand-sm">
+            <i class="bi bi-house"></i> Ir al inicio
+        </a>
+    </div>
+</div>

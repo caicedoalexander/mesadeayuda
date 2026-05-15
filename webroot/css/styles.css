@@ -84,125 +84,112 @@ body {
     max-height: 100dvh !important;
     overflow: hidden !important;
     background-color: var(--bg-color) !important;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+}
+
+/* ============================================
+   DESIGN SYSTEM — SHELL
+   El layout (admin.php / default.php) provee el shell.
+   Las vistas SOLO proveen su contenido — ni rail, ni
+   wrapper de scroll, ni padding propios.
+   ============================================ */
+
+.app-shell {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    overflow: hidden;
+}
+
+.app-shell-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 20px 28px 24px;
+    background: var(--gray-50);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Modifier: vistas que manejan su propio padding interno (p. ej. detalle de
+   ticket, vistas con topbar propio). Anula el padding y gap del shell. */
+.app-shell-main.flush {
+    padding: 0;
+    gap: 0;
+    overflow: hidden;
+}
+
+.app-shell-main > .flash-messages,
+.app-shell-main > .loading-spinner-overlay { flex-shrink: 0; }
+
+/* Page header (breadcrumb + título + stats + acciones) */
+.app-page-header {
+    animation: fadeIn 0.25s ease both;
+    flex-shrink: 0;
+}
+
+.app-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--gray-500);
+    margin-bottom: 6px;
+}
+
+.app-breadcrumb i { font-size: 13px; }
+.app-breadcrumb .separator { font-size: 10px; color: var(--gray-400); }
+.app-breadcrumb .current { color: var(--gray-900); font-weight: 500; }
+.app-breadcrumb a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+.app-breadcrumb a:hover { color: var(--gray-800); }
+
+.app-page-header-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+}
+
+.app-page-header-text { flex: 1; min-width: 0; }
+
+.app-page-title {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin: 0;
+    line-height: 1.15;
+    color: var(--gray-900);
+}
+
+.app-page-stats {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.app-page-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
 @view-transition {
     navigation: auto;
-}
-/* ============================================
-   NAVIGATION BAR
-   ============================================ */
-.top-navbar {
-    padding: 0;
-    background: #fff;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 20px rgba(0, 0, 0, 0.04);
-    position: sticky;
-    top: 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.nav-menu a {
-    color: var(--gray-500);
-    text-decoration: none;
-    padding: 6px 11px;
-    transition: color 0.18s ease, background-color 0.18s ease;
-    font-weight: 500;
-    font-size: 14px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    position: relative;
-}
-
-.nav-menu a::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0;
-    height: 2px;
-    background: var(--admin-green);
-    border-radius: 1px 1px 0 0;
-    transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.nav-menu a:hover {
-    color: var(--gray-800);
-    background-color: var(--gray-50);
-}
-
-.nav-menu a:hover::after {
-    width: 70%;
-}
-
-.nav-user {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: #333;
-}
-
-.btn-logout {
-    border: none;
-    padding: 6px 14px !important;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 500;
-    background-color: var(--admin-orange) !important;
-    color: #fff !important;
-    text-decoration: none;
-    transition: all 0.2s ease;
-    box-shadow: 0 1px 4px rgba(205, 106, 21, 0.22);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.btn-logout:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(205, 106, 21, 0.32);
-    background-color: var(--admin-orange-light) !important;
-}
-
-/* Page Header */
-.page-header {
-    display: flex;
-    align-items: center;
-    gap: 0.875rem;
-    margin-bottom: 1rem;
-    padding-bottom: 0.875rem;
-    border-bottom: 1px solid var(--gray-200);
-    animation: fadeIn 0.3s ease both;
-}
-
-.header-icon {
-    width: 40px;
-    height: 40px;
-    background: rgba(0, 168, 94, 0.1);
-    border-radius: var(--radius-md);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    transition: background 0.2s ease;
-}
-
-.header-icon i {
-    font-size: 20px;
-    color: var(--admin-green);
-}
-
-.header-text h3 {
-    font-size: 1.375rem;
-    font-weight: 700;
-    color: var(--gray-900);
-    margin: 0;
-    line-height: 1.2;
 }
 
 /* ============================================
@@ -529,33 +516,6 @@ body {
 /* Flash messages: estructura y animación viven en components.css
    (sección 09 · Toasts). No declarar reglas aquí. */
 
-/* Sidebar scrollbars — applies to the outer layout wrapper and ticket-detail
-   side panels. Visual styling (rounding, shadow) lives on the inner card,
-   not on this scroll container, so we only style the scrollbar here. */
-.sidebar-scroll::-webkit-scrollbar {
-    width: 6px;
-}
-
-.sidebar-scroll::-webkit-scrollbar-track {
-    background: transparent;
-    border-radius: 8px;
-}
-
-.sidebar-scroll::-webkit-scrollbar-thumb {
-    background: rgba(150, 150, 150, 0.3);
-    border-radius: 8px;
-}
-
-.sidebar-scroll::-webkit-scrollbar-thumb:hover {
-    background: rgba(100, 100, 100, 0.5);
-}
-
-/* For Firefox */
-.sidebar-scroll {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(150, 150, 150, 0.3) transparent;
-}
-
 /* Comments scrollbars with border-radius integration */
 .comments-scroll {
     border-radius: 8px;
@@ -693,10 +653,6 @@ body {
 .fs-13 { font-size: 13px; }
 
 .rounded-md { border-radius: var(--radius-md); }
-
-
-.below-topbar-h { height: 100vh }
-.below-topbar-mh { max-height: 100vh}
 
 /* Tag/label primitives */
 .tag-input-inline {

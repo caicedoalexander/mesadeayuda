@@ -5,11 +5,14 @@
  * @var string $view
  * @var string|null $userRole
  * @var \App\Model\Entity\User|null $currentUser
+ * @var string|null $activeWorkspace One of: users, tags, templates, settings
  */
 use App\Constants\RoleConstants;
 
 $isAdmin = $userRole === RoleConstants::ROLE_ADMIN;
 $isAgent = $userRole === RoleConstants::ROLE_ASESOR_TIC;
+$activeWorkspace = $activeWorkspace ?? null;
+$wsClass = fn(string $key): string => 'rail-nav-item' . ($activeWorkspace === $key ? ' active' : '');
 ?>
 <aside class="tickets-rail">
     <!-- Brand -->
@@ -85,22 +88,22 @@ $isAgent = $userRole === RoleConstants::ROLE_ASESOR_TIC;
             <?= $this->Html->link(
                 '<i class="bi bi-people"></i><span class="rail-nav-text">Usuarios</span>',
                 ['prefix' => 'Admin', 'controller' => 'Settings', 'action' => 'users'],
-                ['class' => 'rail-nav-item', 'escape' => false]
+                ['class' => $wsClass('users'), 'escape' => false]
             ) ?>
             <?= $this->Html->link(
                 '<i class="bi bi-tags"></i><span class="rail-nav-text">Etiquetas</span>',
                 ['prefix' => 'Admin', 'controller' => 'Tags', 'action' => 'index'],
-                ['class' => 'rail-nav-item', 'escape' => false]
+                ['class' => $wsClass('tags'), 'escape' => false]
             ) ?>
             <?= $this->Html->link(
                 '<i class="bi bi-envelope"></i><span class="rail-nav-text">Plantillas</span>',
                 ['prefix' => 'Admin', 'controller' => 'EmailTemplates', 'action' => 'index'],
-                ['class' => 'rail-nav-item', 'escape' => false]
+                ['class' => $wsClass('templates'), 'escape' => false]
             ) ?>
             <?= $this->Html->link(
                 '<i class="bi bi-gear"></i><span class="rail-nav-text">Configuración</span>',
                 ['prefix' => 'Admin', 'controller' => 'Settings', 'action' => 'index'],
-                ['class' => 'rail-nav-item', 'escape' => false]
+                ['class' => $wsClass('settings'), 'escape' => false]
             ) ?>
         </nav>
     </div>

@@ -21,8 +21,12 @@ class TicketsSidebarCell extends Cell
      * @param int|null $userId Current user ID
      * @return void
      */
-    public function display(string $currentView = 'todos_sin_resolver', ?string $userRole = null, ?int $userId = null): void
-    {
+    public function display(
+        string $currentView = 'todos_sin_resolver',
+        ?string $userRole = null,
+        ?int $userId = null,
+        ?string $activeWorkspace = null,
+    ): void {
         $currentUser = null;
         if ($userId) {
             $currentUser = $this->fetchTable('Users')->get($userId);
@@ -63,5 +67,6 @@ class TicketsSidebarCell extends Cell
         $this->set('view', $currentView);
         $this->set('userRole', $userRole);
         $this->set('currentUser', $currentUser);
+        $this->set('activeWorkspace', $activeWorkspace);
     }
 }

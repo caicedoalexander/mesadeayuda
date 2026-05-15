@@ -1257,3 +1257,984 @@
     border-color: var(--admin-green);
     box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.18);
 }
+
+
+/* ===========================================================
+   16 · APP CARD — superficie genérica para formularios y bloques
+   de contenido agrupado (sustituye .config-card, .tag-card, etc.).
+   =========================================================== */
+
+.app-card {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    animation: fadeIn 0.25s ease both;
+}
+
+.app-card + .app-card { margin-top: 16px; }
+
+.app-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--gray-100);
+    background: #fff;
+}
+
+.app-card-header-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-sm);
+    background: var(--admin-green-soft);
+    color: var(--admin-green-ink);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.app-card-header-icon.orange { background: var(--admin-orange-soft); color: var(--admin-orange-ink); }
+.app-card-header-icon.blue   { background: var(--admin-blue-soft);   color: var(--admin-blue-ink); }
+.app-card-header-icon.danger { background: var(--danger-soft);       color: var(--danger-color); }
+.app-card-header-icon.neutral{ background: var(--gray-100);          color: var(--gray-700); }
+
+.app-card-header-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-card-header-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--gray-900);
+    letter-spacing: -0.1px;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.app-card-header-subtitle {
+    font-size: 12px;
+    color: var(--gray-500);
+    margin-top: 2px;
+}
+
+.app-card-header-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.app-card-body { padding: 18px; }
+
+.app-card-footer {
+    padding: 12px 18px;
+    background: var(--gray-50);
+    border-top: 1px solid var(--gray-100);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.app-card-footer.start { justify-content: flex-start; }
+.app-card-footer.between { justify-content: space-between; }
+
+
+/* ===========================================================
+   17 · APP FORM — labels, inputs, selects, textarea, helpers
+   Hereda focus ring verde del DS. Reemplaza estilos por-vista.
+   =========================================================== */
+
+.app-form-group {
+    margin-bottom: 14px;
+}
+
+.app-form-group:last-child { margin-bottom: 0; }
+
+.app-form-group > label,
+.app-form-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--gray-600);
+    margin-bottom: 6px;
+}
+
+.app-form-group input[type="text"],
+.app-form-group input[type="email"],
+.app-form-group input[type="number"],
+.app-form-group input[type="password"],
+.app-form-group input[type="url"],
+.app-form-group input[type="tel"],
+.app-form-group input[type="search"],
+.app-form-group input[type="date"],
+.app-form-group input[type="datetime-local"],
+.app-form-group select,
+.app-form-group textarea,
+.app-input {
+    width: 100%;
+    height: 38px;
+    padding: 0 12px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    background: #fff;
+    color: var(--gray-900);
+    font-size: 13px;
+    font-family: inherit;
+    transition: var(--transition);
+    box-shadow: var(--shadow-sm);
+}
+
+.app-form-group textarea,
+textarea.app-input {
+    height: auto;
+    padding: 10px 12px;
+    min-height: 96px;
+    line-height: 1.55;
+    resize: vertical;
+}
+
+.app-form-group select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236B7280' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+}
+
+.app-form-group input:hover,
+.app-form-group select:hover,
+.app-form-group textarea:hover,
+.app-input:hover {
+    border-color: var(--gray-300);
+}
+
+.app-form-group input:focus,
+.app-form-group select:focus,
+.app-form-group textarea:focus,
+.app-input:focus {
+    outline: none;
+    border-color: var(--admin-green);
+    box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.16);
+}
+
+.app-form-group input[readonly],
+.app-form-group textarea[readonly] {
+    background: var(--gray-50);
+    color: var(--gray-600);
+    cursor: default;
+}
+
+.app-form-group input[disabled],
+.app-form-group select[disabled],
+.app-form-group textarea[disabled] {
+    background: var(--gray-50);
+    color: var(--gray-400);
+    cursor: not-allowed;
+}
+
+.app-form-group small,
+.app-form-help {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--gray-500);
+    line-height: 1.45;
+}
+
+.app-form-help.danger { color: var(--danger-color); }
+.app-form-help code   { font-family: "Geist Mono", ui-monospace, monospace; background: var(--gray-100); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+
+.app-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+@media (max-width: 720px) {
+    .app-form-row { grid-template-columns: 1fr; }
+}
+
+/* Toggle / checkbox combo */
+.app-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.app-toggle input[type="checkbox"] {
+    appearance: none;
+    width: 36px;
+    height: 20px;
+    border-radius: 999px;
+    background: var(--gray-200);
+    position: relative;
+    cursor: pointer;
+    transition: var(--transition);
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.app-toggle input[type="checkbox"]::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    transition: var(--transition);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+
+.app-toggle input[type="checkbox"]:checked {
+    background: var(--admin-green);
+}
+
+.app-toggle input[type="checkbox"]:checked::after {
+    transform: translateX(16px);
+}
+
+.app-toggle-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gray-800);
+}
+
+/* Collapsible block (used by enabled-toggle reveal) */
+.app-collapsible {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--gray-200);
+}
+
+.app-collapsible[hidden] { display: none !important; }
+
+
+/* ===========================================================
+   18 · APP GRID — grilla responsiva genérica para listados de
+   cards (etiquetas, plantillas, accesos rápidos).
+   =========================================================== */
+
+.app-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+}
+
+.app-grid.compact { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+.app-grid.wide    { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+
+
+/* ===========================================================
+   19 · APP STATUS BANNER — bloque inline para estado de
+   conexión, validación de integración, etc.
+   =========================================================== */
+
+.app-status-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+    background: var(--admin-green-soft);
+    color: var(--admin-green-ink);
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid rgba(0, 168, 94, 0.25);
+}
+
+.app-status-row .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--admin-green);
+    flex-shrink: 0;
+    box-shadow: 0 0 0 4px rgba(0, 168, 94, 0.18);
+}
+
+.app-status-row.warning { background: var(--admin-orange-soft); color: var(--admin-orange-ink); border-color: rgba(205, 106, 21, 0.25); }
+.app-status-row.warning .dot { background: var(--admin-orange); box-shadow: 0 0 0 4px rgba(205, 106, 21, 0.18); }
+.app-status-row.danger  { background: var(--danger-soft); color: var(--danger-ink); border-color: rgba(220, 53, 69, 0.25); }
+.app-status-row.danger  .dot { background: var(--danger-color); box-shadow: 0 0 0 4px rgba(220, 53, 69, 0.18); }
+.app-status-row.info    { background: var(--admin-blue-soft); color: var(--admin-blue-ink); border-color: rgba(0, 102, 204, 0.22); }
+.app-status-row.info    .dot { background: var(--admin-blue); box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.18); }
+
+
+/* ===========================================================
+   20 · TAG SWATCH CARD — visual list item para etiquetas con
+   color arbitrario. Usa la variable --swatch del propio card.
+   =========================================================== */
+
+.tag-swatch-card {
+    position: relative;
+    transition: var(--transition);
+}
+
+.tag-swatch-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--gray-300);
+}
+
+.tag-swatch-bar {
+    height: 4px;
+    background: var(--swatch, var(--gray-400));
+    box-shadow: 0 1px 6px color-mix(in srgb, var(--swatch, var(--gray-400)) 45%, transparent);
+}
+
+.tag-swatch-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.tag-swatch-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 11px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    color: #fff;
+    background: var(--swatch, var(--gray-500));
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.tag-swatch-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--gray-500);
+    font-variant-numeric: tabular-nums;
+    font-family: "Geist Mono", ui-monospace, monospace;
+}
+
+.tag-swatch-count i {
+    font-size: 12px;
+    color: var(--gray-400);
+}
+
+.tag-swatch-desc {
+    margin: 0 0 12px;
+    font-size: 12px;
+    color: var(--gray-600);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.tag-swatch-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-top: 10px;
+    border-top: 1px solid var(--gray-100);
+}
+
+.tag-swatch-actions .btn-brand-secondary {
+    flex: 1;
+    justify-content: center;
+}
+
+.tag-swatch-delete:hover {
+    color: var(--danger-color);
+    background: var(--danger-soft);
+}
+
+/* Color picker compuesto (input color + hex texto) */
+.app-color-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+}
+
+.app-color-picker input[type="color"] {
+    width: 36px;
+    height: 36px;
+    border: none;
+    padding: 0;
+    border-radius: 6px;
+    cursor: pointer;
+    background: transparent;
+}
+
+.app-color-picker input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.app-color-picker input[type="color"]::-webkit-color-swatch { border: none; border-radius: 5px; }
+
+.app-color-picker .app-color-hex {
+    width: 110px;
+    height: 32px !important;
+    padding: 0 10px !important;
+    border: none !important;
+    background: var(--gray-50) !important;
+    border-radius: 6px !important;
+    font-family: "Geist Mono", ui-monospace, monospace !important;
+    font-size: 12px !important;
+    color: var(--gray-700) !important;
+    text-transform: uppercase;
+    text-align: center;
+    box-shadow: none !important;
+}
+
+.app-color-picker .app-color-hex:focus { outline: none; box-shadow: 0 0 0 2px rgba(0, 168, 94, 0.18) !important; }
+
+/* Preview de tag (vista add/edit) */
+.app-tag-preview {
+    padding: 24px 14px;
+    background: var(--gray-50);
+    border: 1px dashed var(--gray-200);
+    border-radius: var(--radius-md);
+    text-align: center;
+}
+
+/* ===========================================================
+   21 · APP TABLE — tabla genérica para listados admin (usuarios,
+   recursos). Comparte tokens con .tickets-table pero genérica.
+   =========================================================== */
+
+.app-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: #fff;
+}
+
+.app-table-card {
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+}
+
+.app-table thead th {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--gray-500);
+    padding: 11px 16px;
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-200);
+    text-align: left;
+    white-space: nowrap;
+}
+
+.app-table tbody td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--gray-100);
+    font-size: 13px;
+    color: var(--gray-800);
+    vertical-align: middle;
+}
+
+.app-table tbody tr:last-child td { border-bottom: 0; }
+.app-table tbody tr:hover td { background: #fafafb; }
+
+.app-table .user-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.app-table .user-cell img,
+.app-table .user-cell .avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.app-table .user-cell-name {
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.app-table .action-buttons {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.app-icon-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--gray-200);
+    background: #fff;
+    color: var(--gray-600);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.app-icon-btn:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-300);
+    color: var(--gray-900);
+}
+
+.app-icon-btn.danger:hover  { background: var(--danger-soft);  border-color: var(--danger-color); color: var(--danger-color); }
+.app-icon-btn.success:hover { background: var(--admin-green-soft); border-color: var(--admin-green); color: var(--admin-green-ink); }
+.app-icon-btn.warning:hover { background: var(--admin-orange-soft); border-color: var(--admin-orange); color: var(--admin-orange-ink); }
+
+/* Role / status badges (admin list) */
+.role-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    background: var(--gray-100);
+    color: var(--gray-700);
+    border: 1px solid var(--gray-200);
+}
+
+.role-badge.admin       { background: var(--danger-soft);      color: var(--danger-ink);       border-color: rgba(220, 53, 69, 0.2); }
+.role-badge.asesor_tic  { background: var(--admin-blue-soft);  color: var(--admin-blue-ink);   border-color: rgba(0, 102, 204, 0.2); }
+.role-badge.external    { background: var(--admin-orange-soft); color: var(--admin-orange-ink); border-color: rgba(205, 106, 21, 0.2); }
+
+.status-dot-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--gray-100);
+    color: var(--gray-700);
+}
+
+.status-dot-pill::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--gray-400);
+}
+
+.status-dot-pill.active   { background: var(--admin-green-soft); color: var(--admin-green-ink); }
+.status-dot-pill.active::before { background: var(--admin-green); box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.18); }
+.status-dot-pill.inactive { background: var(--danger-soft); color: var(--danger-ink); }
+.status-dot-pill.inactive::before { background: var(--danger-color); }
+
+
+/* ===========================================================
+   21b · ERROR SHELL — pantalla completa centrada (404, 500)
+   =========================================================== */
+
+.app-error-body {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: auto !important;
+    background:
+        radial-gradient(1000px 500px at 20% 10%, rgba(220, 53, 69, 0.05), transparent 60%),
+        radial-gradient(800px 400px at 110% 90%, rgba(0, 168, 94, 0.05), transparent 60%),
+        var(--gray-50) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.app-error-shell {
+    width: 100%;
+    max-width: 480px;
+}
+
+
+/* ===========================================================
+   22 · LOGIN — split-panel oscuro + form claro
+   =========================================================== */
+
+.app-login-body {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+    background:
+        radial-gradient(1200px 600px at 80% -10%, rgba(0, 168, 94, 0.06), transparent 60%),
+        radial-gradient(900px 500px at -10% 110%, rgba(205, 106, 21, 0.05), transparent 60%),
+        var(--gray-50) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.app-login-shell {
+    width: 100%;
+    max-width: 920px;
+}
+
+.app-login-card {
+    display: grid;
+    grid-template-columns: 0.85fr 1fr;
+    background: #fff;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow:
+        0 30px 80px -20px rgba(17, 24, 39, 0.25),
+        0 12px 30px -8px rgba(17, 24, 39, 0.12),
+        0 0 0 1px var(--gray-200);
+    min-height: 540px;
+    animation: loginAppear 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes loginAppear {
+    from { opacity: 0; transform: translateY(12px) scale(0.985); }
+    to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+/* ── Lado oscuro: brand ────────────────────── */
+.app-login-brand {
+    position: relative;
+    background:
+        radial-gradient(circle at 30% 20%, rgba(0, 168, 94, 0.18), transparent 55%),
+        linear-gradient(160deg, var(--gray-900) 0%, #0c1422 100%);
+    color: #fff;
+    padding: 32px 28px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.app-login-brand::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    background-size: 28px 28px;
+    mask-image: radial-gradient(ellipse at top right, #000 30%, transparent 75%);
+    z-index: -1;
+}
+
+.app-login-brand-mark {
+    width: 54px;
+    height: 54px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, var(--admin-green) 0%, var(--admin-green-light) 100%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow:
+        0 12px 30px -10px rgba(0, 168, 94, 0.65),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    font-size: 26px;
+    color: #fff;
+    margin-bottom: 22px;
+}
+
+.app-login-brand-text h1 {
+    font-size: 26px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.5px;
+    color: #fff;
+    line-height: 1.15;
+}
+
+.app-login-brand-text p {
+    margin: 6px 0 0;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 13px;
+    letter-spacing: 0.1px;
+}
+
+.app-login-brand-glow {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+}
+
+.app-login-brand-glow .glow {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(40px);
+    opacity: 0.55;
+    animation: brandGlow 8s ease-in-out infinite;
+}
+
+.app-login-brand-glow .glow-1 {
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, var(--admin-green) 0%, transparent 70%);
+    bottom: -60px; left: -40px;
+}
+
+.app-login-brand-glow .glow-2 {
+    width: 160px; height: 160px;
+    background: radial-gradient(circle, var(--admin-orange) 0%, transparent 70%);
+    top: 30%; right: -50px;
+    animation-delay: 1.5s;
+    opacity: 0.35;
+}
+
+.app-login-brand-glow .glow-3 {
+    width: 120px; height: 120px;
+    background: radial-gradient(circle, var(--admin-blue) 0%, transparent 70%);
+    top: 55%; left: 10%;
+    animation-delay: 3s;
+    opacity: 0.3;
+}
+
+@keyframes brandGlow {
+    0%, 100% { transform: translate(0, 0)      scale(1); }
+    50%      { transform: translate(8px, -12px) scale(1.05); }
+}
+
+.app-login-brand-meta {
+    margin-top: auto;
+    padding-top: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.55);
+    letter-spacing: 0.3px;
+}
+
+.app-login-brand-meta .meta-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.app-login-brand-meta .meta-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.18);
+}
+
+/* ── Lado claro: form ─────────────────────── */
+.app-login-form {
+    padding: 38px 38px 28px;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-login-form-head {
+    margin-bottom: 22px;
+}
+
+.app-login-logo {
+    height: 28px;
+    width: auto;
+    margin-bottom: 14px;
+}
+
+.app-login-form-head h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0 0 4px;
+    letter-spacing: -0.3px;
+}
+
+.app-login-form-head p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--gray-500);
+}
+
+.app-login-form-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex: 1;
+}
+
+.app-login-form-body .app-form-group { margin-bottom: 0; }
+
+.app-login-submit {
+    width: 100%;
+    margin-top: 4px;
+}
+
+.app-login-foot {
+    margin-top: 26px;
+    padding-top: 16px;
+    border-top: 1px solid var(--gray-100);
+    text-align: center;
+    font-size: 11px;
+    color: var(--gray-500);
+    letter-spacing: 0.1px;
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.app-login-foot span { color: var(--gray-300); }
+
+@media (max-width: 760px) {
+    .app-login-card {
+        grid-template-columns: 1fr;
+        min-height: auto;
+    }
+    .app-login-brand {
+        padding: 26px 24px;
+        text-align: left;
+    }
+    .app-login-brand-meta { padding-top: 18px; }
+    .app-login-form { padding: 28px 24px 22px; }
+}
+
+
+/* Quick link card (acceso rápido en grid) */
+.quick-link-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 18px 12px;
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    color: var(--gray-700);
+    text-decoration: none;
+    transition: var(--transition);
+    text-align: center;
+}
+
+.quick-link-card i {
+    font-size: 22px;
+    color: var(--admin-green);
+    transition: var(--transition);
+}
+
+.quick-link-card span {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.quick-link-card:hover {
+    border-color: var(--admin-green);
+    background: var(--admin-green-soft);
+    color: var(--admin-green-ink);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+.quick-link-card:hover i { transform: scale(1.08); }
+
+
+/* Profile edit row (avatar + dropzone) */
+.profile-edit-row {
+    display: flex;
+    gap: 18px;
+    align-items: stretch;
+}
+
+.profile-edit-avatar {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: var(--gray-100);
+    border: 2px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.profile-edit-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+@media (max-width: 720px) {
+    .profile-edit-row { flex-direction: column; align-items: center; text-align: center; }
+}
+
+
+/* Email template helpers */
+.email-subject-preview {
+    padding: 10px 12px;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    color: var(--gray-800);
+    word-break: break-word;
+    line-height: 1.45;
+}
+
+.email-variables {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.email-var-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--admin-blue-soft);
+    color: var(--admin-blue-ink);
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+    border: 1px solid rgba(0, 102, 204, 0.18);
+}
+
+.email-var-chip.copyable { cursor: pointer; transition: var(--transition); }
+.email-var-chip.copyable:hover { background: var(--admin-blue); color: #fff; border-color: var(--admin-blue); }
+
+.app-tag-preview-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 7px 18px;
+    border-radius: 999px;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--swatch, var(--gray-500));
+    box-shadow: 0 4px 10px -2px color-mix(in srgb, var(--swatch, var(--gray-500)) 40%, transparent);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+

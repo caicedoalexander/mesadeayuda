@@ -1,131 +1,137 @@
 <?php
 /**
  * @var \App\View\AppView $this
- * @var array $settings
+ * @var \Cake\Datasource\Paging\PaginatedInterface<\App\Model\Entity\User> $users
  */
 $this->assign('title', 'Usuarios');
+$this->assign('active_workspace', 'users');
+
+$roleLabels = [
+    'admin' => 'Administrador',
+    'asesor_tic' => 'Asesor TIC',
+    'external' => 'Externo',
+];
 ?>
 
-<?= $this->Html->css('admin/users', ['block' => 'css']) ?>
+<header class="app-page-header">
+    <nav class="app-breadcrumb" aria-label="breadcrumb">
+        <i class="bi bi-grid-1x2"></i>
+        <span>Workspace</span>
+        <i class="bi bi-chevron-right separator"></i>
+        <span class="current">Usuarios</span>
+    </nav>
 
-<div class="admin-users-page">
-    <!-- Header -->
-    <div class="page-header">
-        <div class="header-content">
-            <div class="header-icon">
-                <i class="bi bi-people"></i>
-            </div>
-            <div class="header-text">
-                <h3>Gestión de Usuarios</h3>
-                <p>Administra los usuarios del sistema</p>
+    <div class="app-page-header-row">
+        <div class="app-page-header-text">
+            <h1 class="app-page-title">Usuarios</h1>
+            <div class="app-page-stats">
+                <span class="stat-inline">
+                    <span class="dot" style="background: var(--admin-green);"></span>
+                    <span class="value emphasis"><?= $this->Paginator->counter('{{count}}') ?: $users->count() ?></span>
+                    <span class="label">en total</span>
+                </span>
             </div>
         </div>
-        <div>
+        <div class="app-page-actions">
             <?= $this->Html->link(
-                '<i class="bi bi-person-add"></i> Nuevo Usuario',
+                '<i class="bi bi-person-plus"></i> Nuevo usuario',
                 ['action' => 'addUser'],
-                ['class' => 'btn-add-user', 'escapeTitle' => false],
+                ['class' => 'btn-brand-primary', 'escape' => false]
             ) ?>
         </div>
     </div>
+</header>
 
-    <?= $this->Flash->render() ?>
-
-    <!-- Table Card -->
-    <div class="table-card">
-        <table class="modern-table">
-            <thead>
-                <tr>
-                    <th>Usuario</th>
-                    <th>Email</th>
-                    <th>Rol</th>
-                    <th>Estado</th>
-                    <th>Registro</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (!empty($users)) : ?>
+<?php if ($users->count() > 0) : ?>
+    <div class="app-table-card">
+        <div style="overflow-x: auto;">
+            <table class="app-table">
+                <thead>
+                    <tr>
+                        <th>Usuario</th>
+                        <th>Email</th>
+                        <th>Rol</th>
+                        <th>Estado</th>
+                        <th>Registro</th>
+                        <th style="width: 1%; text-align: right;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
                     <?php foreach ($users as $user) : ?>
                         <tr>
                             <td>
                                 <div class="user-cell">
-                                    <?= $this->User->profileImageTag($user, ['width' => '48', 'height' => '48', 'class' => '']) ?>
-                                    <strong><?= h($user->name) ?></strong>
+                                    <?= $this->User->profileImageTag($user, ['width' => '32', 'height' => '32']) ?>
+                                    <span class="user-cell-name"><?= h($user->name) ?></span>
                                 </div>
                             </td>
-                            <td><?= h($user->email) ?></td>
+                            <td style="color: var(--gray-600);"><?= h($user->email) ?></td>
                             <td>
-                                <?php
-                                $roles = [
-                                    'admin' => 'Administrador',
-                                    'asesor_tic' => 'Asesor TIC',
-                                    'external' => 'Externo',
-                                ];
-                                $roleKey = $user->role;
-                                $roleName = $roles[$roleKey] ?? $roleKey;
-                                ?>
-                                <span class="role-badge <?= h($roleKey) ?>">
-                                    <?= h($roleName) ?>
+                                <span class="role-badge <?= h($user->role) ?>">
+                                    <?= h($roleLabels[$user->role] ?? $user->role) ?>
                                 </span>
                             </td>
                             <td>
-                                <span class="status-badge <?= $user->is_active ? 'active' : 'inactive' ?>">
+                                <span class="status-dot-pill <?= $user->is_active ? 'active' : 'inactive' ?>">
                                     <?= $user->is_active ? 'Activo' : 'Inactivo' ?>
                                 </span>
                             </td>
-                            <td><?= $user->created ? $user->created->format('d/m/Y') : '—' ?></td>
-                            <td>
+                            <td class="mono" style="color: var(--gray-500); font-size: 12px;">
+                                <?= $user->created ? $user->created->format('d/m/Y') : '—' ?>
+                            </td>
+                            <td style="text-align: right;">
                                 <div class="action-buttons">
                                     <?= $this->Html->link(
                                         '<i class="bi bi-pencil"></i>',
                                         ['action' => 'editUser', $user->id],
-                                        ['class' => 'btn-action edit', 'title' => 'Editar', 'escape' => false],
+                                        ['class' => 'app-icon-btn', 'data-tip' => 'Editar', 'escape' => false]
                                     ) ?>
                                     <?php if ($user->is_active) : ?>
                                         <?= $this->Form->postLink(
                                             '<i class="bi bi-person-x"></i>',
                                             ['action' => 'deactivateUser', $user->id],
                                             [
-                                                'class' => 'btn-action deactivate',
-                                                'title' => 'Desactivar',
+                                                'class' => 'app-icon-btn danger',
+                                                'data-tip' => 'Desactivar',
                                                 'confirm' => '¿Desactivar a ' . $user->name . '?',
                                                 'escape' => false,
-                                            ],
+                                            ]
                                         ) ?>
                                     <?php else : ?>
                                         <?= $this->Form->postLink(
                                             '<i class="bi bi-person-check"></i>',
                                             ['action' => 'activateUser', $user->id],
                                             [
-                                                'class' => 'btn-action activate',
-                                                'title' => 'Activar',
+                                                'class' => 'app-icon-btn success',
+                                                'data-tip' => 'Activar',
                                                 'escape' => false,
-                                            ],
+                                            ]
                                         ) ?>
                                     <?php endif; ?>
                                 </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>
-                <?php else : ?>
-                    <tr>
-                        <td colspan="7">
-                            <?= $this->element('empty_state', [
-                                'inline' => true,
-                                'icon'   => 'people',
-                                'title'  => 'No hay usuarios registrados.',
-                            ]) ?>
-                        </td>
-                    </tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
-
-    <?php if ($users->count() > 0) : ?>
-        <div class="pagination-wrapper">
+                </tbody>
+            </table>
+        </div>
+        <div class="app-card-footer between">
+            <span style="font-size: 12px; color: var(--gray-500);">
+                <?= $this->Paginator->counter(__('Mostrando {{start}}–{{end}} de {{count}}')) ?>
+            </span>
             <?= $this->element('pagination') ?>
         </div>
-    <?php endif; ?>
-</div>
+    </div>
+<?php else : ?>
+    <?= $this->element('empty_state', [
+        'icon'    => 'people',
+        'tone'    => 'neutral',
+        'title'   => 'No hay usuarios registrados',
+        'message' => 'Crea el primer usuario para empezar a operar el sistema.',
+        'action'  => $this->Html->link(
+            '<i class="bi bi-person-plus"></i> Crear usuario',
+            ['action' => 'addUser'],
+            ['class' => 'btn-brand-primary btn-brand-sm', 'escape' => false]
+        ),
+    ]) ?>
+<?php endif; ?>

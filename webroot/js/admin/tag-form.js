@@ -1,20 +1,23 @@
 document.addEventListener('DOMContentLoaded', function () {
     const colorPicker = document.getElementById('tag-color');
     const colorHex = document.getElementById('color-hex');
-    const previewBadge = document.getElementById('preview-badge');
+    const previewWrapper = document.getElementById('preview-wrapper');
     const previewText = document.getElementById('preview-text');
     const nameInput = document.querySelector('input[name="name"]');
 
-    if (!colorPicker || !previewBadge || !nameInput) {
+    if (!colorPicker || !previewWrapper || !nameInput) {
         return;
     }
 
-    colorPicker.addEventListener('input', function () {
-        const color = this.value;
+    function applyColor(value) {
+        previewWrapper.style.setProperty('--swatch', value);
         if (colorHex) {
-            colorHex.value = color.toUpperCase();
+            colorHex.value = value.toUpperCase();
         }
-        previewBadge.style.backgroundColor = color;
+    }
+
+    colorPicker.addEventListener('input', function () {
+        applyColor(this.value);
     });
 
     nameInput.addEventListener('input', function () {
@@ -22,4 +25,6 @@ document.addEventListener('DOMContentLoaded', function () {
             previewText.textContent = this.value || 'Nombre de etiqueta';
         }
     });
+
+    applyColor(colorPicker.value);
 });

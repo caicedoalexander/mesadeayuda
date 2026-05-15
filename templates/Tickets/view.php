@@ -9,15 +9,11 @@
  * @var bool $isAssignmentDisabled
  */
 $this->assign('title', $ticket->ticket_number);
-$user = $this->getRequest()->getAttribute('identity');
-$userRole = $user ? $user->get('role') : null;
-$userId = $user ? $user->get('id') : null;
-$currentUser = $user;
+$this->assign('current_view', '__detail__');
+$this->assign('shell_modifier', 'flush');
 ?>
 
-<?= $this->cell('TicketsSidebar::display', ['__detail__', $userRole, $userId]) ?>
-
-<section class="ticket-detail flex-grow-1 d-flex flex-column">
+<section class="ticket-detail d-flex flex-column" style="flex: 1; min-height: 0;">
     <?= $this->element('tickets/header', [
         'entity'   => $ticket,
         'isLocked' => $isLocked,

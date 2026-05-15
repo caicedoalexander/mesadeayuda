@@ -1,108 +1,111 @@
 <?php
 /**
  * @var \App\View\AppView $this
- * @var array $settings
+ * @var \App\Model\Entity\Tag $tag
  */
-$this->assign('title', 'Añadir Etiqueta');
+$this->assign('title', 'Nueva etiqueta');
+$this->assign('active_workspace', 'tags');
+$initialColor = '#0066CC';
 ?>
 
-<?= $this->Html->css('admin/add-tag', ['block' => 'css']) ?>
+<header class="app-page-header">
+    <nav class="app-breadcrumb" aria-label="breadcrumb">
+        <i class="bi bi-grid-1x2"></i>
+        <span>Workspace</span>
+        <i class="bi bi-chevron-right separator"></i>
+        <?= $this->Html->link('Etiquetas', ['controller' => 'Tags', 'action' => 'index']) ?>
+        <i class="bi bi-chevron-right separator"></i>
+        <span class="current">Nueva etiqueta</span>
+    </nav>
 
-<div class="add-tag-page">
-    <!-- Page Header -->
-    <div class="page-header">
-        <div class="header-icon">
-            <i class="bi bi-tag"></i>
+    <div class="app-page-header-row">
+        <div class="app-page-header-text">
+            <h1 class="app-page-title">Nueva etiqueta</h1>
         </div>
-        <div class="header-text">
-            <h1>Nueva Etiqueta</h1>
-            <p>Crear una nueva etiqueta para organizar tickets</p>
+        <div class="app-page-actions">
+            <?= $this->Html->link(
+                '<i class="bi bi-arrow-left"></i> Volver',
+                ['controller' => 'Tags', 'action' => 'index'],
+                ['class' => 'btn-brand-secondary', 'escape' => false]
+            ) ?>
         </div>
     </div>
+</header>
 
-    <?= $this->Flash->render() ?>
-
-    <?= $this->Form->create($tag) ?>
-    <div class="tag-card">
-        <div class="form-content">
-
-            <!-- Información de la Etiqueta -->
-            <div class="form-section">
-                <div class="section-header">
-                    <div class="section-icon">
-                        <i class="bi bi-info-circle"></i>
-                    </div>
-                    <h3>Información de la Etiqueta</h3>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <?= $this->Form->label('name', 'Nombre *') ?>
-                        <?= $this->Form->text('name', [
-                            'placeholder' => 'Ej: Urgente, Bug, Pregunta',
-                            'required' => true
-                        ]) ?>
-                        <small>Nombre corto y descriptivo para la etiqueta</small>
-                    </div>
-
-                    <div class="form-group">
-                        <?= $this->Form->label('color', 'Color *') ?>
-                        <div class="color-input-wrapper">
-                            <?= $this->Form->color('color', [
-                                'class' => 'color-picker',
-                                'id' => 'tag-color',
-                                'value' => '#0066cc',
-                                'required' => true
-                            ]) ?>
-                            <input type="text" id="color-hex" class="color-hex-input"
-                                   value="#0066CC" readonly>
-                        </div>
-                        <small>Color para identificar visualmente la etiqueta</small>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <?= $this->Form->label('description', 'Descripción') ?>
-                    <?= $this->Form->textarea('description', [
-                        'rows' => 3,
-                        'placeholder' => 'Describe cuándo usar esta etiqueta...'
+<?= $this->Form->create($tag) ?>
+<div class="app-form-row" style="grid-template-columns: 1.4fr 1fr; align-items: start;">
+    <div class="app-card">
+        <div class="app-card-header">
+            <div class="app-card-header-icon"><i class="bi bi-info-circle"></i></div>
+            <div class="app-card-header-text">
+                <h3 class="app-card-header-title">Información de la etiqueta</h3>
+                <div class="app-card-header-subtitle">Nombre, color y descripción</div>
+            </div>
+        </div>
+        <div class="app-card-body">
+            <div class="app-form-row">
+                <div class="app-form-group">
+                    <?= $this->Form->label('name', 'Nombre *') ?>
+                    <?= $this->Form->text('name', [
+                        'placeholder' => 'Ej: Urgente, Bug, Pregunta',
+                        'required' => true,
                     ]) ?>
-                    <small>Ayuda a otros usuarios a entender cuándo aplicar esta etiqueta</small>
+                    <small>Nombre corto y descriptivo.</small>
                 </div>
-            </div>
 
-            <!-- Vista Previa -->
-            <div class="form-section">
-                <div class="section-header">
-                    <div class="section-icon">
-                        <i class="bi bi-eye"></i>
+                <div class="app-form-group">
+                    <?= $this->Form->label('color', 'Color *') ?>
+                    <div class="app-color-picker">
+                        <?= $this->Form->color('color', [
+                            'id' => 'tag-color',
+                            'value' => $initialColor,
+                            'required' => true,
+                        ]) ?>
+                        <input type="text" id="color-hex" class="app-color-hex"
+                               value="<?= $initialColor ?>" readonly>
                     </div>
-                    <h3>Vista Previa</h3>
-                </div>
-
-                <div class="tag-preview">
-                    <span class="preview-badge" id="preview-badge" style="background-color: #0066cc">
-                        <span id="preview-text">Nombre de etiqueta</span>
-                    </span>
+                    <small>Color de la pill en listados.</small>
                 </div>
             </div>
 
-            <!-- Form Actions -->
-            <div class="form-actions">
-                <?= $this->Html->link(
-                    'Cancelar',
-                    ['controller' => 'Tags', 'action' => 'index'],
-                    ['class' => 'btn-cancel']
-                ) ?>
-                <?= $this->Form->button(
-                    '<i class="bi bi-check-circle"></i> Crear Etiqueta',
-                    ['class' => 'btn-submit', 'escapeTitle' => false]
-                ) ?>
+            <div class="app-form-group">
+                <?= $this->Form->label('description', 'Descripción') ?>
+                <?= $this->Form->textarea('description', [
+                    'rows' => 3,
+                    'placeholder' => 'Describe cuándo usar esta etiqueta...',
+                ]) ?>
+                <small>Ayuda a otros usuarios a entender cuándo aplicarla.</small>
             </div>
-
+        </div>
+        <div class="app-card-footer">
+            <?= $this->Html->link('Cancelar',
+                ['controller' => 'Tags', 'action' => 'index'],
+                ['class' => 'btn-brand-ghost']
+            ) ?>
+            <?= $this->Form->button(
+                '<i class="bi bi-check-lg"></i> Crear etiqueta',
+                ['class' => 'btn-brand-primary', 'escapeTitle' => false]
+            ) ?>
         </div>
     </div>
-    <?= $this->Form->end() ?>
+
+    <div class="app-card">
+        <div class="app-card-header">
+            <div class="app-card-header-icon orange"><i class="bi bi-eye"></i></div>
+            <div class="app-card-header-text">
+                <h3 class="app-card-header-title">Vista previa</h3>
+                <div class="app-card-header-subtitle">Cómo se verá al aplicar</div>
+            </div>
+        </div>
+        <div class="app-card-body">
+            <div class="app-tag-preview" id="preview-wrapper" style="--swatch: <?= $initialColor ?>">
+                <span class="app-tag-preview-chip" id="preview-badge">
+                    <span id="preview-text">Nombre de etiqueta</span>
+                </span>
+            </div>
+        </div>
+    </div>
 </div>
+<?= $this->Form->end() ?>
 
 <?= $this->Html->script('admin/tag-form', ['block' => 'script']) ?>

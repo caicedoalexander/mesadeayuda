@@ -1,17 +1,15 @@
 document.addEventListener('DOMContentLoaded', function () {
-    document.getElementById('whatsapp_enabled')?.addEventListener('change', function () {
-        const fields = document.getElementById('whatsapp-config-fields');
-        if (fields) {
-            fields.style.display = this.checked ? 'block' : 'none';
-        }
-    });
+    function bindToggleReveal(checkboxId, fieldsId) {
+        const checkbox = document.getElementById(checkboxId);
+        const fields = document.getElementById(fieldsId);
+        if (!checkbox || !fields) return;
+        checkbox.addEventListener('change', function () {
+            fields.hidden = !this.checked;
+        });
+    }
 
-    document.getElementById('n8n_enabled')?.addEventListener('change', function () {
-        const fields = document.getElementById('n8n-config-fields');
-        if (fields) {
-            fields.style.display = this.checked ? 'block' : 'none';
-        }
-    });
+    bindToggleReveal('whatsapp_enabled', 'whatsapp-config-fields');
+    bindToggleReveal('n8n_enabled', 'n8n-config-fields');
 
     function bindConnectionTest(buttonId) {
         const btn = document.getElementById(buttonId);
