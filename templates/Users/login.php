@@ -20,7 +20,6 @@ $buildVersion = date('Y.m.d');
                 </div>
                 <div class="app-login-brand-text">
                     <h1>Mesa de <span class="serif-italic">Ayuda</span></h1>
-                    <p>Operadora Cafetera</p>
                 </div>
             </header>
 
@@ -52,7 +51,7 @@ $buildVersion = date('Y.m.d');
             </div>
 
             <footer class="app-login-brand-foot">
-                <span>&copy; <?= date('Y') ?> Operadora Cafetera</span>
+                <span>&copy; <?= date('Y') ?></span>
                 <span class="sep"></span>
                 <a href="#" tabindex="-1">Términos</a>
                 <span class="sep"></span>
