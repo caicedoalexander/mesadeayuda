@@ -16,6 +16,7 @@ use App\Service\TicketNotificationService;
 use App\Service\TicketPipelineService;
 use Cake\Database\Connection;
 use Cake\Event\EventManager;
+use Cake\ORM\Entity;
 use Cake\ORM\Locator\TableLocator;
 use Cake\ORM\Table;
 use Cake\TestSuite\TestCase;
@@ -25,9 +26,9 @@ use Cake\TestSuite\TestCase;
  * rollback paths, post-commit dispatch ordering, and the preserved
  * "comment survives status failure" semantics.
  *
- * Collaborators are mocked. The Connection is a FakeConnection that
- * just invokes the transactional callback inline — we are not testing
- * SQL semantics, only the pipeline's coordination logic.
+ * Collaborators are mocked. The Connection mock invokes the transactional
+ * callback inline — we are not testing SQL semantics, only the pipeline's
+ * coordination logic.
  */
 class TicketPipelineServiceTest extends TestCase
 {
@@ -105,7 +106,7 @@ class TicketPipelineServiceTest extends TestCase
         $service->expects($this->once())
             ->method('changeStatus')
             ->willThrowException(new InvalidStatusTransitionException(
-                'Transición no permitida: abierto → cerrado'
+                'Transición no permitida: abierto → cerrado',
             ));
 
         $this->stubTicketsTable($service);
@@ -276,7 +277,7 @@ class TicketPipelineServiceTest extends TestCase
             ->onlyMethods(['transactional'])
             ->getMock();
         $connection->method('transactional')->willReturnCallback(
-            fn (callable $cb): mixed => $cb($connection),
+            fn(callable $cb): mixed => $cb($connection),
         );
 
         $tickets = $this->getMockBuilder(Table::class)
@@ -295,7 +296,7 @@ class TicketPipelineServiceTest extends TestCase
             ->onlyMethods(['save', 'newEntity'])
             ->getMock();
         $genericTable->method('save')->willReturnArgument(0);
-        $genericTable->method('newEntity')->willReturn(new \Cake\ORM\Entity());
+        $genericTable->method('newEntity')->willReturn(new Entity());
 
         $locator = new TableLocator();
         $locator->set('Tickets', $tickets);

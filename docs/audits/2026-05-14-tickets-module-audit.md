@@ -15,7 +15,7 @@
 |---|---|---|
 | Salud arquitectónica global | **68%** | **78%** — 2 altos + 2 críticos cerrados |
 | Hallazgos Críticos (rojo) | 3 | 1 (CRIT-1 y CRIT-2 cerrados) |
-| Hallazgos Altos (naranja) | 6 | 4 (HIGH-2 y HIGH-3 cerrados) |
+| Hallazgos Altos (naranja) | 6 | 3 (HIGH-1, HIGH-2 y HIGH-3 cerrados) |
 | Hallazgos Medios (amarillo) | 7 | 7 |
 | Hallazgos Bajos (verde) | 4 | 4 |
 
@@ -102,13 +102,15 @@
 
 ## 4. Hallazgos Altos (Naranja)
 
-### HIGH-1 — `handleResponse()` no es transaccional
+### HIGH-1 — `handleResponse()` no es transaccional ✅ CERRADO 2026-05-15
 
 **Archivo:** `src/Service/TicketPipelineService.php:73-159`
 
 Operación compuesta (comentario + attachments + status + notificaciones) **sin `Connection::transactional(...)`**. Si la subida de adjuntos falla a medio camino, el comentario queda persistido y la notificación dispara con estado parcial.
 
 **Fix:** Envolver bloque persistente en `transactional()`, dispatch de eventos **post-commit**.
+
+**Fix aplicado:** Dos `Connection::transactional()` separados (TX1: comment+uploads, TX2: status change) con buffer local de eventos para dispatch post-commit. Best-effort cleanup de archivos huérfanos cuando TX1 hace rollback. `changeStatus` recibió parámetro `deferDispatch`. Detalle en §11.
 
 ---
 
@@ -224,7 +226,7 @@ El conflicto **más significativo** es EDA + Outbox + Transactional: aceptable h
 |---|---|---|
 | 1 | Circuit Breaker + Retry sobre `SecureHttpTrait::secureCurlPost` (cubre WhatsApp, n8n, Gmail en una intervención) | **Completado 2026-05-15** |
 | 2 | Transactional Outbox para `TicketCreated` y `TicketStatusChanged` | Pendiente |
-| 3 | Frontera transaccional en `handleResponse` con `Connection::transactional()` + dispatch post-commit | Pendiente |
+| 3 | Frontera transaccional en `handleResponse` con `Connection::transactional()` + dispatch post-commit | **Completado 2026-05-15** |
 
 ### Alto (semana 3-4)
 
@@ -346,4 +348,30 @@ LOW-1 a LOW-4: tratar cuando aparezca el caso de uso que los justifique.
 - Llamadas a Gmail API vía `Google\Client` siguen sin protección — requiere Guzzle middleware o decorator de `Google\Http\REST` (no en este alcance).
 - CRIT-3 (Outbox) sigue abierto — la resiliencia HTTP reduce pérdida pero no elimina el riesgo de mensaje perdido entre `save()` y `dispatch()`.
 - HIGH-1 (transaccionalidad de `handleResponse`) sigue abierto.
+
+---
+
+### 2026-05-15 — HIGH-1 cerrado: frontera transaccional en `handleResponse()`
+
+**Hallazgo original:** `handleResponse()` ejecutaba comentario + adjuntos + status + notificaciones inline sin TX. Una falla a mitad dejaba comentario persistido y notificación con estado parcial. Adicionalmente, el evento `TicketStatusChanged` no se despachaba en absoluto desde este flujo (la llamada interna pasaba `sendNotifications=false`), generando una asimetría con los demás callers de `changeStatus`.
+
+**Decisiones de diseño:**
+- Dos TX separadas en lugar de una sola, para preservar la semántica deliberada de "comentario sobrevive si la transición de estado falla" (catch de `InvalidStatusTransitionException`).
+- Best-effort `@unlink` post-rollback para archivos ya escritos al disco (no rollback-able por la BD). Failures logueados, no propagados.
+- Dispatch de `TicketStatusChanged` diferido a post-commit vía buffer local + nuevo parámetro `deferDispatch` en `changeStatus()` (default `false`, preserva callers existentes). Esto **restablece** el dispatch del evento desde `handleResponse`, que antes estaba suprimido.
+
+**Cambios:**
+- `src/Service/TicketPipelineService.php`: refactor de `handleResponse()` (87 → ~150 líneas), nuevo método privado `cleanupOrphanedFiles()`, parámetro `deferDispatch` en `changeStatus()`.
+- `tests/TestCase/Service/TicketPipelineServiceTest.php`: archivo nuevo. 5 tests cubriendo rollback de TX1, semántica preservada en `InvalidStatusTransition`, orden post-commit del dispatch (verificando el flag `deferDispatch=true` en la llamada a `changeStatus`), no-dispatch en rollback silencioso de TX2, y regresión de `changeStatus` default.
+- `composer.json`: añadido `autoload-dev` para namespace `App\Test\` (necesario para futuros helpers de test).
+
+**Despliegue:** sin migraciones, sin cambios de firma pública, sin variables de entorno nuevas. Rollback trivial.
+
+**Validaciones:**
+- `composer test`: PASS — 94 tests, 201 asserts (89 baseline + 5 nuevos).
+- `phpstan analyse src/Service/TicketPipelineService.php`: 1 error pre-existente (`FrozenTime` deprecation), igual al baseline.
+
+**Hallazgos derivados pendientes:**
+- CRIT-3 (Outbox) sigue abierto: la ventana entre commit y dispatch ahora es ~0ms pero un crash exactamente ahí sigue perdiendo el evento. Outbox sigue siendo necesario para at-least-once.
+- MED-1 (`sendResponseNotifications` fuera de bus) sigue abierto y mantiene la asimetría EDA.
 
