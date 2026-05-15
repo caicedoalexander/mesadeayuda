@@ -127,6 +127,73 @@
             if (!btn) return;
             ev.preventDefault();
             applyFormat(editor, btn.getAttribute('data-rt'));
+            refreshToolbarState(editor, toolbar);
+        });
+    }
+
+    /**
+     * Walk up from `node` to `editor`, returning the first ancestor
+     * matching one of the given tag names (lowercased). Used to detect
+     * formats that execCommand doesn't expose via queryCommandState
+     * (blockquote, inline code, link).
+     */
+    function closestTag(editor, node, tagNames) {
+        let n = node;
+        if (n && n.nodeType === 3) n = n.parentNode;
+        while (n && n !== editor) {
+            if (n.nodeType === 1 && tagNames.indexOf(n.tagName.toLowerCase()) !== -1) return n;
+            n = n.parentNode;
+        }
+        return null;
+    }
+
+    /**
+     * Reflect the format under the caret on the toolbar buttons. Called
+     * after every selectionchange/keyup/mouseup/input/click while the
+     * editor has the selection.
+     */
+    function refreshToolbarState(editor, toolbar) {
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return;
+        const anchor = sel.anchorNode;
+        if (!anchor || !editor.contains(anchor)) return;
+
+        const states = {
+            bold:      safeQueryState('bold'),
+            italic:    safeQueryState('italic'),
+            underline: safeQueryState('underline'),
+            ul:        safeQueryState('insertUnorderedList'),
+            ol:        safeQueryState('insertOrderedList'),
+            quote:     !!closestTag(editor, anchor, ['blockquote']),
+            code:      !!closestTag(editor, anchor, ['code']),
+            link:      !!closestTag(editor, anchor, ['a']),
+        };
+
+        Object.keys(states).forEach(function (kind) {
+            const btn = toolbar.querySelector('[data-rt="' + kind + '"]');
+            if (!btn) return;
+            const on = !!states[kind];
+            btn.classList.toggle('active', on);
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+    }
+
+    function safeQueryState(cmd) {
+        try { return document.queryCommandState(cmd); } catch (e) { return false; }
+    }
+
+    function bindStateTracking(editor) {
+        const toolbar = document.getElementById('composer-toolbar');
+        if (!toolbar) return;
+        const refresh = function () { refreshToolbarState(editor, toolbar); };
+        editor.addEventListener('keyup', refresh);
+        editor.addEventListener('mouseup', refresh);
+        editor.addEventListener('input', refresh);
+        editor.addEventListener('focus', refresh);
+        // selectionchange fires globally; ignore when the editor doesn't own the selection.
+        document.addEventListener('selectionchange', function () {
+            const sel = window.getSelection();
+            if (sel && sel.anchorNode && editor.contains(sel.anchorNode)) refresh();
         });
     }
 
@@ -217,6 +284,7 @@
         if (!editor) return;
 
         bindToolbar(editor);
+        bindStateTracking(editor);
         bindCounter(editor);
         bindHiddenSync(editor);
         bindSubmitShortcut(editor);
