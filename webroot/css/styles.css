@@ -837,3 +837,7 @@ body {
     border-radius: 2px;
     background: var(--gray-300);
 }
+
+a {
+    text-decoration: none;
+}
