@@ -519,6 +519,73 @@
 }
 
 /* ============================================
+   Bulk Actions Bar — Sistema de diseño
+   ============================================ */
+.bulk-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex: 1;
+    padding: 8px 14px;
+    background: var(--admin-green-soft);
+    border: 1px solid rgba(0, 168, 94, 0.25);
+    border-radius: var(--radius-md);
+    position: relative;
+    z-index: 1000;
+}
+
+.bulk-bar-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--admin-green-ink);
+}
+
+.bulk-bar-info i {
+    font-size: 16px;
+    color: var(--admin-green);
+}
+
+.bulk-bar-info strong {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.bulk-bar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.bulk-bar-close {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(0, 168, 94, 0.25);
+    background: #fff;
+    color: var(--gray-600);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.bulk-bar-close:hover {
+    background: var(--danger-soft);
+    border-color: var(--danger-color);
+    color: var(--danger-color);
+}
+
+/* Dropdown del bulk bar usa .app-popover de components.css */
+.bulk-bar .dropdown-menu.app-popover {
+    min-width: 200px;
+    margin-top: 6px;
+}
+
+/* ============================================
    Bulk Actions Bar Animation
    ============================================ */
 @keyframes slideDownFadeIn {
@@ -555,21 +622,7 @@
     animation: slideDownFadeIn 0.4s ease-out forwards;
 }
 
-/* ============================================
-   Dropdown Animation
-   ============================================ */
-.dropdown-menu-animated {
-    animation: dropdownSlideIn 0.2s ease-out;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    border: none;
-    padding: 0.5rem 0;
-    position: absolute;
-    z-index: 1050 !important;
-    background-color: var(--surface-light) !important;
-}
-
-/* Asegurar que el dropdown esté por encima de todo */
+/* Dropdown z-index para Bootstrap */
 .btn-group {
     position: relative;
     z-index: 1001;
@@ -577,36 +630,6 @@
 
 .btn-group .dropdown-menu {
     z-index: 1050 !important;
-}
-
-@keyframes dropdownSlideIn {
-    from {
-        transform: translateY(-10px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-.dropdown-menu-animated .dropdown-item {
-    padding: 0.6rem 1.25rem;
-    transition: all 0.2s ease;
-}
-
-.dropdown-menu-animated .dropdown-item:hover {
-    background-color: var(--surface-light);
-    transform: translateX(5px);
-    padding-left: 1.5rem;
-}
-
-.dropdown-menu-animated .dropdown-item i {
-    transition: transform 0.2s ease;
-}
-
-.dropdown-menu-animated .dropdown-item:hover i {
-    transform: scale(1.2);
 }
 
 /* Modals: estilos y animación viven en components.css
