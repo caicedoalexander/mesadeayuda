@@ -14,14 +14,14 @@ $isAgent = $userRole === RoleConstants::ROLE_ASESOR_TIC;
 $activeWorkspace = $activeWorkspace ?? null;
 $wsClass = fn(string $key): string => 'rail-nav-item' . ($activeWorkspace === $key ? ' active' : '');
 ?>
-<aside class="tickets-rail">
+<aside class="tickets-rail scroll-dark">
     <!-- Brand -->
     <div class="rail-brand">
         <div class="rail-brand-mark">
-            <?= $this->Html->image('favicon.png', ['alt' => 'Mesa de Ayuda', 'width' => 38, 'height' => 38, 'class' => 'rounded-circle']) ?>
+            <?= $this->Html->image('logos/logo-mesa-ayuda.svg', ['alt' => 'Mesa de Ayuda']) ?>
         </div>
         <div class="rail-brand-text">
-            <div class="rail-brand-title">Mesa de Ayuda</div>
+            <div class="rail-brand-title">Mesa de <span class="ayuda">Ayuda</span></div>
             <div class="rail-brand-subtitle">Soporte interno</div>
         </div>
     </div>
@@ -34,7 +34,7 @@ $wsClass = fn(string $key): string => 'rail-nav-item' . ($activeWorkspace === $k
                 <?= $this->Html->link(
                     '<i class="bi bi-person-check"></i><span class="rail-nav-text">Mis tickets</span>'
                         . '<span class="rail-nav-count">' . (int)($counts['mis_tickets'] ?? 0) . '</span>',
-                    ['action' => 'index', '?' => ['view' => 'mis_tickets']],
+                    ['prefix' => false, 'controller' => 'Tickets', 'action' => 'index', '?' => ['view' => 'mis_tickets']],
                     ['class' => 'rail-nav-item' . ($view === 'mis_tickets' ? ' active' : ''), 'escape' => false]
                 ) ?>
             <?php endif; ?>
@@ -42,14 +42,14 @@ $wsClass = fn(string $key): string => 'rail-nav-item' . ($activeWorkspace === $k
             <?= $this->Html->link(
                 '<i class="bi bi-inbox"></i><span class="rail-nav-text">Sin asignar</span>'
                     . '<span class="rail-nav-count">' . (int)$counts['sin_asignar'] . '</span>',
-                ['action' => 'index', '?' => ['view' => 'sin_asignar']],
+                ['prefix' => false, 'controller' => 'Tickets', 'action' => 'index', '?' => ['view' => 'sin_asignar']],
                 ['class' => 'rail-nav-item' . ($view === 'sin_asignar' ? ' active' : ''), 'escape' => false]
             ) ?>
 
             <?= $this->Html->link(
                 '<i class="bi bi-ticket"></i><span class="rail-nav-text">Todos sin resolver</span>'
                     . '<span class="rail-nav-count">' . (int)$counts['todos_sin_resolver'] . '</span>',
-                ['action' => 'index', '?' => ['view' => 'todos_sin_resolver']],
+                ['prefix' => false, 'controller' => 'Tickets', 'action' => 'index', '?' => ['view' => 'todos_sin_resolver']],
                 ['class' => 'rail-nav-item' . ($view === 'todos_sin_resolver' ? ' active' : ''), 'escape' => false]
             ) ?>
         </nav>
@@ -72,7 +72,7 @@ $wsClass = fn(string $key): string => 'rail-nav-item' . ($activeWorkspace === $k
                     '<span class="rail-state-dot" style="background:' . $s['dot'] . '"></span>'
                         . '<span class="rail-nav-text">' . h($s['label']) . '</span>'
                         . '<span class="rail-nav-count subtle">' . (int)($counts[$s['key']] ?? 0) . '</span>',
-                    ['action' => 'index', '?' => ['view' => $s['key']]],
+                    ['prefix' => false, 'controller' => 'Tickets', 'action' => 'index', '?' => ['view' => $s['key']]],
                     ['class' => 'rail-nav-item' . ($isActive ? ' active' : ''), 'escape' => false]
                 );
             endforeach;

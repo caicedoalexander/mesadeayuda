@@ -9,10 +9,10 @@ $this->assign('title', 'Iniciar sesión');
     <section class="app-login-card">
         <aside class="app-login-brand">
             <div class="app-login-brand-mark">
-                <i class="bi bi-life-preserver"></i>
+                <?= $this->Html->image('logos/logo-mesa-ayuda.svg', ['alt' => '']) ?>
             </div>
             <div class="app-login-brand-text">
-                <h1>Mesa de Ayuda</h1>
+                <h1>Mesa de <span class="serif-italic">Ayuda</span></h1>
                 <p>Soporte interno · COPC S.A.</p>
             </div>
 
@@ -33,8 +33,6 @@ $this->assign('title', 'Iniciar sesión');
 
         <div class="app-login-form">
             <div class="app-login-form-head">
-                <img src="<?= $this->Url->image('logos/logo.svg') ?>"
-                     alt="Logo" class="app-login-logo" onerror="this.style.display='none'">
                 <h2>Bienvenido de vuelta</h2>
                 <p>Inicia sesión para continuar.</p>
             </div>

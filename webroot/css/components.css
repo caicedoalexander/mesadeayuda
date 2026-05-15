@@ -1945,19 +1945,20 @@ textarea.app-input {
 }
 
 .app-login-brand-mark {
-    width: 54px;
-    height: 54px;
-    border-radius: 16px;
-    background: linear-gradient(135deg, var(--admin-green) 0%, var(--admin-green-light) 100%);
+    width: 64px;
+    height: 64px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    box-shadow:
-        0 12px 30px -10px rgba(0, 168, 94, 0.65),
-        inset 0 1px 0 rgba(255, 255, 255, 0.25);
-    font-size: 26px;
-    color: #fff;
     margin-bottom: 22px;
+    filter: drop-shadow(0 10px 24px rgba(0, 168, 94, 0.35));
+}
+
+.app-login-brand-mark img,
+.app-login-brand-mark svg {
+    width: 100%;
+    height: 100%;
+    display: block;
 }
 
 .app-login-brand-text h1 {
@@ -2053,11 +2054,6 @@ textarea.app-input {
     margin-bottom: 22px;
 }
 
-.app-login-logo {
-    height: 28px;
-    width: auto;
-    margin-bottom: 14px;
-}
 
 .app-login-form-head h2 {
     font-size: 20px;
