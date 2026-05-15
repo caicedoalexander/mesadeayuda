@@ -1,0 +1,69 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Test\TestCase\Notification\Email\Ticket\Template;
+
+use App\Model\Entity\Ticket;
+use App\Model\Entity\TicketComment;
+use App\Model\Entity\User;
+use App\Notification\Email\TemplateContext;
+use App\Notification\Email\Ticket\Template\TicketUpdatedTemplate;
+use Cake\Core\Configure;
+use PHPUnit\Framework\TestCase;
+
+final class TicketUpdatedTemplateTest extends TestCase
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Configure::write('App.fullBaseUrl', 'https://mesa.example.com');
+    }
+
+    public function testKey(): void
+    {
+        self::assertSame('ticket_updated', (new TicketUpdatedTemplate())->key());
+    }
+
+    public function testRenderIncludesBothTransitionAndCommentBlock(): void
+    {
+        $requester = new User();
+        $requester->set(['first_name' => 'Alex', 'last_name' => ''], ['guard' => false]);
+
+        $agent = new User();
+        $agent->set(['first_name' => 'Maira', 'last_name' => 'Pérez', 'role' => 'Líder'], ['guard' => false]);
+
+        $comment = new TicketComment();
+        $comment->set(['body' => '<p>Comentario.</p>', 'user' => $agent], ['guard' => false]);
+
+        $ticket = new Ticket();
+        $ticket->set([
+            'ticket_number' => 'TKT-1',
+            'subject' => 'S',
+            'status' => 'pendiente',
+            'priority' => 'media',
+            'requester' => $requester,
+            'tags' => [],
+        ], ['guard' => false]);
+
+        $ctx = new TemplateContext(
+            ticket: $ticket,
+            ticketUrl: 'https://mesa.example.com/t/1',
+            recipientName: 'Alex',
+            comment: $comment,
+            oldStatus: 'abierto',
+            newStatus: 'pendiente',
+            actor: $agent,
+        );
+
+        $email = (new TicketUpdatedTemplate())->render($ctx);
+
+        self::assertStringContainsString('Maira Pérez actualizó tu ticket', $email->subject);
+        self::assertStringContainsString('Tu ticket fue actualizado', $email->bodyHtml);
+        self::assertStringContainsString('Cambio de estado', $email->bodyHtml);
+        self::assertStringContainsString('Comentario del agente', $email->bodyHtml);
+        self::assertStringContainsString('Abierto', $email->bodyHtml);
+        self::assertStringContainsString('Pendiente', $email->bodyHtml);
+        self::assertStringContainsString('<p>Comentario.</p>', $email->bodyHtml);
+        self::assertStringContainsString('Ver actualización completa', $email->bodyHtml);
+    }
+}
