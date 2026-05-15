@@ -769,9 +769,10 @@ body {
 /* ── Focus ring (forms, inputs) ───────────────── */
 .focus-ring:focus,
 .focus-ring:focus-within {
-    outline: 2px solid rgba(0, 168, 94, 0.18);
-    outline-offset: 1px;
+    outline: none;
     border-color: var(--admin-green) !important;
+    box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.16);
+    border-radius: var(--radius-md);
 }
 
 /* ── Mono utility (IDs, timestamps) ──────────── */
