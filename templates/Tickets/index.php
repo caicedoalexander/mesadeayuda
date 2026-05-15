@@ -207,7 +207,7 @@ $activeFiltersCount = (int)!empty($filters['filterPriority'])
                                                 <span class="row-tags">
                                                     <?php foreach ($visibleTags as $tag): ?>
                                                         <span class="thread-meta-sep"></span>
-                                                        <span class="ticket-tag-chip ticket-tag-chip--row"
+                                                        <span class="tag-chip tag-chip--row"
                                                               style="background:<?= h($tag->color) ?>20; color:<?= h($tag->color) ?>; border-color:<?= h($tag->color) ?>40;"
                                                               title="<?= h($tag->name) ?>">
                                                             <?= h($tag->name) ?>

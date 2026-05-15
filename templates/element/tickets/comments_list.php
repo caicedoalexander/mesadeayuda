@@ -71,7 +71,7 @@ $entityAttachments = array_filter($attachments, function ($a) use ($description)
         <?php if (!empty($entity->tags) || (!$isLocked && !empty($availableTags))): ?>
             <div class="thread-tags">
                 <?php foreach (($entity->tags ?? []) as $tag): ?>
-                    <span class="ticket-tag-chip"
+                    <span class="tag-chip"
                           style="background:<?= h($tag->color) ?>20; color:<?= h($tag->color) ?>; border-color:<?= h($tag->color) ?>40">
                         <?= h($tag->name) ?>
                         <?php if (!$isLocked): ?>
