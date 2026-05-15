@@ -244,7 +244,7 @@
 .app-login-brand-foot a {
     color: inherit;
     text-decoration: none;
-    transition: color 0.15s ease;
+    transition: color var(--transition-fast);
 }
 
 .app-login-brand-foot a:hover { color: rgba(255, 255, 255, 0.85); }
@@ -434,7 +434,7 @@
     display: inline-flex;
     align-items: center;
     border-radius: 4px;
-    transition: color 0.15s ease;
+    transition: color var(--transition-fast);
 }
 
 .app-input-group .app-input-trail:hover { color: var(--gray-800); }
@@ -460,7 +460,7 @@
     color: var(--admin-green-ink);
     font-weight: 600;
     text-decoration: none;
-    transition: color 0.15s ease;
+    transition: color var(--transition-fast);
 }
 
 .app-login-forgot:hover { color: var(--admin-green); text-decoration: underline; }

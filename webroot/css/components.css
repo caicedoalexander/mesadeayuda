@@ -99,7 +99,7 @@
     justify-content: center;
     padding: 0;
     margin: 0;
-    transition: background 0.15s ease;
+    transition: background var(--transition-fast);
 }
 
 .modal-header .btn-close::before {
@@ -237,7 +237,7 @@
     font-weight: 500;
     text-align: left;
     cursor: pointer;
-    transition: background 0.12s ease;
+    transition: background var(--transition-fast);
 }
 
 .app-popover-item:hover {
@@ -349,7 +349,7 @@
     cursor: pointer;
     flex-shrink: 0;
     padding: 0;
-    transition: background 0.12s ease, color 0.12s ease;
+    transition: background var(--transition-fast), color var(--transition-fast);
 }
 
 .app-toast-close:hover {
@@ -656,7 +656,7 @@
     opacity: 0;
     visibility: hidden;
     transform: translateY(-2px);
-    transition: opacity 0.14s ease, transform 0.14s ease, visibility 0s linear 0.14s;
+    transition: opacity var(--transition-fast), transform var(--transition-fast), visibility 0s linear 0.15s;
     z-index: 1090;
     box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.25);
 }
@@ -1031,7 +1031,7 @@
     font-family: inherit;
     font-size: 12px;
     font-weight: 600;
-    transition: background 0.12s ease, color 0.12s ease;
+    transition: background var(--transition-fast), color var(--transition-fast);
 }
 
 .rt-btn:hover {

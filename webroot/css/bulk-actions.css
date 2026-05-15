@@ -59,7 +59,7 @@
 .tickets-table > thead > tr > th a {
     color: var(--gray-500) !important;
     text-decoration: none !important;
-    transition: color 0.15s ease;
+    transition: color var(--transition-fast);
 }
 
 .tickets-table > thead > tr > th a:hover {
@@ -180,7 +180,7 @@
     color: var(--gray-900);
     font-size: 14px;
     font-weight: 600;
-    transition: color 0.15s ease;
+    transition: color var(--transition-fast);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -294,7 +294,7 @@
     width: 22px;
     right: 2px !important;
     opacity: 0.45;
-    transition: opacity 0.15s ease, transform 0.15s ease;
+    transition: opacity var(--transition-fast), transform var(--transition-fast);
 }
 
 .table-assign-form .select2-container.select2-container--bootstrap-5 .select2-selection:hover .select2-selection__arrow {
@@ -504,7 +504,7 @@
     margin-left: 4px;
     flex-shrink: 0;
     font-size: 13px;
-    transition: background-color 0.15s ease, color 0.15s ease, transform 0.2s ease;
+    transition: background-color var(--transition-fast), color var(--transition-fast), transform 0.2s ease;
 }
 
 .btn-clear-search:hover {

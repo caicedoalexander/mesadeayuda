@@ -77,9 +77,15 @@ Todos los tokens viven como CSS variables en `webroot/css/styles.css :root`.
 
 ### 1.6 · Transiciones
 
-| Token           | Valor                                  |
-| --------------- | -------------------------------------- |
-| `--transition`  | `all 0.2s cubic-bezier(0.4, 0, 0.2, 1)` |
+| Token                | Valor                                    | Uso                                                       |
+| -------------------- | ---------------------------------------- | --------------------------------------------------------- |
+| `--transition`       | `all 0.2s cubic-bezier(0.4, 0, 0.2, 1)`  | layout, transformaciones, hover sobre cards               |
+| `--transition-fast`  | `0.15s ease`                             | micro-interacciones de color/background, hover de chips   |
+
+Aplicar `--transition-fast` como `transition: <propiedad> var(--transition-fast)`
+en lugar de `--transition` cuando sólo cambia una propiedad de color y se
+quiere respuesta inmediata. No introducir duraciones intermedias
+(`0.12s` / `0.14s` / `0.18s`) — usar uno de los dos tokens.
 
 ### 1.7 · Focus ring
 

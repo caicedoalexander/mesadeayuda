@@ -34,6 +34,7 @@
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: var(--transition-fast);
     --focus-ring: 0 0 0 3px rgba(0, 168, 94, 0.18);
 
     /* Brand color variants — soft = pill bg, ink = text on soft */
@@ -201,7 +202,7 @@ body {
 .app-breadcrumb a {
     color: inherit;
     text-decoration: none;
-    transition: color 0.15s ease;
+    transition: color var(--transition-fast);
 }
 .app-breadcrumb a:hover { color: var(--gray-800); }
 
@@ -347,7 +348,7 @@ body {
     padding: 10px 12px !important;
     border-radius: 6px !important;
     margin-bottom: 2px;
-    transition: all 0.15s ease;
+    transition: all var(--transition-fast);
     cursor: pointer;
     font-weight: 400;
 }
@@ -421,7 +422,7 @@ body {
     align-items: center;
     gap: 6px;
     margin: 0 !important;
-    transition: all 0.15s ease;
+    transition: all var(--transition-fast);
 }
 
 .select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice:hover {
@@ -440,7 +441,7 @@ body {
     border: none !important;
     background: transparent !important;
     opacity: 0.8;
-    transition: opacity 0.15s ease;
+    transition: opacity var(--transition-fast);
     order: 2;
 }
 
@@ -494,7 +495,7 @@ body {
     font-size: 18px;
     font-weight: 700;
     margin-right: 8px;
-    transition: color 0.15s ease;
+    transition: color var(--transition-fast);
     cursor: pointer;
 }
 
