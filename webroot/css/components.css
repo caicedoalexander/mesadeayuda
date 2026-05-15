@@ -128,9 +128,10 @@
     display: block;
     font-size: 11px;
     font-weight: 600;
-    color: var(--gray-700);
-    letter-spacing: 0.2px;
-    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--gray-600);
+    margin-bottom: 6px;
 }
 
 .modal-footer {
