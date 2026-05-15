@@ -7,6 +7,8 @@
  * @var array $comments
  * @var string $description
  * @var array $attachments
+ * @var array $tags
+ * @var bool $isLocked
  */
 
 use App\Constants\TicketConstants;
@@ -14,8 +16,21 @@ use App\Constants\TicketConstants;
 $comments = $comments ?? [];
 $description = $description ?? ($entity->description ?? '');
 $attachments = $attachments ?? [];
+$tags = $tags ?? [];
+$isLocked = $isLocked ?? false;
 $requesterName = $entity->requester->name ?? 'Desconocido';
 $requesterUser = $entity->requester ?? null;
+
+$assignedTagIds = [];
+foreach (($entity->tags ?? []) as $t) {
+    $assignedTagIds[$t->id] = true;
+}
+$availableTags = [];
+foreach ($tags as $tagId => $tagName) {
+    if (!isset($assignedTagIds[$tagId])) {
+        $availableTags[$tagId] = $tagName;
+    }
+}
 
 $priorityGlyphs = [
     TicketConstants::PRIORITY_BAJA    => '↓',
@@ -47,21 +62,55 @@ $entityAttachments = array_filter($attachments, function ($a) use ($description)
             </span>
             <span class="thread-meta-sep"></span>
             <span class="thread-meta-time">
-                Abierto <?= $this->TimeHuman->short($entity->created) ?>
-                ·
-                <span class="mono"><?= $this->TimeHuman->long($entity->created) ?></span>
+                Creado el
+                <span><?= $this->TimeHuman->long($entity->created) ?></span>
             </span>
         </div>
         <h1 class="thread-title"><?= h($entity->subject) ?></h1>
 
-        <?php if (!empty($entity->tags)): ?>
+        <?php if (!empty($entity->tags) || (!$isLocked && !empty($availableTags))): ?>
             <div class="thread-tags">
-                <?php foreach ($entity->tags as $tag): ?>
+                <?php foreach (($entity->tags ?? []) as $tag): ?>
                     <span class="ticket-tag-chip"
                           style="background:<?= h($tag->color) ?>20; color:<?= h($tag->color) ?>; border-color:<?= h($tag->color) ?>40">
                         <?= h($tag->name) ?>
+                        <?php if (!$isLocked): ?>
+                            <?= $this->Form->postLink(
+                                '<i class="bi bi-x"></i>',
+                                ['action' => 'removeTag', $entity->id, $tag->id],
+                                ['confirm' => '¿Eliminar etiqueta?', 'escape' => false, 'class' => 'tag-remove']
+                            ) ?>
+                        <?php endif; ?>
                     </span>
                 <?php endforeach; ?>
+
+                <?php if (!$isLocked && !empty($availableTags)): ?>
+                    <div class="dropdown add-tag-dropdown">
+                        <button type="button"
+                                class="btn-add-tag"
+                                data-bs-toggle="dropdown"
+                                data-bs-auto-close="true"
+                                aria-expanded="false">
+                            <i class="bi bi-plus"></i> añadir etiqueta
+                        </button>
+                        <ul class="dropdown-menu add-tag-menu shadow-sm">
+                            <li class="add-tag-menu-header">Disponibles</li>
+                            <?php foreach ($availableTags as $tagId => $tagName): ?>
+                                <li>
+                                    <?= $this->Form->postLink(
+                                        '<i class="bi bi-tag-fill"></i> ' . h($tagName),
+                                        ['action' => 'addTag', $entity->id],
+                                        [
+                                            'class'  => 'dropdown-item add-tag-item',
+                                            'escape' => false,
+                                            'data'   => ['tag_id' => $tagId],
+                                        ]
+                                    ) ?>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                <?php endif; ?>
             </div>
         <?php endif; ?>
     </section>

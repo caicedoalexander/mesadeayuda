@@ -26,6 +26,8 @@ $this->assign('shell_modifier', 'flush');
                 'comments'    => $ticket->ticket_comments ?? [],
                 'description' => $ticket->description ?? '',
                 'attachments' => $ticket->attachments ?? [],
+                'tags'        => $tags,
+                'isLocked'    => $isLocked,
             ]) ?>
 
             <?= $this->element('tickets/reply_editor', [
@@ -39,7 +41,6 @@ $this->assign('shell_modifier', 'flush');
         <?= $this->element('tickets/right_sidebar', [
             'ticket'              => $ticket,
             'agents'              => $agents,
-            'tags'                => $tags,
             'isLocked'            => $isLocked,
             'isAssignmentDisabled'=> $isAssignmentDisabled,
             'currentUser'         => $currentUser,

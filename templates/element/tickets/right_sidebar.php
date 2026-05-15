@@ -5,7 +5,6 @@
  * @var \App\View\AppView $this
  * @var \App\Model\Entity\Ticket $ticket
  * @var array $agents
- * @var array $tags
  * @var bool $isLocked
  * @var bool $isAssignmentDisabled
  * @var \App\Model\Entity\User|null $currentUser
@@ -74,23 +73,41 @@ $assignedToCurrent = $currentUser && $ticket->assignee_id === $currentUser->id;
             </div>
         <?php endif; ?>
 
-        <?php if (!$isAssignmentDisabled && !$isLocked): ?>
-            <?= $this->Form->create(null, [
-                'url' => ['action' => 'assign', $ticket->id],
-                'class' => 'meta-reassign-form',
-                'id' => 'assign-form',
-            ]) ?>
-            <label class="meta-reassign-label" for="agent-select">
-                <?= $ticket->hasAssignee() ? 'o reasignar a:' : 'o elige a otro agente:' ?>
-            </label>
-            <?= $this->Form->select('assignee_id', $agents, [
-                'empty'    => '— Seleccionar agente —',
-                'value'    => $ticket->assignee_id,
-                'class'    => 'form-select form-select-sm meta-assignee-select',
-                'id'       => 'agent-select',
-                'disabled' => $isAssignmentDisabled || $isLocked,
-            ]) ?>
-            <?= $this->Form->end() ?>
+        <?php if (!$isAssignmentDisabled && !$isLocked):
+            $otherAgents = [];
+            foreach (($agents ?? []) as $agentId => $agentName) {
+                if ($currentUser && $agentId === $currentUser->id) {
+                    continue;
+                }
+                if ($ticket->hasAssignee() && $agentId === $ticket->assignee_id) {
+                    continue;
+                }
+                $otherAgents[$agentId] = $agentName;
+            }
+        ?>
+            <?php if (!empty($otherAgents)): ?>
+                <div class="meta-reassign-avatars">
+                    <span class="meta-reassign-label">
+                        <?= $ticket->hasAssignee() ? 'o reasignar a:' : 'o elige a otro agente:' ?>
+                    </span>
+                    <div class="meta-reassign-list">
+                        <?php foreach ($otherAgents as $agentId => $agentName): ?>
+                            <?= $this->Form->postLink(
+                                h($this->User->initials($agentName, 2)),
+                                ['action' => 'assign', $ticket->id],
+                                [
+                                    'class'    => 'agent-avatar meta-reassign-avatar',
+                                    'escape'   => false,
+                                    'title'    => $agentName,
+                                    'aria-label' => 'Asignar a ' . $agentName,
+                                    'data'     => ['assignee_id' => $agentId],
+                                    'style'    => 'background:' . h($this->User->avatarColor($agentName)),
+                                ]
+                            ) ?>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
         <?php endif; ?>
     </section>
 
@@ -120,70 +137,6 @@ $assignedToCurrent = $currentUser && $ticket->assignee_id === $currentUser->id;
                 <?= h($priorities[$ticket->priority] ?? ucfirst($ticket->priority)) ?>
             </span>
         <?php endif; ?>
-    </section>
-
-    <!-- Etiquetas -->
-    <?php
-    $assignedTagIds = [];
-    if (!empty($ticket->tags)) {
-        foreach ($ticket->tags as $t) {
-            $assignedTagIds[$t->id] = true;
-        }
-    }
-    $availableTags = [];
-    foreach (($tags ?? []) as $tagId => $tagName) {
-        if (!isset($assignedTagIds[$tagId])) {
-            $availableTags[$tagId] = $tagName;
-        }
-    }
-    ?>
-    <section class="meta-section">
-        <h4 class="meta-label">Etiquetas</h4>
-        <div class="meta-tags">
-            <?php if (!empty($ticket->tags)): ?>
-                <?php foreach ($ticket->tags as $tag): ?>
-                    <span class="ticket-tag-chip" style="background:<?= h($tag->color) ?>20; color:<?= h($tag->color) ?>; border-color:<?= h($tag->color) ?>40">
-                        <?= h($tag->name) ?>
-                        <?php if (!$isLocked): ?>
-                            <?= $this->Form->postLink('<i class="bi bi-x"></i>',
-                                ['action' => 'removeTag', $ticket->id, $tag->id],
-                                ['confirm' => '¿Eliminar etiqueta?', 'escape' => false, 'class' => 'tag-remove']
-                            ) ?>
-                        <?php endif; ?>
-                    </span>
-                <?php endforeach; ?>
-            <?php endif; ?>
-
-            <?php if (!$isLocked && !empty($availableTags)): ?>
-                <div class="dropdown add-tag-dropdown">
-                    <button type="button"
-                            class="btn-add-tag"
-                            data-bs-toggle="dropdown"
-                            data-bs-auto-close="true"
-                            aria-expanded="false">
-                        <i class="bi bi-plus"></i> añadir
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end add-tag-menu shadow-sm">
-                        <li class="add-tag-menu-header">Disponibles</li>
-                        <?php foreach ($availableTags as $tagId => $tagName): ?>
-                            <li>
-                                <?= $this->Form->postLink(
-                                    '<i class="bi bi-tag-fill"></i> ' . h($tagName),
-                                    ['action' => 'addTag', $ticket->id],
-                                    [
-                                        'class'  => 'dropdown-item add-tag-item',
-                                        'escape' => false,
-                                        'data'   => ['tag_id' => $tagId],
-                                    ]
-                                ) ?>
-                            </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </div>
-            <?php elseif (!$isLocked && empty($availableTags) && empty($ticket->tags)): ?>
-                <span class="meta-tags-empty">Sin etiquetas disponibles</span>
-            <?php endif; ?>
-        </div>
     </section>
 
     <!-- Actividad -->
