@@ -683,13 +683,42 @@ Container con toolbar arriba (`.rt-toolbar.full`) + `.rt-editor-body`
 de mínimo 120 px + `.rt-editor-footer` con acciones (`adjuntar`,
 contador, keycap `⌘⏎`, botón `Enviar`).
 
-### 10.4 · Regla de uso
+### 10.4 · Integración en el composer del ticket
+
+`templates/element/tickets/reply_editor.php` aplica `.rt-toolbar.full`
+embebido dentro del card `.composer` (el composer aporta el contenedor,
+así que la skin embedded del toolbar descarta los bordes externos —
+override scoped en `tickets-view.css :: .composer .rt-toolbar.full`).
+El espaciador `.rt-toolbar-spacer` empuja el botón **Plantilla**
+(`.rt-btn.rt-btn-text`, glifo `bi-file-earmark-text`) al extremo derecho.
+
+El footer del composer respeta la anatomía del DS:
+
+| Elemento                  | Clase                         |
+| ------------------------- | ----------------------------- |
+| Adjuntar (icon-only 32×32)| `.composer-icon-btn`          |
+| Emoji (icon-only 32×32)   | `.composer-icon-btn`          |
+| Contador de caracteres    | `.composer-char-counter`      |
+| Keycap atajo `⌘⏎`         | `.composer-shortcut`          |
+| CTA enviar                | `.btn-brand-primary.btn-brand-sm` |
+
+El contador acepta `data-max` en el textarea (default 5 000) y aplica
+`.is-near-limit` (≤ 10 % restante) o `.is-over-limit` cuando se excede.
+El atajo `Ctrl/⌘ + Enter` se captura sobre `#comment-textarea` y dispara
+`reply-form.requestSubmit()`. La lógica vive en
+`webroot/js/reply-editor-init.js` (`bindToolbar`, `bindCounter`,
+`bindSubmitShortcut`, `bindTemplatePicker`, `bindEmojiButton`).
+
+### 10.5 · Regla de uso
 
 - Toolbar liviano — sólo lo esencial. Markdown shortcuts
   (`**negrita**`, `*it*`, `> cita`, `- lista`) son más descubribles
   que un toolbar enorme.
 - Si se integra un editor real, pasar el HTML resultante por
   `HtmlSanitizerTrait` antes de persistir (CLAUDE.md).
+- El botón **Plantilla** emite el evento `composer:open-template-picker`
+  sobre `document` — el picker real (consumo de `email_templates` desde
+  la UI del agente) se conecta a ese evento cuando exista el endpoint.
 
 ---
 

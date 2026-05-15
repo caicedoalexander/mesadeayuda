@@ -405,6 +405,58 @@
 .composer-attach i { font-size: 16px; }
 .composer-attach input[type="file"] { display: none; }
 
+/* Footer icon-only buttons (attach, emoji): cuadrado 32x32 sobre fondo claro. */
+.composer-icon-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--gray-200);
+    background: #fff;
+    color: var(--gray-600);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+    margin: 0;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.composer-icon-btn:hover {
+    background: var(--gray-50);
+    color: var(--gray-900);
+    border-color: var(--gray-300);
+}
+
+.composer-icon-btn i { font-size: 15px; }
+.composer-icon-btn input[type="file"] { display: none; }
+
+/* Char counter — pequeño, gris, mono. */
+.composer-char-counter {
+    font-size: 11px;
+    color: var(--gray-500);
+    line-height: 1.2;
+}
+
+.composer-char-counter.is-near-limit { color: var(--admin-orange); }
+.composer-char-counter.is-over-limit { color: var(--danger-color); font-weight: 600; }
+
+/* Spacer para empujar la Plantilla a la derecha del toolbar. */
+.rt-toolbar-spacer { flex: 1; }
+
+/* Toolbar embebido en el composer: usamos la skin del DS pero descartamos
+   los bordes externos (el composer ya aporta su contenedor) y dejamos
+   sólo la línea inferior que separa del textarea. */
+.composer .rt-toolbar.full {
+    border: 0;
+    border-bottom: 1px solid var(--gray-200);
+    border-radius: 0;
+    padding: 6px 12px;
+}
+
+.composer .rt-toolbar.full .rt-btn { font-size: 13px; }
+
 /* File list / item / chip: estilos en components.css
    (sección 13 · FILE UPLOAD). Layout local sólo para el contenedor. */
 .file-list {
