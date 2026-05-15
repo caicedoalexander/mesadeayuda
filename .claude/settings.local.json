@@ -9,7 +9,8 @@
       "Bash(mkdir -p /tmp/design-pkg2)",
       "Read(//tmp/**)",
       "Bash(curl -sL \"https://api.anthropic.com/v1/design/h/nHJzWTJEO0P4aqUkjEMBmQ\" -o pkg.tar.gz)",
-      "Bash(tar -xzf pkg.tar.gz)"
+      "Bash(tar -xzf pkg.tar.gz)",
+      "WebFetch(domain:api.anthropic.com)"
     ]
   }
 }
