@@ -7,8 +7,9 @@
  * @var array $tags
  * @var bool $isLocked
  * @var bool $isAssignmentDisabled
+ * @var \App\Model\Entity\User|null $currentUser
  */
-$this->assign('title', $ticket->ticket_number);
+$this->assign('title', '#' . $ticket->ticket_number);
 $this->assign('current_view', '__detail__');
 $this->assign('shell_modifier', 'flush');
 ?>

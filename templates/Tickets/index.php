@@ -7,6 +7,7 @@
  * @var string $view
  * @var array $filters
  * @var array $agents
+ * @var array $tags
  * @var bool $isAssignmentDisabled
  */
 
