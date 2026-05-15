@@ -115,6 +115,14 @@ body {
     overflow-x: hidden;
 }
 
+/* En un flex column con scroll, los hijos con overflow:hidden (como .app-card)
+   colapsan su min-content a 0 y el flex los comprime para caber en el viewport.
+   Forzamos flex-shrink:0 para que conserven su altura natural y el scroll
+   vertical se haga en el .app-shell-main. */
+.app-shell-main > * {
+    flex-shrink: 0;
+}
+
 /* Modifier: vistas que manejan su propio padding interno (p. ej. detalle de
    ticket, vistas con topbar propio). Anula el padding y gap del shell. */
 .app-shell-main.flush {
