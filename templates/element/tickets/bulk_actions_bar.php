@@ -44,8 +44,5 @@ $showTagAction = $showTagAction ?? false;
                 </li>
             </ul>
         </div>
-        <button type="button" id="bulkClearBtn" class="bulk-bar-close d-none" onclick="clearSelection()" data-tip="Limpiar selección">
-            <i class="bi bi-x-lg"></i>
-        </button>
     </div>
 </div>

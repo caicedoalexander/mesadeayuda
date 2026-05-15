@@ -115,13 +115,9 @@
     function updateSelectionUI() {
         const count = selectedItems.length;
         const trigger = document.getElementById('bulkActionsTrigger');
-        const clearBtn = document.getElementById('bulkClearBtn');
 
         if (trigger) {
             trigger.disabled = count === 0;
-        }
-        if (clearBtn) {
-            clearBtn.classList.toggle('d-none', count === 0);
         }
 
         // Actualizar el checkbox "Seleccionar todo"
@@ -131,21 +127,6 @@
             checkAll.checked = allCheckboxes.length > 0 && selectedItems.length === allCheckboxes.length;
         }
     }
-
-    /**
-     * Limpiar selección
-     */
-    window.clearSelection = function() {
-        selectedItems = [];
-        document.querySelectorAll('.row-check').forEach(checkbox => {
-            checkbox.checked = false;
-        });
-        const checkAll = document.getElementById('checkAll');
-        if (checkAll) {
-            checkAll.checked = false;
-        }
-        updateSelectionUI();
-    };
 
     /**
      * Manejar acciones masivas

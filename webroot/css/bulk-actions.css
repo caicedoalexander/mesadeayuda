@@ -536,26 +536,6 @@
     gap: 8px;
 }
 
-.bulk-bar-close {
-    width: 30px;
-    height: 30px;
-    border-radius: var(--radius-sm);
-    border: 1px solid rgba(0, 168, 94, 0.25);
-    background: #fff;
-    color: var(--gray-600);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-.bulk-bar-close:hover {
-    background: var(--danger-soft);
-    border-color: var(--danger-color);
-    color: var(--danger-color);
-}
-
 /* Dropdown del bulk bar usa .app-popover de components.css */
 .bulk-bar .dropdown-menu.app-popover {
     min-width: 200px;
