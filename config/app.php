@@ -145,6 +145,19 @@ return [
             'duration' => '+1 years',
             'url' => env('CACHE_CAKEMODEL_URL', null),
         ],
+
+        /*
+         * Circuit breaker state per outbound host. Must be shared across
+         * PHP-FPM workers in production (File or Redis), not Array.
+         */
+        'resilience' => [
+            'className' => FileEngine::class,
+            'prefix' => 'myapp_resilience_',
+            'path' => CACHE . 'persistent' . DS,
+            'serialize' => true,
+            'duration' => '+1 hour',
+            'url' => env('CACHE_RESILIENCE_URL', null),
+        ],
     ],
 
     /*
