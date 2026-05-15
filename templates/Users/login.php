@@ -24,7 +24,7 @@ $buildVersion = date('Y.m.d');
             </header>
 
             <div class="app-login-brand-hero">
-                <div class="app-login-brand-eyebrow">Soporte interno · v2.4</div>
+                <div class="app-login-brand-eyebrow">Sistema de Soporte</div>
                 <h2 class="app-login-brand-headline">
                     Resuelve rápido,
                     <span class="italic">opera tranquilo.</span>
@@ -51,22 +51,16 @@ $buildVersion = date('Y.m.d');
             </div>
 
             <footer class="app-login-brand-foot">
-                <span>&copy; <?= date('Y') ?> Operadora Cafetera</span>
+                <span>&copy; <?= date('Y') ?> Compañía Operadora Portuaria Cafetera S.A.</span>
                 <span class="sep"></span>
                 <a href="#" tabindex="-1">Términos</a>
                 <span class="sep"></span>
                 <a href="#" tabindex="-1">Privacidad</a>
-                <span class="spacer"></span>
-                <span class="build">build <?= h($buildVersion) ?></span>
             </footer>
         </aside>
 
         <div class="app-login-form">
             <div class="app-login-topbar">
-                <span class="app-login-status">
-                    <span class="dot"></span>
-                    Todos los sistemas operativos
-                </span>
                 <span class="sep"></span>
                 <button type="button" class="app-login-locale" disabled data-tip="Sólo Español" data-tip-side="bottom">
                     <span class="flag">ES</span> Español <i class="bi bi-chevron-down"></i>
@@ -135,7 +129,7 @@ $buildVersion = date('Y.m.d');
 
                     <div class="app-login-remember-row">
                         <label class="app-login-check">
-                            <?= $this->Form->checkbox('remember_me', ['id' => 'remember_me', 'hiddenField' => false]) ?>
+                            <?= $this->Form->checkbox('remember_me', ['id' => 'remember_me']) ?>
                             Mantener sesión iniciada
                         </label>
                         <span class="app-login-secure" data-tip="Cifrado TLS de extremo a extremo" data-tip-side="left">
