@@ -1896,12 +1896,12 @@ textarea.app-input {
 
 .app-login-shell {
     width: 100%;
-    max-width: 920px;
+    max-width: 1100px;
 }
 
 .app-login-card {
     display: grid;
-    grid-template-columns: 0.85fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     background: #fff;
     border-radius: 18px;
     overflow: hidden;
@@ -1909,9 +1909,10 @@ textarea.app-input {
         0 30px 80px -20px rgba(17, 24, 39, 0.25),
         0 12px 30px -8px rgba(17, 24, 39, 0.12),
         0 0 0 1px var(--gray-200);
-    min-height: 540px;
+    min-height: 640px;
     animation: loginAppear 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
+
 
 @keyframes loginAppear {
     from { opacity: 0; transform: translateY(12px) scale(0.985); }
@@ -1921,17 +1922,16 @@ textarea.app-input {
 /* ── Lado oscuro: brand ────────────────────── */
 .app-login-brand {
     position: relative;
-    background:
-        radial-gradient(circle at 30% 20%, rgba(0, 168, 94, 0.18), transparent 55%),
-        linear-gradient(160deg, var(--gray-900) 0%, #0c1422 100%);
+    background: linear-gradient(160deg, var(--gray-900) 0%, #0c1422 100%);
     color: #fff;
-    padding: 32px 28px;
+    padding: 36px 40px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
     isolation: isolate;
 }
 
+/* Soft grid overlay */
 .app-login-brand::before {
     content: "";
     position: absolute;
@@ -1939,19 +1939,60 @@ textarea.app-input {
     background-image:
         linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
-    background-size: 28px 28px;
-    mask-image: radial-gradient(ellipse at top right, #000 30%, transparent 75%);
-    z-index: -1;
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Decorative glow blobs — green top-left, orange bottom-right */
+.app-login-brand-glow {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.app-login-brand-glow .glow {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.app-login-brand-glow .glow-1 {
+    top: -160px;
+    left: -120px;
+    width: 420px;
+    height: 420px;
+    background: radial-gradient(circle, rgba(0, 168, 94, 0.55) 0%, transparent 65%);
+}
+
+.app-login-brand-glow .glow-2 {
+    bottom: -180px;
+    right: -140px;
+    width: 480px;
+    height: 480px;
+    background: radial-gradient(circle, rgba(205, 106, 21, 0.32) 0%, transparent 60%);
+}
+
+/* All inner blocks above the decorative layers */
+.app-login-brand > * { position: relative; z-index: 1; }
+
+/* Brand header (logo + wordmark) */
+.app-login-brand-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .app-login-brand-mark {
-    width: 64px;
-    height: 64px;
+    width: 42px;
+    height: 42px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 22px;
-    filter: drop-shadow(0 10px 24px rgba(0, 168, 94, 0.35));
+    flex-shrink: 0;
+    filter: drop-shadow(0 8px 20px rgba(0, 168, 94, 0.35));
+    margin: 0;
 }
 
 .app-login-brand-mark img,
@@ -1961,86 +2002,134 @@ textarea.app-input {
     display: block;
 }
 
+.app-login-brand-text { min-width: 0; }
+
 .app-login-brand-text h1 {
-    font-size: 26px;
+    font-size: 18px;
     font-weight: 700;
     margin: 0;
-    letter-spacing: -0.5px;
+    letter-spacing: -0.3px;
     color: #fff;
     line-height: 1.15;
 }
 
 .app-login-brand-text p {
-    margin: 6px 0 0;
+    margin: 2px 0 0;
     color: rgba(255, 255, 255, 0.55);
-    font-size: 13px;
-    letter-spacing: 0.1px;
+    font-size: 12px;
 }
 
-.app-login-brand-glow {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: -1;
-}
-
-.app-login-brand-glow .glow {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(40px);
-    opacity: 0.55;
-    animation: brandGlow 8s ease-in-out infinite;
-}
-
-.app-login-brand-glow .glow-1 {
-    width: 220px; height: 220px;
-    background: radial-gradient(circle, var(--admin-green) 0%, transparent 70%);
-    bottom: -60px; left: -40px;
-}
-
-.app-login-brand-glow .glow-2 {
-    width: 160px; height: 160px;
-    background: radial-gradient(circle, var(--admin-orange) 0%, transparent 70%);
-    top: 30%; right: -50px;
-    animation-delay: 1.5s;
-    opacity: 0.35;
-}
-
-.app-login-brand-glow .glow-3 {
-    width: 120px; height: 120px;
-    background: radial-gradient(circle, var(--admin-blue) 0%, transparent 70%);
-    top: 55%; left: 10%;
-    animation-delay: 3s;
-    opacity: 0.3;
-}
-
-@keyframes brandGlow {
-    0%, 100% { transform: translate(0, 0)      scale(1); }
-    50%      { transform: translate(8px, -12px) scale(1.05); }
-}
-
-.app-login-brand-meta {
-    margin-top: auto;
-    padding-top: 30px;
+/* Hero column — fills middle */
+.app-login-brand-hero {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.55);
-    letter-spacing: 0.3px;
+    justify-content: center;
+    max-width: 420px;
 }
 
-.app-login-brand-meta .meta-row {
+.app-login-brand-eyebrow {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    font-family: "Geist Mono", ui-monospace, "SF Mono", monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: var(--admin-green-light);
+    margin-bottom: 20px;
 }
 
-.app-login-brand-meta .meta-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.18);
+.app-login-brand-eyebrow::before {
+    content: "";
+    width: 24px;
+    height: 1px;
+    background: var(--admin-green-light);
+}
+
+.app-login-brand-headline {
+    font-size: 44px;
+    font-weight: 700;
+    letter-spacing: -1.5px;
+    line-height: 1.05;
+    margin: 0;
+    color: #fff;
+}
+
+.app-login-brand-headline .italic {
+    display: block;
+    font-family: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+    font-style: italic;
+    font-weight: 400;
+    color: var(--admin-green-light);
+    letter-spacing: -0.5px;
+}
+
+.app-login-brand-lede {
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.65);
+    line-height: 1.6;
+    margin: 18px 0 0;
+    max-width: 360px;
+}
+
+/* Stats grid (3 cols) */
+.app-login-brand-stats {
+    display: flex;
+    gap: 28px;
+    margin-top: 36px;
+}
+
+.app-login-brand-stat-value {
+    font-family: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+    font-size: 32px;
+    font-weight: 500;
+    line-height: 1;
+    color: #fff;
+    letter-spacing: -0.5px;
+    font-variant-numeric: tabular-nums;
+}
+
+.app-login-brand-stat-label {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 6px;
+    line-height: 1.4;
+}
+
+/* Brand footer — terms / privacy / build */
+.app-login-brand-foot {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 24px;
+}
+
+.app-login-brand-foot a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+.app-login-brand-foot a:hover { color: rgba(255, 255, 255, 0.85); }
+
+.app-login-brand-foot .sep {
+    width: 3px;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.3);
+    flex-shrink: 0;
+}
+
+.app-login-brand-foot .spacer { flex: 1; }
+
+.app-login-brand-foot .build {
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 10px;
+    opacity: 0.7;
 }
 
 /* ── Lado claro: form ─────────────────────── */
@@ -2344,44 +2433,78 @@ textarea.app-input {
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    padding: 14px 24px;
+    gap: 10px;
+    padding: 16px 28px;
     flex-shrink: 0;
 }
+
+.app-login-topbar .sep {
+    width: 1px;
+    height: 16px;
+    background: var(--gray-300);
+}
+
+.app-login-locale {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 10px;
+    border: 1px solid var(--gray-200);
+    border-radius: 7px;
+    background: #fff;
+    font-size: 12px;
+    color: var(--gray-700);
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.app-login-locale:hover {
+    border-color: var(--gray-300);
+    background: var(--gray-50);
+    color: var(--gray-900);
+}
+
+.app-login-locale .flag {
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--gray-500);
+    letter-spacing: 0.5px;
+}
+
+.app-login-locale i { font-size: 11px; color: var(--gray-500); }
+
+/* 2FA / secure connection hint (next to Remember row) */
+.app-login-secure {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--gray-500);
+}
+
+.app-login-secure i { font-size: 12px; }
 
 .app-login-submit {
     width: 100%;
     margin-top: 4px;
 }
 
-.app-login-foot {
-    padding: 14px 38px 18px;
-    border-top: 1px solid var(--gray-100);
-    text-align: center;
-    font-size: 11px;
-    color: var(--gray-500);
-    letter-spacing: 0.1px;
-    display: flex;
-    gap: 6px;
-    justify-content: center;
-    flex-wrap: wrap;
-    flex-shrink: 0;
-}
-
-.app-login-foot span { color: var(--gray-300); }
-
-@media (max-width: 760px) {
+@media (max-width: 860px) {
     .app-login-card {
         grid-template-columns: 1fr;
         min-height: auto;
     }
     .app-login-brand {
-        padding: 26px 24px;
-        text-align: left;
+        padding: 28px 24px;
     }
-    .app-login-brand-meta { padding-top: 18px; }
+    .app-login-brand-headline { font-size: 36px; }
+    .app-login-brand-stats { gap: 20px; }
+    .app-login-brand-stat-value { font-size: 28px; }
     .app-login-topbar { padding: 12px 18px; }
     .app-login-form-inner { padding: 8px 24px 18px; }
-    .app-login-foot { padding: 12px 24px 16px; }
 }
 
 

@@ -3,32 +3,63 @@
  * @var \App\View\AppView $this
  */
 $this->assign('title', 'Iniciar sesión');
+$buildVersion = date('Y.m.d');
 ?>
 
 <div class="app-login-shell">
     <section class="app-login-card">
         <aside class="app-login-brand">
-            <div class="app-login-brand-mark">
-                <?= $this->Html->image('logos/logo-mesa-ayuda.svg', ['alt' => '']) ?>
-            </div>
-            <div class="app-login-brand-text">
-                <h1>Mesa de <span class="serif-italic">Ayuda</span></h1>
-                <p>Soporte interno · COPC S.A.</p>
-            </div>
-
             <div class="app-login-brand-glow" aria-hidden="true">
                 <span class="glow glow-1"></span>
                 <span class="glow glow-2"></span>
-                <span class="glow glow-3"></span>
             </div>
 
-            <div class="app-login-brand-meta">
-                <div class="meta-row">
-                    <span class="meta-dot" style="background: var(--admin-green);"></span>
-                    Sistema operativo
+            <header class="app-login-brand-header">
+                <div class="app-login-brand-mark">
+                    <?= $this->Html->image('logos/logo-mesa-ayuda.svg', ['alt' => '']) ?>
                 </div>
-                <div class="meta-row mono">v<?= h(date('Y.m.d')) ?></div>
+                <div class="app-login-brand-text">
+                    <h1>Mesa de <span class="serif-italic">Ayuda</span></h1>
+                    <p>Operadora Cafetera</p>
+                </div>
+            </header>
+
+            <div class="app-login-brand-hero">
+                <div class="app-login-brand-eyebrow">Soporte interno · v2.4</div>
+                <h2 class="app-login-brand-headline">
+                    Resuelve rápido,
+                    <span class="italic">opera tranquilo.</span>
+                </h2>
+                <p class="app-login-brand-lede">
+                    Centraliza solicitudes de tus sucursales, prioriza por SLA y mantén
+                    al equipo enfocado en lo que importa.
+                </p>
+
+                <div class="app-login-brand-stats">
+                    <div>
+                        <div class="app-login-brand-stat-value">3 min</div>
+                        <div class="app-login-brand-stat-label">Tiempo medio<br>de respuesta</div>
+                    </div>
+                    <div>
+                        <div class="app-login-brand-stat-value">98%</div>
+                        <div class="app-login-brand-stat-label">SLA cumplido<br>este mes</div>
+                    </div>
+                    <div>
+                        <div class="app-login-brand-stat-value">42</div>
+                        <div class="app-login-brand-stat-label">Sucursales<br>activas</div>
+                    </div>
+                </div>
             </div>
+
+            <footer class="app-login-brand-foot">
+                <span>&copy; <?= date('Y') ?> Operadora Cafetera</span>
+                <span class="sep"></span>
+                <a href="#" tabindex="-1">Términos</a>
+                <span class="sep"></span>
+                <a href="#" tabindex="-1">Privacidad</a>
+                <span class="spacer"></span>
+                <span class="build">build <?= h($buildVersion) ?></span>
+            </footer>
         </aside>
 
         <div class="app-login-form">
@@ -37,6 +68,10 @@ $this->assign('title', 'Iniciar sesión');
                     <span class="dot"></span>
                     Todos los sistemas operativos
                 </span>
+                <span class="sep"></span>
+                <button type="button" class="app-login-locale" disabled data-tip="Sólo Español" data-tip-side="bottom">
+                    <span class="flag">ES</span> Español <i class="bi bi-chevron-down"></i>
+                </button>
             </div>
 
             <div class="app-login-form-inner">
@@ -104,6 +139,9 @@ $this->assign('title', 'Iniciar sesión');
                             <?= $this->Form->checkbox('remember_me', ['id' => 'remember_me', 'hiddenField' => false]) ?>
                             Mantener sesión iniciada
                         </label>
+                        <span class="app-login-secure" data-tip="Cifrado TLS de extremo a extremo" data-tip-side="left">
+                            <i class="bi bi-shield-check"></i> Conexión segura
+                        </span>
                     </div>
 
                     <?= $this->Form->button(
@@ -127,19 +165,12 @@ $this->assign('title', 'Iniciar sesión');
                     </div>
                 </div>
             </div>
-
-            <div class="app-login-foot">
-                &copy; <?= date('Y') ?> Compañía Operadora Portuaria Cafetera S.A.
-                <span>·</span>
-                <span class="mono">Todos los derechos reservados</span>
-            </div>
         </div>
     </section>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    // Email validation indicator
     const email = document.getElementById('email');
     const valid = document.getElementById('email-valid');
     if (email && valid) {
@@ -150,7 +181,6 @@ document.addEventListener('DOMContentLoaded', function () {
         update();
     }
 
-    // Password show/hide toggle
     const password = document.getElementById('password');
     const toggle = document.getElementById('toggle-password');
     const icon = document.getElementById('toggle-password-icon');
@@ -159,8 +189,9 @@ document.addEventListener('DOMContentLoaded', function () {
             const hidden = password.type === 'password';
             password.type = hidden ? 'text' : 'password';
             icon.className = hidden ? 'bi bi-eye-slash' : 'bi bi-eye';
-            toggle.setAttribute('data-tip', hidden ? 'Ocultar contraseña' : 'Mostrar contraseña');
-            toggle.setAttribute('aria-label', hidden ? 'Ocultar contraseña' : 'Mostrar contraseña');
+            const label = hidden ? 'Ocultar contraseña' : 'Mostrar contraseña';
+            toggle.setAttribute('data-tip', label);
+            toggle.setAttribute('aria-label', label);
         });
     }
 });
