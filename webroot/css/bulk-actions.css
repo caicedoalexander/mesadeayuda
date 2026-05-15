@@ -400,6 +400,8 @@
     gap: 8px;
     margin-bottom: 14px;
     animation: fadeIn 0.25s ease both;
+    position: relative;
+    z-index: 20;
 }
 
 .toolbar-filter-btn {
@@ -522,35 +524,15 @@
    Bulk Actions Bar — Sistema de diseño
    ============================================ */
 .bulk-bar {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    flex: 1;
-    padding: 8px 14px;
+    gap: 8px;
+    padding: 6px 8px 6px 10px;
     background: var(--admin-green-soft);
     border: 1px solid rgba(0, 168, 94, 0.25);
     border-radius: var(--radius-md);
     position: relative;
     z-index: 1000;
-}
-
-.bulk-bar-info {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    color: var(--admin-green-ink);
-}
-
-.bulk-bar-info i {
-    font-size: 16px;
-    color: var(--admin-green);
-}
-
-.bulk-bar-info strong {
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
 }
 
 .bulk-bar-actions {

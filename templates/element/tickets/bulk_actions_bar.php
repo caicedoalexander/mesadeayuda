@@ -10,10 +10,6 @@ $showTagAction = $showTagAction ?? false;
 
 <!-- Bulk Actions Bar -->
 <div id="bulkActionsBar" class="bulk-bar d-none bulk-actions-animated">
-    <div class="bulk-bar-info">
-        <i class="bi bi-check-circle-fill"></i>
-        <span><strong id="selectedCount">0</strong> ticket(s) seleccionado(s)</span>
-    </div>
     <div class="bulk-bar-actions">
         <div class="btn-group">
             <button type="button" class="btn-brand-primary btn-brand-sm dropdown-toggle"

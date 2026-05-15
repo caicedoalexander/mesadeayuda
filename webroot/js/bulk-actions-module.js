@@ -115,11 +115,9 @@
     function updateSelectionUI() {
         const count = selectedItems.length;
         const bulkBar = document.getElementById('bulkActionsBar');
-        const selectedCount = document.getElementById('selectedCount');
 
         if (count > 0) {
             bulkBar.classList.remove('d-none');
-            selectedCount.textContent = count;
         } else {
             bulkBar.classList.add('d-none');
         }
