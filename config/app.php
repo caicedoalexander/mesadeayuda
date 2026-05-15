@@ -161,6 +161,24 @@ return [
     ],
 
     /*
+     * Resilience configuration for outbound HTTP calls routed through
+     * SecureHttpTrait::secureCurlPost. Override via env vars to tune without
+     * redeploy. Emergency rollback: set RESILIENCE_CB_THRESHOLD=999999.
+     */
+    'Resilience' => [
+        'circuitBreaker' => [
+            'failureThreshold' => (int)env('RESILIENCE_CB_THRESHOLD', 5),
+            'cooldownSeconds' => (int)env('RESILIENCE_CB_COOLDOWN', 30),
+        ],
+        'retry' => [
+            'maxAttempts' => (int)env('RESILIENCE_RETRY_ATTEMPTS', 3),
+            'baseDelayMs' => (int)env('RESILIENCE_RETRY_BASE_MS', 200),
+            'backoffMultiplier' => 2.5,
+            'jitterMs' => 100,
+        ],
+    ],
+
+    /*
      * Configure the Error and Exception handlers used by your application.
      *
      * By default errors are displayed using Debugger, when debug is true and logged
