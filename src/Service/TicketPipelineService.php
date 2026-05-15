@@ -102,39 +102,99 @@ class TicketPipelineService
             ];
         }
 
+        $connection = $this->fetchTable('Tickets')->getConnection();
+        $writtenFilePaths = [];
+        $pendingEvents = [];
         $comment = null;
         $uploadedCount = 0;
 
+        // TX1: comment + uploads. On rollback (callback returns false OR exception),
+        // best-effort unlink any attachment files already moved to disk.
         if ($hasComment) {
-            $comment = $this->comments->addComment($entityId, $userId, $commentBody, $commentType, false, $emailTo, $emailCc);
+            $tx1Ok = false;
+            try {
+                $tx1Ok = $connection->transactional(function () use (
+                    $entityId,
+                    $userId,
+                    $commentBody,
+                    $commentType,
+                    $emailTo,
+                    $emailCc,
+                    $files,
+                    $entity,
+                    &$comment,
+                    &$uploadedCount,
+                    &$writtenFilePaths,
+                ): bool {
+                    $comment = $this->comments->addComment(
+                        $entityId,
+                        $userId,
+                        $commentBody,
+                        $commentType,
+                        false,
+                        $emailTo,
+                        $emailCc,
+                    );
 
-            if (!$comment) {
+                    if (!$comment) {
+                        return false;
+                    }
+
+                    if (!empty($files['attachments'])) {
+                        foreach ($files['attachments'] as $file) {
+                            if ($file->getError() !== UPLOAD_ERR_OK) {
+                                continue;
+                            }
+                            $attachment = $this->attachments->saveUploadedFile($entity, $file, $comment->id, $userId);
+                            if ($attachment !== null) {
+                                $writtenFilePaths[] = $attachment->file_path;
+                                $uploadedCount++;
+                            }
+                        }
+                    }
+
+                    return true;
+                });
+            } finally {
+                if ($tx1Ok !== true) {
+                    $this->cleanupOrphanedFiles($writtenFilePaths);
+                }
+            }
+
+            if ($tx1Ok !== true) {
                 return [
                     'success' => false,
                     'message' => 'Error al agregar el comentario.',
                     'entity' => $entity,
                 ];
             }
-
-            if (!empty($files['attachments'])) {
-                foreach ($files['attachments'] as $file) {
-                    if ($file->getError() === UPLOAD_ERR_OK) {
-                        $result = $this->attachments->saveUploadedFile($entity, $file, $comment->id, $userId);
-                        if ($result) {
-                            $uploadedCount++;
-                        }
-                    }
-                }
-            }
         }
 
+        // TX2: status change. InvalidStatusTransitionException is caught to preserve
+        // the "comment already committed; don't tempt a retry" semantics.
         if ($hasStatusChange) {
             try {
-                $this->changeStatus($entity, $newStatus, $userId, null, false);
+                $connection->transactional(function () use (
+                    $entity,
+                    $newStatus,
+                    $oldStatus,
+                    $userId,
+                    &$pendingEvents,
+                ): bool {
+                    $ok = $this->changeStatus($entity, $newStatus, $userId, null, true, deferDispatch: true);
+                    if (!$ok) {
+                        return false;
+                    }
+                    $pendingEvents[] = new TicketStatusChanged(
+                        ticketId: (int)$entity->id,
+                        oldStatus: $oldStatus,
+                        newStatus: $newStatus,
+                        actorId: $userId,
+                    );
+
+                    return true;
+                });
             } catch (InvalidStatusTransitionException $e) {
-                // Comment + uploads were already committed; report the failure
-                // without bubbling a 500 that would tempt the user to retry
-                // and double-post the comment.
                 Log::warning('Response committed but status transition rejected', [
                     'ticket_id' => $entityId,
                     'from' => $oldStatus,
@@ -153,7 +213,23 @@ class TicketPipelineService
             }
         }
 
-        $this->notifications->sendResponseNotifications($entity, $comment, $oldStatus, $newStatus, $hasComment, $commentType, $hasStatusChange, $emailTo, $emailCc);
+        // Post-commit: dispatch buffered domain events. If TX2 rolled back without
+        // throwing (changeStatus returned false), pendingEvents is empty for that branch.
+        foreach ($pendingEvents as $event) {
+            $this->eventManager->dispatch($event);
+        }
+
+        $this->notifications->sendResponseNotifications(
+            $entity,
+            $comment,
+            $oldStatus,
+            $newStatus,
+            $hasComment,
+            $commentType,
+            $hasStatusChange,
+            $emailTo,
+            $emailCc,
+        );
 
         return $this->buildResponseResult($hasComment, $hasStatusChange, $uploadedCount, $entity);
     }
