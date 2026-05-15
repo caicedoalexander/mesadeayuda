@@ -150,7 +150,6 @@ $requesterEmail = $entity->requester->email ?? '';
             <div class="composer-footer-spacer"></div>
 
             <span class="composer-char-counter mono tnum" id="composer-char-counter" aria-live="polite">5.0k restantes</span>
-            <span class="composer-shortcut" aria-hidden="true">⌘ ⏎</span>
 
             <!-- Status is fixed: the comment keeps the current ticket status.
                  State transitions live in the top bar (Resolver / Cambiar estado). -->
