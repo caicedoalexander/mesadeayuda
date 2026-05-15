@@ -1,0 +1,636 @@
+/**
+ * Login View Styles
+ *
+ * View-scoped a templates/Users/login.php (layout `login`). Cubre el
+ * split-panel oscuro + form claro, el SSO button, los input-groups
+ * con icono, la top bar de locale y el help card al pie.
+ *
+ * Cargado desde templates/layout/login.php — NO desde el head global,
+ * para que las ~620 líneas no viajen en cada página autenticada.
+ */
+
+/* ===========================================================
+   LOGIN — split-panel oscuro + form claro
+   =========================================================== */
+
+.app-login-body {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+    background:
+        radial-gradient(1200px 600px at 80% -10%, rgba(0, 168, 94, 0.06), transparent 60%),
+        radial-gradient(900px 500px at -10% 110%, rgba(205, 106, 21, 0.05), transparent 60%),
+        var(--gray-50) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.app-login-shell {
+    width: 100%;
+    max-width: 1100px;
+}
+
+.app-login-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    background: #fff;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow:
+        0 30px 80px -20px rgba(17, 24, 39, 0.25),
+        0 12px 30px -8px rgba(17, 24, 39, 0.12),
+        0 0 0 1px var(--gray-200);
+    min-height: 640px;
+    animation: loginAppear 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+
+@keyframes loginAppear {
+    from { opacity: 0; transform: translateY(12px) scale(0.985); }
+    to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+/* ── Lado oscuro: brand ────────────────────── */
+.app-login-brand {
+    position: relative;
+    background: linear-gradient(160deg, var(--gray-900) 0%, #0c1422 100%);
+    color: #fff;
+    padding: 36px 40px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+/* Soft grid overlay */
+.app-login-brand::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Decorative glow blobs — green top-left, orange bottom-right */
+.app-login-brand-glow {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.app-login-brand-glow .glow {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.app-login-brand-glow .glow-1 {
+    top: -160px;
+    left: -120px;
+    width: 420px;
+    height: 420px;
+    background: radial-gradient(circle, rgba(0, 168, 94, 0.55) 0%, transparent 65%);
+}
+
+.app-login-brand-glow .glow-2 {
+    bottom: -180px;
+    right: -140px;
+    width: 480px;
+    height: 480px;
+    background: radial-gradient(circle, rgba(205, 106, 21, 0.32) 0%, transparent 60%);
+}
+
+/* All inner blocks above the decorative layers */
+.app-login-brand > * { position: relative; z-index: 1; }
+
+/* Brand header (logo + wordmark) */
+.app-login-brand-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.app-login-brand-mark {
+    width: 42px;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    filter: drop-shadow(0 8px 20px rgba(0, 168, 94, 0.35));
+    margin: 0;
+}
+
+.app-login-brand-mark img,
+.app-login-brand-mark svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.app-login-brand-text { min-width: 0; }
+
+.app-login-brand-text h1 {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.3px;
+    color: #fff;
+    line-height: 1.15;
+}
+
+.app-login-brand-text p {
+    margin: 2px 0 0;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 12px;
+}
+
+/* Hero column — fills middle */
+.app-login-brand-hero {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-width: 420px;
+}
+
+.app-login-brand-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: var(--admin-green-light);
+    margin-bottom: 20px;
+}
+
+.app-login-brand-eyebrow::before {
+    content: "";
+    width: 24px;
+    height: 1px;
+    background: var(--admin-green-light);
+}
+
+.app-login-brand-headline {
+    font-size: 44px;
+    font-weight: 700;
+    letter-spacing: -1.5px;
+    line-height: 1.05;
+    margin: 0;
+    color: #fff;
+}
+
+.app-login-brand-headline .italic {
+    display: block;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    color: var(--admin-green-light);
+    letter-spacing: -0.5px;
+}
+
+.app-login-brand-lede {
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.65);
+    line-height: 1.6;
+    margin: 18px 0 0;
+    max-width: 360px;
+}
+
+/* Stats grid (3 cols) */
+.app-login-brand-stats {
+    display: flex;
+    gap: 28px;
+    margin-top: 36px;
+}
+
+.app-login-brand-stat-value {
+    font-family: var(--font-serif);
+    font-size: 32px;
+    font-weight: 500;
+    line-height: 1;
+    color: #fff;
+    letter-spacing: -0.5px;
+    font-variant-numeric: tabular-nums;
+}
+
+.app-login-brand-stat-label {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 6px;
+    line-height: 1.4;
+}
+
+/* Brand footer — terms / privacy / build */
+.app-login-brand-foot {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 24px;
+}
+
+.app-login-brand-foot a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+.app-login-brand-foot a:hover { color: rgba(255, 255, 255, 0.85); }
+
+.app-login-brand-foot .sep {
+    width: 3px;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.3);
+    flex-shrink: 0;
+}
+
+.app-login-brand-foot .spacer { flex: 1; }
+
+.app-login-brand-foot .build {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    opacity: 0.7;
+}
+
+/* ── Lado claro: form ─────────────────────── */
+.app-login-form {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.app-login-form-inner {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 8px 38px 18px;
+    overflow-y: auto;
+}
+
+.app-login-form-head {
+    margin-bottom: 26px;
+}
+
+.app-login-form-head h2 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0 0 6px;
+    letter-spacing: -0.6px;
+    line-height: 1.15;
+}
+
+.app-login-form-head p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--gray-600);
+}
+
+.app-login-form-body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    flex: 1;
+}
+
+.app-login-form-body .app-form-group { margin-bottom: 0; }
+
+/* SSO button (Google Workspace) */
+.app-sso-btn {
+    width: 100%;
+    height: 44px;
+    border-radius: 9px;
+    border: 1px solid var(--gray-200);
+    background: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-800);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    text-decoration: none;
+}
+
+.app-sso-btn:hover:not(:disabled) {
+    border-color: var(--gray-300);
+    background: var(--gray-50);
+    color: var(--gray-900);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.app-sso-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.app-sso-btn svg { flex-shrink: 0; }
+
+/* "O CON EMAIL" divider */
+.app-login-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 4px 0;
+}
+
+.app-login-divider::before,
+.app-login-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--gray-200);
+}
+
+.app-login-divider span {
+    font-size: 11px;
+    color: var(--gray-500);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+/* Input group: icon-left + field + icon-right (validación / toggle) */
+.app-input-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--gray-200);
+    border-radius: 9px;
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+}
+
+.app-input-group:hover { border-color: var(--gray-300); }
+
+.app-input-group:focus-within {
+    border-color: var(--admin-green);
+    box-shadow: var(--focus-ring);
+}
+
+.app-input-group > i,
+.app-input-group > .app-input-icon {
+    color: var(--gray-500);
+    font-size: 16px;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.app-input-group input {
+    flex: 1;
+    height: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 14px;
+    color: var(--gray-900);
+    font-family: inherit;
+    padding: 0;
+    min-width: 0;
+}
+
+.app-input-group input::placeholder { color: var(--gray-400); }
+
+/* Anular el background azul/amarillo que el navegador pinta sobre inputs
+   autocompletados. Sin esto, el flex gap se ve roto porque el autofill
+   se extiende hasta el borde del input. */
+.app-input-group input:-webkit-autofill,
+.app-input-group input:-webkit-autofill:hover,
+.app-input-group input:-webkit-autofill:focus,
+.app-input-group input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 1000px #fff inset;
+    -webkit-text-fill-color: var(--gray-900);
+    caret-color: var(--gray-900);
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+.app-input-group .app-input-trail {
+    border: none;
+    background: none;
+    color: var(--gray-500);
+    padding: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 4px;
+    transition: color 0.15s ease;
+}
+
+.app-input-group .app-input-trail:hover { color: var(--gray-800); }
+.app-input-group .app-input-trail.success { color: var(--admin-green); }
+
+/* Password label row with forgot-password link */
+.app-login-label-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.app-login-label-row label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin: 0;
+}
+
+.app-login-forgot {
+    font-size: 12px;
+    color: var(--admin-green-ink);
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+.app-login-forgot:hover { color: var(--admin-green); text-decoration: underline; }
+
+/* Remember row */
+.app-login-remember-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 4px 0 8px;
+}
+
+.app-login-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--gray-700);
+    cursor: pointer;
+    user-select: none;
+}
+
+.app-login-check input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    accent-color: var(--admin-green);
+    cursor: pointer;
+    margin: 0;
+}
+
+/* Primary CTA (override del .btn-brand-primary para login con chevron) */
+.app-login-submit {
+    width: 100%;
+    height: 46px !important;
+    border-radius: 9px !important;
+    font-size: 14px !important;
+    margin-top: 4px;
+}
+
+.app-login-submit i { transition: transform 0.2s ease; }
+.app-login-submit:hover i { transform: translateX(2px); }
+
+/* Help card al pie del form */
+.app-login-help {
+    margin-top: 18px;
+    padding: 14px;
+    border-radius: 10px;
+    border: 1px solid var(--gray-200);
+    background: #fff;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: var(--shadow-sm);
+}
+
+.app-login-help-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--admin-green-soft);
+    color: var(--admin-green-ink);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 18px;
+}
+
+.app-login-help-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-login-help-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.app-login-help-message {
+    font-size: 12px;
+    color: var(--gray-600);
+    margin-top: 1px;
+    line-height: 1.5;
+}
+
+.app-login-help-message a,
+.app-login-help-message strong {
+    color: var(--gray-900);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.app-login-help-message a:hover { color: var(--admin-green); text-decoration: underline; }
+
+.app-login-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 28px;
+    flex-shrink: 0;
+}
+
+.app-login-topbar .sep {
+    width: 1px;
+    height: 16px;
+    background: var(--gray-300);
+}
+
+.app-login-locale {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 10px;
+    border: 1px solid var(--gray-200);
+    border-radius: 7px;
+    background: #fff;
+    font-size: 12px;
+    color: var(--gray-700);
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.app-login-locale:hover {
+    border-color: var(--gray-300);
+    background: var(--gray-50);
+    color: var(--gray-900);
+}
+
+.app-login-locale .flag {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--gray-500);
+    letter-spacing: 0.5px;
+}
+
+.app-login-locale i { font-size: 11px; color: var(--gray-500); }
+
+/* 2FA / secure connection hint (next to Remember row) */
+.app-login-secure {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--gray-500);
+}
+
+.app-login-secure i { font-size: 12px; }
+
+.app-login-submit {
+    width: 100%;
+    margin-top: 4px;
+}
+
+@media (max-width: 860px) {
+    .app-login-card {
+        grid-template-columns: 1fr;
+        min-height: auto;
+    }
+    .app-login-brand {
+        padding: 28px 24px;
+    }
+    .app-login-brand-headline { font-size: 36px; }
+    .app-login-brand-stats { gap: 20px; }
+    .app-login-brand-stat-value { font-size: 28px; }
+    .app-login-topbar { padding: 12px 18px; }
+    .app-login-form-inner { padding: 8px 24px 18px; }
+}
