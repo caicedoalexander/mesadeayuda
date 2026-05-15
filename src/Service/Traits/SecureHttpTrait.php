@@ -3,6 +3,12 @@ declare(strict_types=1);
 
 namespace App\Service\Traits;
 
+use App\Constants\CacheConstants;
+use App\Service\Resilience\CircuitBreaker;
+use App\Service\Resilience\CircuitOpenException;
+use App\Service\Resilience\ResilientHttpClient;
+use App\Service\Resilience\RetryPolicy;
+use Cake\Core\Configure;
 use Cake\Log\Log;
 
 /**
@@ -13,6 +19,42 @@ use Cake\Log\Log;
  */
 trait SecureHttpTrait
 {
+    private ?ResilientHttpClient $resilientHttp = null;
+
+    /**
+     * Build (or return cached) ResilientHttpClient using config values.
+     */
+    private function resilientHttp(): ResilientHttpClient
+    {
+        if ($this->resilientHttp === null) {
+            $cb = Configure::read('Resilience.circuitBreaker') ?? [];
+            $rt = Configure::read('Resilience.retry') ?? [];
+            $this->resilientHttp = new ResilientHttpClient(
+                new CircuitBreaker(
+                    CacheConstants::CACHE_RESILIENCE,
+                    failureThreshold: (int)($cb['failureThreshold'] ?? 5),
+                    cooldownSeconds: (int)($cb['cooldownSeconds'] ?? 30),
+                ),
+                new RetryPolicy(
+                    maxAttempts: (int)($rt['maxAttempts'] ?? 3),
+                    baseDelayMs: (int)($rt['baseDelayMs'] ?? 200),
+                    backoffMultiplier: (float)($rt['backoffMultiplier'] ?? 2.5),
+                    jitterMs: (int)($rt['jitterMs'] ?? 100),
+                ),
+            );
+        }
+
+        return $this->resilientHttp;
+    }
+
+    /**
+     * Test seam: override the resilient client. Used only by tests.
+     */
+    public function setResilientHttpClientForTesting(ResilientHttpClient $client): void
+    {
+        $this->resilientHttp = $client;
+    }
+
     /**
      * Validate that a URL is safe AND resolve its hostname to an IP we control.
      *
@@ -130,7 +172,21 @@ trait SecureHttpTrait
             ];
         }
 
-        return $this->executeRawCurlPost($url, $jsonPayload, $headers, $timeout, $resolution);
+        try {
+            return $this->resilientHttp()->send(
+                $url,
+                fn (): array => $this->executeRawCurlPost($url, $jsonPayload, $headers, $timeout, $resolution),
+            );
+        } catch (CircuitOpenException $e) {
+            return [
+                'success' => false,
+                'http_code' => 0,
+                'response' => null,
+                'error' => $e->getMessage(),
+                'curl_errno' => 0,
+                'circuit_breaker' => true,
+            ];
+        }
     }
 
     /**
