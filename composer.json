@@ -34,6 +34,11 @@
             "App\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "App\\Test\\": "tests/"
+        }
+    },
     "config": {
         "allow-plugins": {
             "cakephp/plugin-installer": true,
