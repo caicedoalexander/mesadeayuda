@@ -526,11 +526,6 @@
 .bulk-bar {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 8px 6px 10px;
-    background: var(--admin-green-soft);
-    border: 1px solid rgba(0, 168, 94, 0.25);
-    border-radius: var(--radius-md);
     position: relative;
     z-index: 1000;
 }
@@ -565,43 +560,6 @@
 .bulk-bar .dropdown-menu.app-popover {
     min-width: 200px;
     margin-top: 6px;
-}
-
-/* ============================================
-   Bulk Actions Bar Animation
-   ============================================ */
-@keyframes slideDownFadeIn {
-    from {
-        transform: translateY(-20px);
-        opacity: 0;
-        max-height: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-        max-height: 100px;
-    }
-}
-
-@keyframes slideUpFadeOut {
-    from {
-        transform: translateY(0);
-        opacity: 1;
-        max-height: 100px;
-    }
-    to {
-        transform: translateY(-20px);
-        opacity: 0;
-        max-height: 0;
-    }
-}
-
-.bulk-actions-animated {
-    transition: all 0.3s ease-out;
-}
-
-.bulk-actions-animated:not(.d-none) {
-    animation: slideDownFadeIn 0.4s ease-out forwards;
 }
 
 /* Dropdown z-index para Bootstrap */

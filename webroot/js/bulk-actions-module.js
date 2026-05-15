@@ -114,12 +114,14 @@
      */
     function updateSelectionUI() {
         const count = selectedItems.length;
-        const bulkBar = document.getElementById('bulkActionsBar');
+        const trigger = document.getElementById('bulkActionsTrigger');
+        const clearBtn = document.getElementById('bulkClearBtn');
 
-        if (count > 0) {
-            bulkBar.classList.remove('d-none');
-        } else {
-            bulkBar.classList.add('d-none');
+        if (trigger) {
+            trigger.disabled = count === 0;
+        }
+        if (clearBtn) {
+            clearBtn.classList.toggle('d-none', count === 0);
         }
 
         // Actualizar el checkbox "Seleccionar todo"

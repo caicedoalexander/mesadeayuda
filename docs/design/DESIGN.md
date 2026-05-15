@@ -124,6 +124,13 @@ Implementados en `webroot/css/styles.css` (sección `DESIGN SYSTEM`).
   por `--danger-color` y la sombra correspondiente; nunca se inventa un color.
 - Iconos a la izquierda del texto, gap 6 px, mismo color que el texto.
 
+**Estado deshabilitado** (`:disabled` o `.disabled`): `opacity: 0.5`,
+`cursor: not-allowed`, sin cambios de hover. Aplica a `primary`,
+`secondary` y `danger`. Para bloquear interacciones de un trigger
+contextual (ej. acciones masivas sin selección) se usa el atributo
+`disabled` del botón — nunca se oculta el botón con `d-none` para
+evitar saltos de layout.
+
 ### 2.2 · Pills de estado — `.status-pill` / `.badge-status-*`
 
 Pill redondeada (`border-radius: 999px`) con dot a la izquierda. El dot usa

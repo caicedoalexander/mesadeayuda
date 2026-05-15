@@ -649,6 +649,20 @@ body {
     background: var(--gray-50);
     color: var(--gray-900);
 }
+.btn-brand-secondary:disabled,
+.btn-brand-secondary.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #fff;
+    color: var(--gray-700);
+    border-color: var(--gray-200);
+}
+.btn-brand-secondary:disabled:hover,
+.btn-brand-secondary.disabled:hover {
+    background: #fff;
+    color: var(--gray-700);
+    border-color: var(--gray-200);
+}
 
 .btn-brand-ghost {
     height: 36px;

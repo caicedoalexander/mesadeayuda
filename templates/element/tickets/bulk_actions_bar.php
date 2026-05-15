@@ -9,11 +9,12 @@ $showTagAction = $showTagAction ?? false;
 ?>
 
 <!-- Bulk Actions Bar -->
-<div id="bulkActionsBar" class="bulk-bar d-none bulk-actions-animated">
+<div id="bulkActionsBar" class="bulk-bar">
     <div class="bulk-bar-actions">
         <div class="btn-group">
-            <button type="button" class="btn-brand-primary btn-brand-sm dropdown-toggle"
-                data-bs-toggle="dropdown" aria-expanded="false">
+            <button type="button" id="bulkActionsTrigger" class="btn-brand-secondary dropdown-toggle"
+                data-bs-toggle="dropdown" aria-expanded="false" disabled>
+                <i class="bi bi-lightning-charge"></i>
                 Acciones rápidas
             </button>
             <ul class="dropdown-menu dropdown-menu-end app-popover">
@@ -43,7 +44,7 @@ $showTagAction = $showTagAction ?? false;
                 </li>
             </ul>
         </div>
-        <button type="button" class="bulk-bar-close" onclick="clearSelection()" data-tip="Limpiar selección">
+        <button type="button" id="bulkClearBtn" class="bulk-bar-close d-none" onclick="clearSelection()" data-tip="Limpiar selección">
             <i class="bi bi-x-lg"></i>
         </button>
     </div>
