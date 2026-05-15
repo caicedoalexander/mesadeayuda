@@ -160,14 +160,34 @@ En la vista de detalle se muestra siempre.
 
 ### 2.4 · Tag chip — `.tag-chip`
 
-Categorías de ticket. Cuatro tonos:
+Pill compacto para mostrar etiquetas de un ticket. Componente
+**compartido y global**, vive en `webroot/css/components.css` y se
+carga desde `templates/element/head.php`. Se usa tanto en la lista
+(`templates/Tickets/index.php`) como en el detalle
+(`templates/element/tickets/comments_list.php`).
 
-| Tono     | Clase            | Uso sugerido                          |
-| -------- | ---------------- | ------------------------------------- |
-| `gray`   | _(default)_      | Genérico                              |
-| `green`  | `.tag-chip.green`| RRHH, accesos                         |
-| `orange` | `.tag-chip.orange`| Mantenimiento, PSI                    |
-| `blue`   | `.tag-chip.blue` | IT, sucursal                          |
+**Markup canónico:**
+
+```html
+<span class="tag-chip"
+      style="background:<?= h($tag->color) ?>20; color:<?= h($tag->color) ?>; border-color:<?= h($tag->color) ?>40">
+    <?= h($tag->name) ?>
+    <a href="#" class="tag-remove">&times;</a>
+</span>
+```
+
+El color **no** se aplica con variantes de clase (`.green`, `.orange`)
+sino inline desde `tag->color` (campo dinámico de la tabla `tags`).
+El sufijo hexadecimal `20`/`40` aplica alpha al fondo/borde.
+
+**Modifier — `.tag-chip--row`:** trunca el nombre a `max-width: 140px`
+dentro de la fila densa de la tabla de tickets. Vive en
+`webroot/css/bulk-actions.css` (view-scoped a index) porque solo aplica
+en ese contexto.
+
+**Sub-elemento — `.tag-remove`:** ancla con `&times;` para quitar la
+etiqueta. Hereda color del padre, `opacity: 0.55` en reposo y `1` en
+hover.
 
 ### 2.5 · Stat inline — `.stat-inline`
 
