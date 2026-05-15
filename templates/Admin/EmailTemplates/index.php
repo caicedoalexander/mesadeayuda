@@ -1,7 +1,7 @@
 <?php
 /**
  * @var \App\View\AppView $this
- * @var iterable<\App\Model\Entity\EmailTemplate> $templates
+ * @var list<\App\Notification\Email\Admin\TemplateDescriptor> $descriptors
  */
 $this->assign('title', 'Plantillas de email');
 $this->assign('active_workspace', 'templates');
@@ -21,58 +21,39 @@ $this->assign('active_workspace', 'templates');
             <div class="app-page-stats">
                 <span class="stat-inline">
                     <span class="dot" style="background: var(--admin-green);"></span>
-                    <span class="value emphasis"><?= count($templates) ?></span>
+                    <span class="value emphasis"><?= count($descriptors) ?></span>
                     <span class="label">plantillas</span>
+                </span>
+                <span class="stat-inline">
+                    <span class="label">Sólo lectura — viven en el código</span>
                 </span>
             </div>
         </div>
     </div>
 </header>
 
-<?php if (!empty($templates)): ?>
+<?php if (!empty($descriptors)): ?>
     <div class="app-grid wide">
-        <?php foreach ($templates as $template): ?>
-            <?php $vars = json_decode($template->available_variables ?? '[]', true) ?: []; ?>
+        <?php foreach ($descriptors as $d): ?>
             <article class="app-card">
                 <div class="app-card-header">
-                    <div class="app-card-header-icon <?= $template->is_active ? '' : 'neutral' ?>">
+                    <div class="app-card-header-icon" style="background: <?= h($d->accentSoftColor) ?>; color: <?= h($d->accentColor) ?>;">
                         <i class="bi bi-envelope-paper"></i>
                     </div>
                     <div class="app-card-header-text">
-                        <h3 class="app-card-header-title mono"><?= h($template->template_key) ?></h3>
-                        <div class="app-card-header-subtitle">
-                            <span class="status-dot-pill <?= $template->is_active ? 'active' : 'inactive' ?>">
-                                <?= $template->is_active ? 'Activa' : 'Inactiva' ?>
-                            </span>
-                        </div>
+                        <h3 class="app-card-header-title mono"><?= h($d->key) ?></h3>
+                        <div class="app-card-header-subtitle"><?= h($d->tag) ?></div>
                     </div>
                 </div>
                 <div class="app-card-body">
-                    <div class="app-form-group" style="margin-bottom: 12px;">
-                        <span class="app-form-label">Asunto</span>
-                        <div class="email-subject-preview"><?= h($template->subject) ?></div>
-                    </div>
-                    <?php if (!empty($vars)): ?>
-                    <div class="app-form-group" style="margin-bottom: 0;">
-                        <span class="app-form-label">Variables</span>
-                        <div class="email-variables">
-                            <?php foreach ($vars as $var): ?>
-                                <code class="email-var-chip"><?= '{{' . h($var) . '}}' ?></code>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                    <?php endif; ?>
+                    <p class="app-card-body-text"><?= h($d->description) ?></p>
                 </div>
                 <div class="app-card-footer between">
+                    <span class="muted">Edición deshabilitada</span>
                     <?= $this->Html->link(
                         '<i class="bi bi-eye"></i> Previsualizar',
-                        ['controller' => 'EmailTemplates', 'action' => 'preview', $template->id],
-                        ['class' => 'btn-brand-ghost btn-brand-sm', 'target' => '_blank', 'escape' => false]
-                    ) ?>
-                    <?= $this->Html->link(
-                        '<i class="bi bi-pencil"></i> Editar',
-                        ['controller' => 'EmailTemplates', 'action' => 'edit', $template->id],
-                        ['class' => 'btn-brand-primary btn-brand-sm', 'escape' => false]
+                        ['controller' => 'EmailTemplates', 'action' => 'preview', $d->key],
+                        ['class' => 'btn-brand-primary btn-brand-sm', 'target' => '_blank', 'escape' => false],
                     ) ?>
                 </div>
             </article>
@@ -80,9 +61,9 @@ $this->assign('active_workspace', 'templates');
     </div>
 <?php else: ?>
     <?= $this->element('empty_state', [
-        'icon'    => 'envelope-x',
-        'tone'    => 'neutral',
-        'title'   => 'No hay plantillas configuradas',
-        'message' => 'Las plantillas se configuran automáticamente al inicializar el sistema.',
+        'icon' => 'envelope-x',
+        'tone' => 'neutral',
+        'title' => 'No hay plantillas registradas',
+        'message' => 'Define plantillas implementando App\\Notification\\Email\\EmailTemplate.',
     ]) ?>
 <?php endif; ?>
