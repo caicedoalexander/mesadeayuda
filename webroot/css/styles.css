@@ -744,24 +744,6 @@ body {
 .priority-flag.alta    { color: var(--danger-color); }
 .priority-flag.urgente { color: var(--danger-color); }
 
-/* ── Tag chip — categoría ─────────────────────── */
-.tag-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 2px 8px;
-    border-radius: var(--radius-sm);
-    background: var(--gray-100);
-    color: var(--gray-700);
-    font-size: 11px;
-    font-weight: 500;
-    white-space: nowrap;
-    line-height: 1.5;
-}
-.tag-chip.green  { background: var(--admin-green-soft);  color: var(--admin-green-ink); }
-.tag-chip.orange { background: var(--admin-orange-soft); color: var(--admin-orange-ink); }
-.tag-chip.blue   { background: var(--admin-blue-soft);   color: var(--admin-blue-ink); }
-
 /* ── Inline stat (header) ─────────────────────── */
 .stat-inline {
     display: inline-flex;
