@@ -71,6 +71,11 @@ trait TicketListingTrait
         } else {
             $query->contain($this->getDefaultContain());
         }
+        $commentsCountSub = $this->fetchTable('TicketComments')
+            ->find()
+            ->select(['c' => $query->func()->count('*')])
+            ->where(["TicketComments.ticket_id = {$tableAlias}.id"]);
+        $query->select(['comments_count' => $commentsCountSub])->enableAutoFields(true);
         $validSortFields = $config['validSortFields'] ?? $this->getValidSortFields();
         $resolvedViews = ['resueltos', 'resueltas', 'completados'];
         $isResolvedView = in_array($view, $resolvedViews);
@@ -129,7 +134,7 @@ trait TicketListingTrait
      */
     private function getDefaultContain(): array
     {
-        return ['Requesters', 'Assignees'];
+        return ['Requesters', 'Assignees', 'Tags'];
     }
 
     /**

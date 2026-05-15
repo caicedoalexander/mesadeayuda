@@ -196,6 +196,34 @@ $activeFiltersCount = (int)!empty($filters['filterPriority'])
                                                 <span class="sep">·</span>
                                                 <span class="requester-email"><?= h($ticket->requester->email) ?></span>
                                             <?php endif; ?>
+
+                                            <?php
+                                            $ticketTags = $ticket->tags ?? [];
+                                            $visibleTags = array_slice($ticketTags, 0, 2);
+                                            $extraTags = max(0, count($ticketTags) - count($visibleTags));
+                                            $commentsCount = (int)($ticket->comments_count ?? 0);
+                                            ?>
+                                            <?php if (!empty($visibleTags) || $commentsCount > 0): ?>
+                                                <span class="meta-row-divider" aria-hidden="true"></span>
+                                                <span class="row-tags">
+                                                    <?php foreach ($visibleTags as $tag): ?>
+                                                        <span class="row-tag-chip"
+                                                              style="background:<?= h($tag->color) ?>1a; color:<?= h($tag->color) ?>; border-color:<?= h($tag->color) ?>33;"
+                                                              title="<?= h($tag->name) ?>">
+                                                            <?= h($tag->name) ?>
+                                                        </span>
+                                                    <?php endforeach; ?>
+                                                    <?php if ($extraTags > 0): ?>
+                                                        <span class="row-tag-more" title="<?= $extraTags ?> etiquetas más">+<?= $extraTags ?></span>
+                                                    <?php endif; ?>
+                                                </span>
+                                                <?php if ($commentsCount > 0): ?>
+                                                    <span class="row-comments" title="<?= $commentsCount ?> comentario<?= $commentsCount === 1 ? '' : 's' ?>">
+                                                        <i class="bi bi-chat-left-text"></i>
+                                                        <span class="mono"><?= $commentsCount ?></span>
+                                                    </span>
+                                                <?php endif; ?>
+                                            <?php endif; ?>
                                         </div>
                                     </td>
 

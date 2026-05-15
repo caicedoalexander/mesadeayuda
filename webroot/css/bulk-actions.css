@@ -108,6 +108,71 @@
 
 .cell-subject .meta-row .sep { color: var(--gray-300); }
 
+/* ── Row metadata: tags + comments count ── */
+.cell-subject .meta-row .meta-row-divider {
+    flex: 0 0 1px;
+    align-self: stretch;
+    margin: 2px 4px;
+    background: var(--gray-200);
+}
+
+.cell-subject .meta-row .row-tags {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: nowrap;
+    min-width: 0;
+}
+
+.cell-subject .meta-row .row-tag-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 7px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.5;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    background: var(--gray-100);
+    color: var(--gray-700);
+}
+
+.cell-subject .meta-row .row-tag-more {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--gray-100);
+    color: var(--gray-600);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+}
+
+.cell-subject .meta-row .row-comments {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--gray-500);
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.cell-subject .meta-row .row-comments i {
+    font-size: 12px;
+    color: var(--gray-400);
+}
+
+.cell-subject .meta-row .row-comments .mono {
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
 .ticket-subject-link {
     text-decoration: none;
     color: var(--gray-900);
