@@ -8,10 +8,8 @@ use Cake\ORM\Entity;
 /**
  * TicketTag Entity
  *
- * @property int $id
  * @property int $ticket_id
  * @property int $tag_id
- * @property \Cake\I18n\DateTime $created
  *
  * @property \App\Model\Entity\Ticket $ticket
  * @property \App\Model\Entity\Tag $tag
@@ -30,7 +28,6 @@ class TicketTag extends Entity
     protected array $_accessible = [
         'ticket_id' => true,
         'tag_id' => true,
-        'created' => true,
         'ticket' => true,
         'tag' => true,
     ];

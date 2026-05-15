@@ -40,10 +40,8 @@ class TicketTagsTable extends Table
         parent::initialize($config);
 
         $this->setTable('tickets_tags');
-        $this->setDisplayField('id');
-        $this->setPrimaryKey('id');
-
-        $this->addBehavior('Timestamp');
+        $this->setDisplayField('ticket_id');
+        $this->setPrimaryKey(['ticket_id', 'tag_id']);
 
         $this->belongsTo('Tickets', [
             'foreignKey' => 'ticket_id',
