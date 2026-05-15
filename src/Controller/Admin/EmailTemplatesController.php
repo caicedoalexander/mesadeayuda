@@ -3,16 +3,21 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
-use App\Constants\CacheConstants;
 use App\Constants\RoleConstants;
-use App\Service\EmailTemplateRenderer;
+use App\Notification\Email\Admin\TemplateDescriptor;
+use App\Notification\Email\EmailTheme;
+use App\Notification\Email\PreviewFixture;
+use App\Notification\Email\TemplateRegistry;
 use Cake\Event\EventInterface;
+use Cake\Http\Exception\NotFoundException;
+use InvalidArgumentException;
 
 /**
- * EmailTemplates Controller (Admin)
+ * EmailTemplates Controller (Admin) — read-only previewer.
  *
- * Manages email notification templates.
- * Extracted from SettingsController for SRP compliance.
+ * Templates live in code (App\Notification\Email\*). This controller lists
+ * registered templates and renders an HTML preview against a static fixture.
+ * Editing is intentionally not supported; changes require a deploy.
  */
 class EmailTemplatesController extends AppController
 {
@@ -24,75 +29,75 @@ class EmailTemplatesController extends AppController
     }
 
     /**
-     * List all email templates
+     * List all registered templates.
      */
-    public function index()
+    public function index(): void
     {
-        $templatesTable = $this->fetchTable('EmailTemplates');
-
-        if ($this->request->is('post')) {
-            $template = $templatesTable->newEntity($this->request->getData());
-
-            if ($templatesTable->save($template)) {
-                $this->Flash->success('Plantilla creada exitosamente.');
-
-                return $this->redirect(['action' => 'index']);
-            } else {
-                $this->Flash->error('Error al crear la plantilla.');
-            }
+        $registry = new TemplateRegistry();
+        $descriptors = [];
+        foreach ($registry->all() as $template) {
+            $descriptors[] = $this->descriptorFor($template->key());
         }
 
-        $templates = $templatesTable->find()->all();
-        $this->set(compact('templates'));
+        $this->set(compact('descriptors'));
     }
 
     /**
-     * Edit email template
+     * Render a preview of one template using fixture data.
      */
-    public function edit($id = null)
+    public function preview(?string $key = null): void
     {
-        $templatesTable = $this->fetchTable('EmailTemplates');
-        $template = $templatesTable->get($id);
+        $registry = new TemplateRegistry();
 
-        if ($this->request->is(['patch', 'post', 'put'])) {
-            $template = $templatesTable->patchEntity($template, $this->request->getData());
-
-            if ($templatesTable->save($template)) {
-                $this->Flash->success('Plantilla actualizada exitosamente.');
-
-                return $this->redirect(['action' => 'index']);
-            } else {
-                $this->Flash->error('Error al actualizar la plantilla.');
-            }
+        try {
+            $template = $registry->get((string)$key);
+        } catch (InvalidArgumentException) {
+            throw new NotFoundException();
         }
 
-        $this->set(compact('template'));
+        $ctx = PreviewFixture::context(PreviewFixture::variantForKey($template->key()));
+        $rendered = $template->render($ctx);
+
+        $this->viewBuilder()->setLayout('ajax');
+        $this->set([
+            'subject' => $rendered->subject,
+            'bodyHtml' => $rendered->bodyHtml,
+            'descriptor' => $this->descriptorFor($template->key()),
+        ]);
     }
 
-    /**
-     * Preview email template
-     */
-    public function preview($id = null)
+    private function descriptorFor(string $key): TemplateDescriptor
     {
-        $templatesTable = $this->fetchTable('EmailTemplates');
-        $template = $templatesTable->get($id);
-
-        $sampleData = [
-            'ticket_number' => 'TKT-2025-00001',
-            'subject' => 'Ejemplo de asunto del ticket',
-            'requester_name' => 'Juan Pérez',
-            'assignee_name' => 'María González',
-            'created_date' => date('d/m/Y H:i'),
-            'updated_date' => date('d/m/Y H:i'),
-            'ticket_url' => 'http://localhost:8080/tickets/view/1',
-            'system_title' => CacheConstants::DEFAULT_SYSTEM_TITLE,
-        ];
-
-        // Use the same renderer the live mailer uses so the preview reflects
-        // actual escaping behavior (text vars escaped, sanitized HTML passed through).
-        $previewBody = (new EmailTemplateRenderer())->render($template->body_html, $sampleData);
-
-        $this->viewBuilder()->setLayout(null);
-        $this->set(compact('previewBody', 'template'));
+        return match ($key) {
+            'ticket_created' => new TemplateDescriptor(
+                key: $key,
+                accentColor: EmailTheme::creacion()->accent,
+                accentSoftColor: EmailTheme::creacion()->accentSoft,
+                tag: EmailTheme::creacion()->tag,
+                description: 'Notifica al solicitante que su ticket fue creado correctamente.',
+            ),
+            'ticket_status_changed' => new TemplateDescriptor(
+                key: $key,
+                accentColor: EmailTheme::estado()->accent,
+                accentSoftColor: EmailTheme::estado()->accentSoft,
+                tag: EmailTheme::estado()->tag,
+                description: 'Notifica al solicitante que el estado de su ticket cambió.',
+            ),
+            'ticket_comment_added' => new TemplateDescriptor(
+                key: $key,
+                accentColor: EmailTheme::comentario()->accent,
+                accentSoftColor: EmailTheme::comentario()->accentSoft,
+                tag: EmailTheme::comentario()->tag,
+                description: 'Notifica al solicitante que un agente respondió a su ticket.',
+            ),
+            'ticket_updated' => new TemplateDescriptor(
+                key: $key,
+                accentColor: EmailTheme::actualizacion()->accent,
+                accentSoftColor: EmailTheme::actualizacion()->accentSoft,
+                tag: EmailTheme::actualizacion()->tag,
+                description: 'Combina cambio de estado y comentario en una sola notificación.',
+            ),
+            default => new TemplateDescriptor($key, '#6B7280', '#F3F4F6', '', ''),
+        };
     }
 }
