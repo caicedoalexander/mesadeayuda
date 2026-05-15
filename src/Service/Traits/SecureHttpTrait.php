@@ -126,9 +126,23 @@ trait SecureHttpTrait
                 'http_code' => 0,
                 'response' => null,
                 'error' => $resolution['error'],
+                'curl_errno' => 0,
             ];
         }
 
+        return $this->executeRawCurlPost($url, $jsonPayload, $headers, $timeout, $resolution);
+    }
+
+    /**
+     * Raw cURL POST. Caller must pass a pre-validated $resolution from
+     * resolveAndValidateUrl(). Returns the standard response shape plus
+     * curl_errno (used by ResilientHttpClient to decide retries).
+     *
+     * @param array{ok: bool, error: ?string, host: ?string, port: ?int, ip: ?string} $resolution
+     * @return array{success: bool, http_code: int, response: string|null, error: string|null, curl_errno: int}
+     */
+    private function executeRawCurlPost(string $url, string $jsonPayload, array $headers, int $timeout, array $resolution): array
+    {
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
@@ -151,6 +165,7 @@ trait SecureHttpTrait
         $response = curl_exec($ch);
         $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $error = curl_error($ch);
+        $errno = curl_errno($ch);
 
         if ($error) {
             return [
@@ -158,6 +173,7 @@ trait SecureHttpTrait
                 'http_code' => 0,
                 'response' => null,
                 'error' => $error,
+                'curl_errno' => $errno,
             ];
         }
 
@@ -166,6 +182,7 @@ trait SecureHttpTrait
             'http_code' => $httpCode,
             'response' => $response ?: null,
             'error' => $httpCode >= 300 ? 'HTTP ' . $httpCode : null,
+            'curl_errno' => $errno,
         ];
     }
 }
