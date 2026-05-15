@@ -60,7 +60,7 @@ final readonly class SystemConfig
      * Flat array of all setting key => value pairs.
      *
      * Used to bridge the VO into legacy code paths that still consume
-     * the raw settings array (ConfigResolutionTrait, EmailTemplateRenderer).
+     * the raw settings array (ConfigResolutionTrait).
      *
      * @return array<string, mixed>
      */
