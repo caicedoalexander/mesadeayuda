@@ -523,48 +523,18 @@
 /* ============================================
    Bulk Actions Bar — Sistema de diseño
    ============================================ */
-.bulk-bar {
-    display: inline-flex;
-    align-items: center;
+/* Trigger de acciones masivas. El stacking sobre el thead sticky se
+   resuelve en .tickets-toolbar (z-index: 20); .app-popover (z-index
+   1050 en components.css) garantiza que la dropdown quede sobre la
+   tabla cuando se abre. */
+.bulk-bar.btn-group {
     position: relative;
-    z-index: 1000;
 }
 
-.bulk-bar-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-/* Dropdown del bulk bar usa .app-popover de components.css */
-.bulk-bar .dropdown-menu.app-popover {
-    min-width: 200px;
-    margin-top: 6px;
-}
-
-/* Dropdown z-index para Bootstrap */
-.btn-group {
-    position: relative;
-    z-index: 1001;
-}
-
-.btn-group .dropdown-menu {
-    z-index: 1050 !important;
-}
-
-/* Modals: estilos y animación viven en components.css
-   (sección 08 · Overlays). */
-
-/* ============================================
-   Form Styles
-   ============================================ */
-.form-label {
-    font-weight: 600;
-    color: var(--gray-700);
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-}
-
+/* Inputs de los modals: estos overrides aplican a .form-control /
+   .form-select dentro de bulk_modals.php. Idealmente vivirían como
+   .modal-body .form-control / .form-select en components.css —
+   pendiente de extracción a la capa global. */
 .form-select,
 .form-control {
     border-radius: var(--radius-sm);
@@ -577,16 +547,6 @@
 .form-control:focus {
     border-color: var(--admin-green);
     box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.12);
-}
-
-/* ============================================
-   Alert Styles
-   ============================================ */
-.alert-danger {
-    border-color: #feb2b2;
-    color: #c53030;
-    border-radius: 8px;
-    padding: 0.75rem 1rem;
 }
 
 /* ============================================

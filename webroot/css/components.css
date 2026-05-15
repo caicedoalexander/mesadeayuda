@@ -204,6 +204,7 @@
 .app-popover {
     position: absolute;
     min-width: 200px;
+    margin-top: 6px;
     background: #fff;
     border: 1px solid var(--gray-200);
     border-radius: 10px;
