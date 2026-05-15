@@ -74,7 +74,10 @@ trait TicketListingTrait
         $commentsCountSub = $this->fetchTable('TicketComments')
             ->find()
             ->select(['c' => $query->func()->count('*')])
-            ->where(["TicketComments.ticket_id = {$tableAlias}.id"]);
+            ->where([
+                "TicketComments.ticket_id = {$tableAlias}.id",
+                'TicketComments.is_system_comment' => false,
+            ]);
         $query->select(['comments_count' => $commentsCountSub])->enableAutoFields(true);
         $validSortFields = $config['validSortFields'] ?? $this->getValidSortFields();
         $resolvedViews = ['resueltos', 'resueltas', 'completados'];
