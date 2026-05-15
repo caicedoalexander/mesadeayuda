@@ -2279,6 +2279,19 @@ textarea.app-input {
 
 .app-input-group input::placeholder { color: var(--gray-400); }
 
+/* Anular el background azul/amarillo que el navegador pinta sobre inputs
+   autocompletados. Sin esto, el flex gap se ve roto porque el autofill
+   se extiende hasta el borde del input. */
+.app-input-group input:-webkit-autofill,
+.app-input-group input:-webkit-autofill:hover,
+.app-input-group input:-webkit-autofill:focus,
+.app-input-group input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 1000px #fff inset;
+    -webkit-text-fill-color: var(--gray-900);
+    caret-color: var(--gray-900);
+    transition: background-color 5000s ease-in-out 0s;
+}
+
 .app-input-group .app-input-trail {
     border: none;
     background: none;
