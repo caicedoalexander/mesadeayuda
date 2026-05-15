@@ -111,7 +111,6 @@ $requesterEmail = $entity->requester->email ?? '';
             <button type="button" class="rt-btn" data-rt="quote" data-tip="Cita" data-tip-side="top" aria-label="Cita"><i class="bi bi-quote"></i></button>
             <span class="rt-divider" aria-hidden="true"></span>
             <button type="button" class="rt-btn" data-rt="link" data-tip="Enlace" data-tip-side="top" aria-label="Enlace"><i class="bi bi-link-45deg"></i></button>
-            <button type="button" class="rt-btn" data-rt="code" data-tip="Código" data-tip-side="top" aria-label="Código inline"><i class="bi bi-code"></i></button>
         </div>
 
         <?= $this->Form->hidden('comment_body', ['id' => 'comment-body-hidden']) ?>
