@@ -5,6 +5,10 @@ namespace App\Domain\Event;
 
 /**
  * Dispatched after a ticket's assignee_id is changed (including clearing).
+ *
+ * Currently has no listener after the email assignment notification was
+ * removed (see TicketNotificationListener). Remains in place for future
+ * audit/integration subscribers on the global EventManager.
  */
 final class TicketAssigned extends DomainEvent
 {

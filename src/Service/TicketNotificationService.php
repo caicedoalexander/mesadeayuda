@@ -92,9 +92,8 @@ class TicketNotificationService
      * Dispatch update notifications (Email only).
      *
      * @param \Cake\Datasource\EntityInterface $entity Ticket entity
-     * @param string $notificationType 'status_change', 'comment', 'response', 'assignment'
-     * @param array $context Additional context (old_status, new_status, comment,
-     *                       new_assignee_id, actor_id, etc.)
+     * @param string $notificationType 'status_change', 'comment', 'response'
+     * @param array $context Additional context (old_status, new_status, comment, etc.)
      * @return void
      */
     public function dispatchUpdateNotifications(
@@ -130,17 +129,6 @@ class TicketNotificationService
                         $context['additional_to'] ?? [],
                         $context['additional_cc'] ?? [],
                     );
-                    break;
-
-                case 'assignment':
-                    $newAssigneeId = $context['new_assignee_id'] ?? null;
-                    $actorId = $context['actor_id'] ?? null;
-                    // No assignee to notify (unassign), or actor self-assigned:
-                    // skip silently — we don't email an agent about their own action.
-                    if ($newAssigneeId === null || $newAssigneeId === $actorId) {
-                        break;
-                    }
-                    $this->emailService->sendEntityAssignmentNotification($entity);
                     break;
 
                 default:
