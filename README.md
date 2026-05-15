@@ -115,8 +115,16 @@ La configuración base vive en `config/app_local.php` (ignorado por Git). Variab
 | `SECURITY_SALT` | Salt para CSRF y encriptación |
 | `FULL_BASE_URL` | URL pública absoluta del sitio |
 | `TRUST_PROXY` | Habilitar cuando hay un proxy reverso al frente |
+| `RESILIENCE_CB_THRESHOLD` | Fallos consecutivos antes de abrir el Circuit Breaker (default `5`). Rollback de emergencia: `999999`. |
+| `RESILIENCE_CB_COOLDOWN` | Segundos en estado OPEN antes de probar HALF_OPEN (default `30`). |
+| `RESILIENCE_RETRY_ATTEMPTS` | Intentos máximos por llamada HTTP saliente (default `3`). |
+| `RESILIENCE_RETRY_BASE_MS` | Delay base de backoff exponencial en ms (default `200`). |
 
 Opcionalmente puede usarse un archivo `config/.env` (cargado por `josegonzalez/dotenv` desde `config/bootstrap.php`).
+
+### Resiliencia HTTP
+
+Llamadas HTTP salientes (WhatsApp, n8n, Gmail webhooks) usan Circuit Breaker + Retry vía `App\Service\Resilience\ResilientHttpClient`. El estado del breaker se persiste en el cache config `CacheConstants::CACHE_RESILIENCE` (`resilience`). En producción este cache debe usar un backend compartido entre workers (File o Redis), **no `Array`**. Spec: `docs/superpowers/specs/2026-05-15-tickets-resilience-design.md`.
 
 > Ajustes por tenant (tokens OAuth de Gmail, credenciales de integración, plantillas de email) se gestionan desde la interfaz `/admin`, persistidos en las tablas `system_settings` y `email_templates`.
 
