@@ -5,16 +5,16 @@
 - **Nivel:** standard
 - **Alcance:** 7 traits + 8 services + 4 events + 5 entities + 1 table + 1 listener + 1 view cell + 2 templates
 - **Referencia previa:** auditoría 2026-05-07 (~95% cerrada)
-- **Última actualización de progreso:** 2026-05-14 (ver §11)
+- **Última actualización de progreso:** 2026-05-15 (ver §11)
 
 ---
 
 ## 1. Resumen Ejecutivo
 
-| Indicador | Valor inicial | Estado actual (2026-05-14) |
+| Indicador | Valor inicial | Estado actual (2026-05-15) |
 |---|---|---|
-| Salud arquitectónica global | **68%** | **72%** — 2 hallazgos altos cerrados |
-| Hallazgos Críticos (rojo) | 3 | 3 |
+| Salud arquitectónica global | **68%** | **78%** — 2 altos + 2 críticos cerrados |
+| Hallazgos Críticos (rojo) | 3 | 1 (CRIT-1 y CRIT-2 cerrados) |
 | Hallazgos Altos (naranja) | 6 | 4 (HIGH-2 y HIGH-3 cerrados) |
 | Hallazgos Medios (amarillo) | 7 | 7 |
 | Hallazgos Bajos (verde) | 4 | 4 |
@@ -39,8 +39,8 @@
 | EDA / EventManager | Parcial | Notif. de "response" se llaman directo, no por bus | Amarillo |
 | Outbox Pattern | No | Ausente | Rojo |
 | Saga Pattern | No | Sin compensación en ingesta multi-paso | Naranja |
-| Circuit Breaker | No | Sin protección a APIs externas | Rojo |
-| Retry / Backoff | No | Errores transitorios son definitivos | Rojo |
+| Circuit Breaker | Sí | Alto (sobre `SecureHttpTrait`) | Verde |
+| Retry / Backoff | Sí | Alto (3 intentos, 5xx/429/timeout) | Verde |
 | Rate Limiter outbound | No | Solo inbound webhook tiene MIN_INTERVAL_SECONDS | Naranja |
 | Bulkhead | No | Canales de notif. ejecutan secuencialmente | Naranja |
 | Timeout | Sí | `secureCurlPost` clamp a 30s | Verde |
@@ -57,7 +57,7 @@
 
 ## 3. Hallazgos Críticos (Rojo)
 
-### CRIT-1 — Sin Circuit Breaker en llamadas a APIs externas
+### CRIT-1 — Sin Circuit Breaker en llamadas a APIs externas ✅ CERRADO 2026-05-15
 
 **Ubicaciones:**
 - `src/Service/WhatsappService.php:152` (Evolution API)
@@ -69,15 +69,19 @@
 
 **Fix sugerido:** Circuit Breaker aplicado sobre `SecureHttpTrait::secureCurlPost` cubre los 3 servicios en una sola intervención.
 
+**Fix aplicado:** Implementado vía `App\Service\Resilience\ResilientHttpClient` sobre `SecureHttpTrait::secureCurlPost`. Cubre WhatsApp/n8n/Gmail webhook POSTs. Llamadas a Gmail API vía `Google\Client` siguen fuera de scope. Detalle en §11.
+
 ---
 
-### CRIT-2 — Sin Retry / Backoff para errores transitorios
+### CRIT-2 — Sin Retry / Backoff para errores transitorios ✅ CERRADO 2026-05-15
 
 **Ubicaciones:** `WhatsappService:152`, `N8nService:107`, `GmailService:365-380`, `TicketAttachmentService:58-82`.
 
 **Riesgo concreto:** Un HTTP 429/503 transitorio en `downloadAttachment` se loguea como error y el adjunto **se pierde definitivamente** — no hay reintento.
 
 **Fix:** Retry con backoff exponencial + jitter para 5xx/429/`CURLE_OPERATION_TIMEOUTED`.
+
+**Fix aplicado:** Política conservadora (3 intentos, base 200ms, multiplier 2.5, jitter 100ms) en `App\Service\Resilience\RetryPolicy`. Detalle en §11.
 
 ---
 
@@ -218,7 +222,7 @@ El conflicto **más significativo** es EDA + Outbox + Transactional: aceptable h
 
 | # | Acción | Estado |
 |---|---|---|
-| 1 | Circuit Breaker + Retry sobre `SecureHttpTrait::secureCurlPost` (cubre WhatsApp, n8n, Gmail en una intervención) | Pendiente |
+| 1 | Circuit Breaker + Retry sobre `SecureHttpTrait::secureCurlPost` (cubre WhatsApp, n8n, Gmail en una intervención) | **Completado 2026-05-15** |
 | 2 | Transactional Outbox para `TicketCreated` y `TicketStatusChanged` | Pendiente |
 | 3 | Frontera transaccional en `handleResponse` con `Connection::transactional()` + dispatch post-commit | Pendiente |
 
@@ -309,4 +313,37 @@ LOW-1 a LOW-4: tratar cuando aparezca el caso de uso que los justifique.
 
 **Hallazgos derivados / cross-pattern actualizados:**
 - El conflicto `EDA ↔ Bus asimétrico` documentado en §8 sigue vigente: `sendResponseNotifications` continúa siendo llamado directo desde `TicketPipelineService`. Ahora el bus tiene 3/3 eventos de `Ticket.*` suscritos (`created`, `statusChanged`, `assigned`), pero la asimetría real está en los flujos de "response/comment" que no emiten evento. Ver MED-1 pendiente.
+
+---
+
+### 2026-05-15 — CRIT-1 + CRIT-2 cerrados: Circuit Breaker + Retry sobre `SecureHttpTrait`
+
+**Hallazgos cubiertos:** CRIT-1 (sin Circuit Breaker en APIs externas) y CRIT-2 (sin Retry/Backoff para errores transitorios).
+
+**Decisiones de diseño:**
+- Intervención única sobre `SecureHttpTrait::secureCurlPost` cubre WhatsApp, n8n y Gmail webhooks. Llamadas a Gmail API vía `Google\Client` quedan fuera de scope (no usan curl directo).
+- Estado del Circuit Breaker persiste en cache compartido (`CacheConstants::CACHE_RESILIENCE` → cache config `resilience`, backend File por defecto) — clave por host del URL.
+- Política de Retry conservadora: 3 intentos para 5xx/429/`CURLE_OPERATION_TIMEOUTED`, backoff exponencial ~200ms/500ms/1.25s + jitter (0–100ms).
+- 4xx no-429 NO cuentan como fallo del breaker (son errores del cliente).
+- Race conditions entre workers FPM: aceptables sin locking distribuido — pérdida acotada a un request extra antes de que el breaker abra.
+
+**Cambios:**
+- `src/Service/Resilience/` (nuevo): `RetryPolicy` (value object), `CircuitBreaker` (state machine CLOSED/OPEN/HALF_OPEN), `ResilientHttpClient` (orquestador), `CircuitOpenException`.
+- `src/Service/Traits/SecureHttpTrait.php`: curl extraído a `executeRawCurlPost()`; `secureCurlPost()` ahora delega al cliente resiliente y traduce `CircuitOpenException` al shape de error estándar (con clave `circuit_breaker => true`). Firma pública sin cambios.
+- `src/Constants/CacheConstants.php`: nueva constante `CACHE_RESILIENCE`.
+- `config/app.php`: bloque `Resilience.*` (con overrides vía env) + cache engine `resilience`.
+- `README.md`: documentadas variables de override y requisito de backend de cache compartido.
+- Tests: 23 nuevos (RetryPolicy ×7, CircuitBreaker ×8, ResilientHttpClient ×7, SecureHttpTrait ×1).
+
+**Despliegue:** sin migraciones, sin cambios de firma en `WhatsappService`/`N8nService`/`GmailService`. Rollback de emergencia: `RESILIENCE_CB_THRESHOLD=999999` en `.env`.
+
+**Validaciones:**
+- `composer test`: PASS — 89 tests, 179 asserts (88 antes → 89 nuevo + 22 nuevos en suite Resilience).
+- `phpstan analyse src/Service/Resilience src/Service/Traits/SecureHttpTrait.php`: 0 errores.
+- Bootstrap de CakePHP carga correctamente la config `Resilience.*` y el cache engine `resilience`.
+
+**Hallazgos derivados pendientes:**
+- Llamadas a Gmail API vía `Google\Client` siguen sin protección — requiere Guzzle middleware o decorator de `Google\Http\REST` (no en este alcance).
+- CRIT-3 (Outbox) sigue abierto — la resiliencia HTTP reduce pérdida pero no elimina el riesgo de mensaje perdido entre `save()` y `dispatch()`.
+- HIGH-1 (transaccionalidad de `handleResponse`) sigue abierto.
 
