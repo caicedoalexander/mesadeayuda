@@ -22,7 +22,7 @@
          underlying woff2 files and any pinned hash would expire silently. -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 
     <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
@@ -61,9 +61,6 @@
     <?= $this->Html->script('flash-messages') ?>
     <!-- Loading Spinner -->
     <?= $this->Html->script('loading-spinner') ?>
-    <!-- Marquee Text Animation -->
-    <?= $this->Html->script('marquee') ?>
-
     <?= $this->fetch('meta') ?>
     <?= $this->fetch('css') ?>
     <?= $this->fetch('script') ?>

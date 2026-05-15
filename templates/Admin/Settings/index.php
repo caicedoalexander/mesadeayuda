@@ -161,7 +161,7 @@ $n8nEnabled        = ($settings['n8n_enabled'] ?? '0') === '1';
                 'rows' => 10,
                 'spellcheck' => 'false',
                 'autocomplete' => 'off',
-                'style' => 'font-family: "Geist Mono", ui-monospace, monospace; font-size: 12px; line-height: 1.55;',
+                'style' => 'font-family: var(--font-mono); font-size: 12px; line-height: 1.55;',
                 'placeholder' => '{"web":{"client_id":"...","client_secret":"...","redirect_uris":["..."]}}',
                 'required' => true,
             ]) ?>

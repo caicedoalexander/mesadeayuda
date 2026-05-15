@@ -1,15 +1,19 @@
 /**
  * Sistema de Soporte - Estilos Personalizados
  * Bootstrap 5 + Custom CSS
+ *
+ * Fuentes (cargadas en templates/element/head.php):
+ *   - Geist           — primaria (UI)
+ *   - Geist Mono      — datos tabulares, IDs, timestamps  (class .mono)
+ *   - Instrument Serif — wordmark italic                  (class .serif-italic)
  */
 
-/* ============================================
-   FONT IMPORTS
-   ============================================ */
-
-@import url('https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap');
-
 :root {
+    /* Familias tipográficas */
+    --font-sans:  "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --font-mono:  "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --font-serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+
     --admin-green: #00A85E;
     --admin-orange: #CD6A15;
     --admin-blue: #0066cc;
@@ -34,11 +38,9 @@
     /* Brand color variants — soft = pill bg, ink = text on soft */
     --admin-green-light: #00D477;
     --admin-green-hover: #008f50;
-    --admin-green-rgb: 0, 168, 94;
     --admin-green-soft: #E6F7EE;
     --admin-green-ink: #00432a;
     --admin-orange-light: #F07D2D;
-    --admin-orange-rgb: 205, 106, 21;
     --admin-orange-soft: #FCEFE0;
     --admin-orange-ink: #6b3306;
     --admin-blue-soft: #E3EFFC;
@@ -48,33 +50,23 @@
 
     /* App surface */
     --bg-color: #FFFFFF;
+    --surface-light: #f8f9fa;
 
-    /* Semantic colors (aligned with Bootstrap 5 alert palette) */
-    --primary-color: #0d6efd;
+    /* Semánticos (alineados con Bootstrap 5) — documentados en DESIGN.md */
     --success-color: #198754;
     --danger-color: #dc3545;
     --warning-color: #ffc107;
     --info-color: #0dcaf0;
-
-    /* Surfaces (Bootstrap grays) */
-    --surface-light: #f8f9fa;
-    --surface-hover: #e9ecef;
-    --border-color: #dee2e6;
-    --border-hover: #adb5bd;
-    --text-muted: #6c757d;
 }
 
 /* ============================================
-   APLICACIÓN DE FUENTE GLOBAL
-   Para cambiar la fuente, modifica SOLO la línea siguiente:
-   var(--font-current)   → DM Sans (actual)
-   var(--font-option-1)  → Outfit (geométrica)
-   var(--font-option-2)  → Plus Jakarta Sans (humanista)
-   var(--font-option-3)  → Manrope (grotesca moderna)
-   var(--font-option-4)  → Bricolage Grotesque (única)
+   FUENTE GLOBAL
+   El sistema usa Geist (sans) para UI y Geist Mono para datos
+   tabulares vía la clase .mono. Familias definidas en :root como
+   --font-sans / --font-mono / --font-serif.
    ============================================ */
 * {
-    font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: var(--font-sans);
     font-optical-sizing: auto;
     font-style: normal;
 }
@@ -137,7 +129,7 @@ body {
 
 /* Helpers tipográficos del DS — wordmark Mesa de Ayuda */
 .serif-italic {
-    font-family: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+    font-family: var(--font-serif);
     font-style: italic;
     font-weight: 400;
 }
@@ -560,40 +552,6 @@ body {
 }
 
 /* ============================================
-   MARQUEE TEXT ANIMATION
-   ============================================ */
-.marquee-container {
-    position: relative;
-    overflow: hidden;
-    white-space: nowrap;
-}
-
-.marquee-text {
-    display: inline-block;
-    white-space: nowrap;
-    animation: marquee 15s linear infinite;
-    animation-play-state: paused;
-}
-
-.marquee-container:hover .marquee-text {
-    animation-play-state: running;
-}
-
-@keyframes marquee {
-    0% {
-        transform: translateX(0%);
-    }
-    100% {
-        transform: translateX(calc(-100% - 20px));
-    }
-}
-
-/* Variante que reinicia la animación */
-.marquee-text.marquee-active {
-    animation-play-state: running;
-}
-
-/* ============================================
    EMAIL RECIPIENTS TAGS (TagInput Component)
    ============================================ */
 #email-recipients-section {
@@ -877,7 +835,7 @@ body {
 
 /* ── Mono utility (IDs, timestamps) ──────────── */
 .mono {
-    font-family: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
 }
 .tnum { font-variant-numeric: tabular-nums; }

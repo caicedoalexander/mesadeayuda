@@ -95,7 +95,7 @@ $vars = json_decode($template->available_variables ?? '[]', true) ?: [];
             <?= $this->Form->textarea('body_html', [
                 'class' => 'mono',
                 'rows' => 20,
-                'style' => 'font-family: "Geist Mono", ui-monospace, monospace; font-size: 12px; line-height: 1.55; min-height: 320px;',
+                'style' => 'font-family: var(--font-mono); font-size: 12px; line-height: 1.55; min-height: 320px;',
             ]) ?>
             <small>Escribe el HTML del email. Usa las variables del bloque siguiente.</small>
         </div>

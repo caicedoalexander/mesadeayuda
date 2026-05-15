@@ -747,7 +747,7 @@
 }
 
 .app-tip-keycap {
-    font-family: "Geist Mono", ui-monospace, "SF Mono", monospace;
+    font-family: var(--font-mono);
     font-size: 10px;
     padding: 1px 5px;
     border-radius: 3px;
@@ -939,7 +939,7 @@
 }
 
 .file-item-progress-pct {
-    font-family: "Geist Mono", ui-monospace, monospace;
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
     font-size: 10px;
     color: var(--gray-500);
@@ -1144,7 +1144,7 @@
     color: var(--gray-700);
     font-size: 13px;
     font-weight: 500;
-    font-family: "Geist Mono", ui-monospace, monospace;
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
     display: inline-flex;
     align-items: center;
@@ -1207,7 +1207,7 @@
     display: inline-flex;
     align-items: center;
     gap: 12px;
-    font-family: "Geist Mono", ui-monospace, monospace;
+    font-family: var(--font-mono);
     font-size: 13px;
     color: var(--gray-700);
     font-variant-numeric: tabular-nums;
@@ -1246,7 +1246,7 @@
     border-radius: 7px;
     background: #fff;
     width: 70px;
-    font-family: "Geist Mono", ui-monospace, monospace;
+    font-family: var(--font-mono);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     text-align: center;
@@ -1449,7 +1449,7 @@ textarea.app-input {
 }
 
 .app-form-help.danger { color: var(--danger-color); }
-.app-form-help code   { font-family: "Geist Mono", ui-monospace, monospace; background: var(--gray-100); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+.app-form-help code   { font-family: var(--font-mono); background: var(--gray-100); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
 
 .app-form-row {
     display: grid;
@@ -1625,7 +1625,7 @@ textarea.app-input {
     font-weight: 600;
     color: var(--gray-500);
     font-variant-numeric: tabular-nums;
-    font-family: "Geist Mono", ui-monospace, monospace;
+    font-family: var(--font-mono);
 }
 
 .tag-swatch-count i {
@@ -1694,7 +1694,7 @@ textarea.app-input {
     border: none !important;
     background: var(--gray-50) !important;
     border-radius: 6px !important;
-    font-family: "Geist Mono", ui-monospace, monospace !important;
+    font-family: var(--font-mono) !important;
     font-size: 12px !important;
     color: var(--gray-700) !important;
     text-transform: uppercase;
@@ -2032,7 +2032,7 @@ textarea.app-input {
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    font-family: "Geist Mono", ui-monospace, "SF Mono", monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 1.6px;
@@ -2059,7 +2059,7 @@ textarea.app-input {
 
 .app-login-brand-headline .italic {
     display: block;
-    font-family: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+    font-family: var(--font-serif);
     font-style: italic;
     font-weight: 400;
     color: var(--admin-green-light);
@@ -2082,7 +2082,7 @@ textarea.app-input {
 }
 
 .app-login-brand-stat-value {
-    font-family: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+    font-family: var(--font-serif);
     font-size: 32px;
     font-weight: 500;
     line-height: 1;
@@ -2127,7 +2127,7 @@ textarea.app-input {
 .app-login-brand-foot .spacer { flex: 1; }
 
 .app-login-brand-foot .build {
-    font-family: "Geist Mono", ui-monospace, monospace;
+    font-family: var(--font-mono);
     font-size: 10px;
     opacity: 0.7;
 }
@@ -2480,7 +2480,7 @@ textarea.app-input {
 }
 
 .app-login-locale .flag {
-    font-family: "Geist Mono", ui-monospace, monospace;
+    font-family: var(--font-mono);
     font-size: 10px;
     font-weight: 700;
     color: var(--gray-500);
@@ -2616,7 +2616,7 @@ textarea.app-input {
     border-radius: 999px;
     background: var(--admin-blue-soft);
     color: var(--admin-blue-ink);
-    font-family: "Geist Mono", ui-monospace, monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     font-weight: 500;
     letter-spacing: 0.2px;

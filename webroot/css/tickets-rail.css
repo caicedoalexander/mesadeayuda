@@ -55,7 +55,7 @@
 }
 
 .rail-brand-title .ayuda {
-    font-family: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+    font-family: var(--font-serif);
     font-style: italic;
     font-weight: 400;
     color: var(--admin-green-light);
@@ -144,7 +144,7 @@
 }
 
 .rail-nav-count {
-    font-family: 'Geist Mono', ui-monospace, 'SF Mono', monospace;
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
     font-size: 11px;
     font-weight: 600;
