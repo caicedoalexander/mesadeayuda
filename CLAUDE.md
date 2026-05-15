@@ -30,7 +30,6 @@ bin/cake migrations migrate
 bin/cake migrations status
 bin/cake bake migration CreateFooTable
 bin/cake import_gmail --max 5         # manual Gmail ingest (prod path is the n8n webhook)
-bin/cake test_email                   # SMTP smoke test
 ```
 
 Pre-commit expectation: `composer cs-fix && composer cs-check` before any commit.
@@ -99,11 +98,19 @@ Reuse `SidebarCountsService`; do not query ticket tables from views.
 - Lazy DI is used in `TicketServiceInitializerTrait` for Gmail/n8n services (commit 01f498d) — keep it lazy; instantiating these eagerly inflates request latency.
 - HTML coming from email bodies must pass through `HtmlSanitizerTrait` (htmlpurifier) before render or storage.
 
+### CSS y sistema de diseño
+
+- Antes de usar una clase CSS en un template, verifica que el archivo que la define esté cargado por esa vista. Archivos cargados globalmente desde `templates/element/head.php`: `styles`, `components`, `badges`, `tickets-rail`. View-scoped: `tickets-view.css` (solo en la vista de detalle de ticket vía `element/tickets/styles_and_scripts.php`) y `bulk-actions.css` (solo en la vista index de tickets).
+- Si una clase se usa en más de una vista (o podría usarse), su CSS debe vivir en `webroot/css/components.css` y estar documentada en `docs/design/DESIGN.md` antes del merge. CSS view-scoped es solo para clases que viven exclusivamente dentro de esa ruta.
+- No dupliques una regla CSS en dos archivos. Si necesitas extender un componente compartido en un contexto específico, usa un modifier (`--row`, `--compact`, etc.) en el CSS view-scoped y deja el bloque base en `components.css`.
+- `docs/design/DESIGN.md` es la fuente única de los componentes del sistema de diseño. Cuando crees, renombres o muevas un componente compartido, actualiza DESIGN.md en el mismo commit que el CSS.
+
 ## Testing
 
 Tests live in `tests/TestCase/{Model,Service}/...` and bootstrap via `tests/bootstrap.php` (no fixtures wired by default — most existing tests are pure unit tests against domain logic and service traits). When adding integration-style tests that touch the ORM, add the necessary fixture wiring rather than mocking the Table layer.
 
 ## Reference docs
 
+- `docs/design/DESIGN.md` — design system source of truth (tokens, components, rules). All CSS variables live in `webroot/css/styles.css :root`; **never hardcode colors/spacing/radii in components** — read tokens from there. Add new component specs to this doc before implementing.
 - `docs/operations/n8n-gmail-webhook.md` — wiring of the Gmail import webhook.
-- `docs/audits/2026-05-07-architecture-audit.md`, `docs/audits/2026-05-09-dead-code-audit.md` — recent audit findings driving the active refactor direction (domain events, predicates, dead-code removal).
+- `docs/audits/2026-05-14-tickets-module-audit.md` — most recent audit driving the active refactor direction (domain events, predicates, dead-code removal).
