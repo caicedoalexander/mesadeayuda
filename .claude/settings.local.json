@@ -10,7 +10,9 @@
       "Read(//tmp/**)",
       "Bash(curl -sL \"https://api.anthropic.com/v1/design/h/nHJzWTJEO0P4aqUkjEMBmQ\" -o pkg.tar.gz)",
       "Bash(tar -xzf pkg.tar.gz)",
-      "WebFetch(domain:api.anthropic.com)"
+      "WebFetch(domain:api.anthropic.com)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'feat\\(resilience\\): add ResilientHttpClient orchestrator *)"
     ]
   }
 }
