@@ -85,7 +85,7 @@
 .ticket-topbar-status-wrap .dropdown-toggle::after { margin-left: 4px; }
 
 .ticket-topbar-status-menu {
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     border: 1px solid var(--gray-200);
     padding: 4px;
     min-width: 220px;
@@ -97,7 +97,7 @@
     align-items: center;
     gap: 9px;
     padding: 8px 10px !important;
-    border-radius: 6px !important;
+    border-radius: var(--radius-sm) !important;
     font-size: 13px !important;
     color: var(--gray-700) !important;
 }
@@ -226,7 +226,7 @@
     font-size: 10px;
     font-weight: 700;
     padding: 2px 7px;
-    border-radius: 4px;
+    border-radius: var(--radius-xs);
     letter-spacing: 0.5px;
     text-transform: uppercase;
     line-height: 1.4;
@@ -282,7 +282,7 @@
     padding: 8px 14px;
     background: var(--admin-orange-soft);
     color: var(--admin-orange-ink);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     font-size: 12px;
     font-weight: 600;
     text-align: center;
@@ -295,7 +295,7 @@
 .composer {
     margin: 4px 40px 24px;
     border: 1px solid var(--gray-200);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     overflow: hidden;
     background: #fff;
     box-shadow: var(--shadow-sm);
@@ -316,7 +316,7 @@
     align-items: center;
     gap: 6px;
     padding: 6px 12px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     font-size: 12px;
     font-weight: 500;
     color: var(--gray-600);
@@ -388,7 +388,7 @@
     align-items: center;
     gap: 6px;
     padding: 6px 10px;
-    border-radius: 7px;
+    border-radius: var(--radius-sm);
     color: var(--gray-600);
     background: transparent;
     border: 1px solid transparent;
@@ -423,7 +423,7 @@
     gap: 7px;
     height: 32px;
     padding: 0 11px;
-    border-radius: 7px;
+    border-radius: var(--radius-sm);
     border: 1px solid var(--gray-200);
     background: #fff;
     color: var(--gray-700);
@@ -441,7 +441,7 @@
 .composer-status-btn strong { font-weight: 600; color: var(--gray-900); }
 
 .composer-status-menu {
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     border: 1px solid var(--gray-200);
     padding: 4px;
     min-width: 200px;
@@ -452,7 +452,7 @@
     align-items: center;
     gap: 8px;
     padding: 7px 10px !important;
-    border-radius: 6px !important;
+    border-radius: var(--radius-sm) !important;
     font-size: 12px !important;
     color: var(--gray-700) !important;
 }
@@ -465,7 +465,7 @@
 .composer-shortcut {
     font-size: 11px;
     padding: 3px 8px;
-    border-radius: 4px;
+    border-radius: var(--radius-xs);
     background: var(--gray-50);
     border: 1px solid var(--gray-200);
     color: var(--gray-500);
@@ -729,7 +729,7 @@
     background: var(--admin-green-soft);
     color: var(--admin-green-ink);
     border: 1px dashed var(--admin-green);
-    border-radius: 7px;
+    border-radius: var(--radius-sm);
     font-size: 13px;
     font-weight: 600;
     text-decoration: none;
@@ -748,7 +748,7 @@
     padding: 6px 10px;
     background: var(--gray-50);
     border: 1px solid var(--gray-200);
-    border-radius: 7px;
+    border-radius: var(--radius-sm);
     font-size: 13px;
 }
 
@@ -766,7 +766,7 @@
     font-size: 10px;
     font-weight: 700;
     padding: 2px 6px;
-    border-radius: 4px;
+    border-radius: var(--radius-xs);
     background: var(--admin-green);
     color: #fff;
     text-transform: uppercase;
@@ -836,7 +836,7 @@
     justify-content: center;
     gap: 4px;
     padding: 7px 6px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     border: 1px solid var(--gray-200);
     background: #fff;
     color: var(--gray-600);
@@ -868,7 +868,7 @@
     align-items: center;
     gap: 4px;
     padding: 3px 9px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     border: 1px dashed var(--gray-300);
     background: transparent;
     color: var(--gray-500);
@@ -886,7 +886,7 @@
 .add-tag-dropdown { display: inline-block; }
 
 .add-tag-menu {
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     border: 1px solid var(--gray-200);
     padding: 4px;
     min-width: 200px;
@@ -910,7 +910,7 @@
     align-items: center;
     gap: 8px;
     padding: 6px 10px !important;
-    border-radius: 6px !important;
+    border-radius: var(--radius-sm) !important;
     font-size: 12px !important;
     color: var(--gray-700) !important;
 }
@@ -1007,7 +1007,7 @@
     align-items: center;
     gap: 8px;
     padding: 6px 10px;
-    border-radius: 7px;
+    border-radius: var(--radius-sm);
     border: 1px solid var(--gray-200);
     background: #fff;
     font-size: 12px;
@@ -1033,7 +1033,7 @@
 .thread-scroll::-webkit-scrollbar-thumb,
 .ticket-meta-sidebar::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.12);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
 }
 
 .thread-scroll::-webkit-scrollbar-thumb:hover,

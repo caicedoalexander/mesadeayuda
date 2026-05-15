@@ -60,12 +60,18 @@ Todos los tokens viven como CSS variables en `webroot/css/styles.css :root`.
 
 ### 1.4 · Radios
 
-| Token          | Valor  | Uso                                       |
-| -------------- | ------ | ----------------------------------------- |
-| `--radius-sm`  | `6px`  | Tags, chips, dropdown items               |
-| `--radius-md`  | `8px`  | Botones, inputs, cards pequeñas           |
-| `--radius-lg`  | `12px` | Cards, modales, contenedores grandes      |
-| _999px_        | —      | Pills (status, priority) — siempre full   |
+| Token          | Valor  | Uso                                                  |
+| -------------- | ------ | ---------------------------------------------------- |
+| `--radius-xs`  | `4px`  | Micro-chips, swatches, dividers, hits clickeables    |
+| `--radius-sm`  | `6px`  | Tags, chips, dropdown items, botones de fila         |
+| `--radius-md`  | `8px`  | Botones, inputs, cards pequeñas                      |
+| `--radius-lg`  | `12px` | Cards, modales, contenedores grandes                 |
+| _999px_        | —      | Pills (status, priority) — siempre full              |
+
+Valores literales **NO permitidos** fuera de geometría obvia (`height/2`
+para círculos perfectos). Si una propuesta de diseño exige un radio
+intermedio (p. ej. `10px`), discutirlo antes de hardcodearlo — el
+sistema sólo conoce los 4 tokens.
 
 ### 1.5 · Sombras
 
