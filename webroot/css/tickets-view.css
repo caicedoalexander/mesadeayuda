@@ -499,6 +499,73 @@
 .composer-char-counter.is-near-limit { color: var(--admin-orange); }
 .composer-char-counter.is-over-limit { color: var(--danger-color); font-weight: 600; }
 
+/* Emoji picker popover anclado al botón emoji del composer. */
+.composer-emoji-popover {
+    position: absolute;
+    z-index: 1080;
+    width: 320px;
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.composer-emoji-tabs {
+    display: flex;
+    gap: 2px;
+    border-bottom: 1px solid var(--gray-100);
+    padding-bottom: 6px;
+    overflow-x: auto;
+}
+
+.composer-emoji-tab {
+    flex-shrink: 0;
+    padding: 4px 9px;
+    border: 0;
+    background: transparent;
+    color: var(--gray-600);
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.composer-emoji-tab:hover { background: var(--gray-50); color: var(--gray-900); }
+.composer-emoji-tab.is-active { background: var(--admin-green-soft); color: var(--admin-green-ink); }
+
+.composer-emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 2px;
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 2px;
+}
+
+.composer-emoji-cell {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border: 0;
+    background: transparent;
+    font-size: 18px;
+    line-height: 1;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: background var(--transition-fast);
+}
+
+.composer-emoji-cell:hover { background: var(--gray-100); }
+.composer-emoji-cell:focus-visible { outline: 2px solid var(--admin-green); outline-offset: 1px; }
+
 /* Toolbar embebido en el composer: usamos la skin del DS pero descartamos
    los bordes externos (el composer ya aporta su contenedor) y dejamos
    sólo la línea inferior que separa del textarea. */

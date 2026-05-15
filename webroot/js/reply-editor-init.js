@@ -231,17 +231,128 @@
         });
     }
 
+    /**
+     * Lightweight emoji picker. Built lazily on first open, anchored
+     * to the trigger button, dismissed on outside click / Escape /
+     * selection. The picker remembers the editor's caret range so the
+     * insertion lands where the user left it (focus moves to the
+     * picker buttons while it's open).
+     */
+    const EMOJI_GROUPS = [
+        { label: 'Caras', emojis: ['😀','😄','🙂','😉','😊','😅','😂','🤣','😍','😘','😎','🤔','😐','😴','😢','😭','😡','🤯','🥳','🙃'] },
+        { label: 'Gestos', emojis: ['👍','👎','👌','✌️','🤝','🙏','👏','🙌','💪','👋','🤞','✋','🫡','👀','🫶','🤘'] },
+        { label: 'Objetos', emojis: ['📎','📌','📝','📅','📞','💻','🖥️','⌨️','🖱️','📱','💡','🔧','🔒','🔑','📦','📬','🛠️','🧰'] },
+        { label: 'Señales', emojis: ['✅','❌','⚠️','❗','❓','✔️','✖️','⭐','🔥','💯','🚀','⏰','📈','📉','💬','🔔','🆕','✨'] },
+        { label: 'Corazones', emojis: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','💖','💗','💞','💕','💘','💝'] },
+    ];
+
+    function insertAtCaret(editor, range, text) {
+        editor.focus();
+        const sel = window.getSelection();
+        if (range && editor.contains(range.startContainer)) {
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+        document.execCommand('insertText', false, text);
+        editor.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    function buildEmojiPopover(editor, anchorBtn) {
+        const pop = document.createElement('div');
+        pop.className = 'composer-emoji-popover';
+        pop.setAttribute('role', 'dialog');
+        pop.setAttribute('aria-label', 'Seleccionar emoji');
+
+        const tabs = document.createElement('div');
+        tabs.className = 'composer-emoji-tabs';
+        const grid = document.createElement('div');
+        grid.className = 'composer-emoji-grid';
+
+        let savedRange = null;
+        const renderGroup = function (group) {
+            grid.innerHTML = '';
+            group.emojis.forEach(function (em) {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'composer-emoji-cell';
+                b.textContent = em;
+                b.setAttribute('aria-label', em);
+                b.addEventListener('mousedown', function (ev) { ev.preventDefault(); });
+                b.addEventListener('click', function () {
+                    insertAtCaret(editor, savedRange, em);
+                    close();
+                });
+                grid.appendChild(b);
+            });
+        };
+
+        EMOJI_GROUPS.forEach(function (g, i) {
+            const t = document.createElement('button');
+            t.type = 'button';
+            t.className = 'composer-emoji-tab' + (i === 0 ? ' is-active' : '');
+            t.textContent = g.label;
+            t.addEventListener('mousedown', function (ev) { ev.preventDefault(); });
+            t.addEventListener('click', function () {
+                tabs.querySelectorAll('.composer-emoji-tab').forEach(function (x) { x.classList.remove('is-active'); });
+                t.classList.add('is-active');
+                renderGroup(g);
+            });
+            tabs.appendChild(t);
+        });
+
+        pop.appendChild(tabs);
+        pop.appendChild(grid);
+        renderGroup(EMOJI_GROUPS[0]);
+
+        const close = function () {
+            pop.remove();
+            document.removeEventListener('mousedown', onOutside, true);
+            document.removeEventListener('keydown', onKey, true);
+        };
+        const onOutside = function (ev) {
+            if (!pop.contains(ev.target) && ev.target !== anchorBtn) close();
+        };
+        const onKey = function (ev) {
+            if (ev.key === 'Escape') { ev.preventDefault(); close(); }
+        };
+
+        pop.__open = function (range) {
+            savedRange = range ? range.cloneRange() : null;
+            document.body.appendChild(pop);
+            const r = anchorBtn.getBoundingClientRect();
+            // Anchor above the button, aligned to its left edge, with viewport clamping.
+            const top = window.scrollY + r.top - pop.offsetHeight - 6;
+            let left = window.scrollX + r.left;
+            const maxLeft = window.scrollX + document.documentElement.clientWidth - pop.offsetWidth - 8;
+            if (left > maxLeft) left = maxLeft;
+            if (left < 8) left = 8;
+            pop.style.top = Math.max(top, window.scrollY + 8) + 'px';
+            pop.style.left = left + 'px';
+            document.addEventListener('mousedown', onOutside, true);
+            document.addEventListener('keydown', onKey, true);
+        };
+        pop.__close = close;
+        return pop;
+    }
+
     function bindEmojiButton(editor) {
         const btn = document.getElementById('emoji-btn');
         if (!btn) return;
-        const palette = ['🙂', '👍', '🙏', '✅', '⚠️', '❤️', '🚀', '📎'];
+        let popover = null;
+
         btn.addEventListener('mousedown', function (ev) { ev.preventDefault(); });
         btn.addEventListener('click', function (ev) {
             ev.preventDefault();
-            editor.focus();
-            const choice = palette[Math.floor(Math.random() * palette.length)];
-            document.execCommand('insertText', false, choice);
-            editor.dispatchEvent(new Event('input', { bubbles: true }));
+            if (popover && document.body.contains(popover)) {
+                popover.__close();
+                popover = null;
+                return;
+            }
+            // Snapshot the editor's caret BEFORE shifting focus into the popover.
+            const sel = window.getSelection();
+            const range = (sel && sel.rangeCount && editor.contains(sel.anchorNode)) ? sel.getRangeAt(0) : null;
+            popover = buildEmojiPopover(editor, btn);
+            popover.__open(range);
         });
     }
 
