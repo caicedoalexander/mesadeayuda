@@ -531,24 +531,6 @@
     position: relative;
 }
 
-/* Inputs de los modals: estos overrides aplican a .form-control /
-   .form-select dentro de bulk_modals.php. Idealmente vivirían como
-   .modal-body .form-control / .form-select en components.css —
-   pendiente de extracción a la capa global. */
-.form-select,
-.form-control {
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--gray-200);
-    padding: 0.55rem 0.75rem;
-    font-size: 0.9rem;
-}
-
-.form-select:focus,
-.form-control:focus {
-    border-color: var(--admin-green);
-    box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.12);
-}
-
 /* ============================================
    Table Footer (inside card)
    ============================================ */

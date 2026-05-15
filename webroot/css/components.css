@@ -134,6 +134,20 @@
     margin-bottom: 6px;
 }
 
+.modal-body .form-control,
+.modal-body .form-select {
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--gray-200);
+    padding: 0.55rem 0.75rem;
+    font-size: 0.9rem;
+}
+
+.modal-body .form-control:focus,
+.modal-body .form-select:focus {
+    border-color: var(--admin-green);
+    box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.12);
+}
+
 .modal-footer {
     padding: 12px 18px;
     border-top: 1px solid var(--gray-100);

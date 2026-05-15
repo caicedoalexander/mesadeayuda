@@ -325,7 +325,10 @@ Ver sección **6 · Empty states** (componente reutilizable
 ### 4.1 · Modal centrado — `.modal-dialog-centered-small`
 
 Ancho máximo **420px**. Header blanco con título en `--gray-900` + icono
-verde 16px. Body 16px de padding, label 11px uppercase. Footer en
+verde 16px. Body 16px de padding, label 11px uppercase. Inputs
+(`.form-control` / `.form-select`) dentro del body usan
+`--radius-sm`, borde `--gray-200`, padding `0.55rem 0.75rem`, foco con
+anillo `rgba(0,168,94,.12)` y borde `--admin-green`. Footer en
 `--gray-50` con dos botones (`.btn-brand-ghost btn-brand-sm` izquierda,
 `.btn-brand-primary btn-brand-sm` derecha).
 
