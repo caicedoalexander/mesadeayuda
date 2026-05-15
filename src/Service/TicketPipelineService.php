@@ -166,6 +166,9 @@ class TicketPipelineService
      * @param int|null $userId User performing the change
      * @param string|null $comment Optional override comment for the system entry
      * @param bool $sendNotifications Whether to dispatch the email notification
+     * @param bool $deferDispatch When true, suppresses inline event dispatch even if
+     *        $sendNotifications is true. Used by callers (e.g., handleResponse) that
+     *        wrap this call in a transaction and need to dispatch post-commit.
      * @return bool
      */
     public function changeStatus(
@@ -174,6 +177,7 @@ class TicketPipelineService
         ?int $userId = null,
         ?string $comment = null,
         bool $sendNotifications = true,
+        bool $deferDispatch = false,
     ): bool {
         $table = $this->fetchTable('Tickets');
         $oldStatus = $entity->status;
@@ -216,7 +220,7 @@ class TicketPipelineService
         $systemComment = $comment ?? "El estado cambió de '{$oldStatus}' a '{$newStatus}'";
         $this->comments->addComment($entity->id, $userId, $systemComment, TicketConstants::COMMENT_INTERNAL, true);
 
-        if ($sendNotifications) {
+        if ($sendNotifications && !$deferDispatch) {
             $this->eventManager->dispatch(new TicketStatusChanged(
                 ticketId: (int)$entity->id,
                 oldStatus: $oldStatus,
