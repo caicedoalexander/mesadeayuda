@@ -124,10 +124,10 @@
     min-width: 0;
 }
 
-/* Row-context modifier of .ticket-tag-chip: truncate long names inside
-   the dense table row. All other tokens (padding, radius, color tinting)
-   are inherited from the canonical chip in tickets-view.css. */
-.cell-subject .meta-row .ticket-tag-chip--row {
+/* Row-context modifier of .tag-chip: truncate long names inside the
+   dense table row. All other tokens (padding, radius, color tinting)
+   are inherited from the canonical chip in components.css. */
+.cell-subject .meta-row .tag-chip--row {
     max-width: 140px;
     overflow: hidden;
     text-overflow: ellipsis;
