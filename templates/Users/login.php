@@ -51,7 +51,7 @@ $buildVersion = date('Y.m.d');
             </div>
 
             <footer class="app-login-brand-foot">
-                <span>&copy; <?= date('Y') ?></span>
+                <span>&copy; <?= date('Y') ?> Operadora Cafetera</span>
                 <span class="sep"></span>
                 <a href="#" tabindex="-1">Términos</a>
                 <span class="sep"></span>
