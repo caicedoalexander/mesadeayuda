@@ -499,9 +499,6 @@
 .composer-char-counter.is-near-limit { color: var(--admin-orange); }
 .composer-char-counter.is-over-limit { color: var(--danger-color); font-weight: 600; }
 
-/* Spacer para empujar la Plantilla a la derecha del toolbar. */
-.rt-toolbar-spacer { flex: 1; }
-
 /* Toolbar embebido en el composer: usamos la skin del DS pero descartamos
    los bordes externos (el composer ya aporta su contenedor) y dejamos
    sólo la línea inferior que separa del textarea. */

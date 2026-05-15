@@ -689,8 +689,6 @@ contador, keycap `⌘⏎`, botón `Enviar`).
 embebido dentro del card `.composer` (el composer aporta el contenedor,
 así que la skin embedded del toolbar descarta los bordes externos —
 override scoped en `tickets-view.css :: .composer .rt-toolbar.full`).
-El espaciador `.rt-toolbar-spacer` empuja el botón **Plantilla**
-(`.rt-btn.rt-btn-text`, glifo `bi-file-earmark-text`) al extremo derecho.
 
 El footer del composer respeta la anatomía del DS:
 
@@ -716,9 +714,6 @@ El atajo `Ctrl/⌘ + Enter` se captura sobre `#comment-textarea` y dispara
   que un toolbar enorme.
 - Si se integra un editor real, pasar el HTML resultante por
   `HtmlSanitizerTrait` antes de persistir (CLAUDE.md).
-- El botón **Plantilla** emite el evento `composer:open-template-picker`
-  sobre `document` — el picker real (consumo de `email_templates` desde
-  la UI del agente) se conecta a ese evento cuando exista el endpoint.
 
 ---
 

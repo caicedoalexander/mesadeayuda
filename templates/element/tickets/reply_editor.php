@@ -112,10 +112,6 @@ $requesterEmail = $entity->requester->email ?? '';
             <span class="rt-divider" aria-hidden="true"></span>
             <button type="button" class="rt-btn" data-rt="link" data-tip="Enlace" data-tip-side="top" aria-label="Enlace"><i class="bi bi-link-45deg"></i></button>
             <button type="button" class="rt-btn" data-rt="code" data-tip="Código" data-tip-side="top" aria-label="Código inline"><i class="bi bi-code"></i></button>
-            <div class="rt-toolbar-spacer"></div>
-            <button type="button" class="rt-btn rt-btn-text" data-action="open-template-picker" aria-label="Insertar plantilla">
-                <i class="bi bi-file-earmark-text"></i> Plantilla
-            </button>
         </div>
 
         <?= $this->Form->hidden('comment_body', ['id' => 'comment-body-hidden']) ?>

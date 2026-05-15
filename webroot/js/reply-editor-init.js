@@ -231,15 +231,6 @@
         });
     }
 
-    function bindTemplatePicker() {
-        const btn = document.querySelector('[data-action="open-template-picker"]');
-        if (!btn) return;
-        btn.addEventListener('click', function (ev) {
-            ev.preventDefault();
-            document.dispatchEvent(new CustomEvent('composer:open-template-picker'));
-        });
-    }
-
     function bindEmojiButton(editor) {
         const btn = document.getElementById('emoji-btn');
         if (!btn) return;
@@ -288,7 +279,6 @@
         bindCounter(editor);
         bindHiddenSync(editor);
         bindSubmitShortcut(editor);
-        bindTemplatePicker();
         bindEmojiButton(editor);
         bindPlainPaste(editor);
     });
