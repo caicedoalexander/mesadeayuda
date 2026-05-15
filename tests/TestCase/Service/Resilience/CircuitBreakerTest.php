@@ -61,4 +61,61 @@ final class CircuitBreakerTest extends TestCase
         $breaker->recordFailure('api.example.com');
         $this->assertTrue($breaker->isAvailable('api.example.com'));
     }
+
+    public function testOpenBreakerRejectsBeforeCooldown(): void
+    {
+        $breaker = new CircuitBreaker(self::CACHE_KEY, failureThreshold: 1, cooldownSeconds: 30);
+        $breaker->recordFailure('api.example.com');
+        $this->assertFalse($breaker->isAvailable('api.example.com'));
+        $this->assertGreaterThanOrEqual(0, $breaker->secondsOpen('api.example.com'));
+    }
+
+    public function testOpenBreakerPromotesToHalfOpenAfterCooldown(): void
+    {
+        $breaker = new CircuitBreaker(self::CACHE_KEY, failureThreshold: 1, cooldownSeconds: 30);
+        $breaker->recordFailure('api.example.com');
+
+        Cache::write('cb_api.example.com', [
+            'state' => 'open',
+            'failures' => 1,
+            'openedAt' => time() - 60,
+        ], self::CACHE_KEY);
+
+        $this->assertTrue($breaker->isAvailable('api.example.com'));
+
+        $stored = Cache::read('cb_api.example.com', self::CACHE_KEY);
+        $this->assertSame('half_open', $stored['state']);
+    }
+
+    public function testHalfOpenSuccessClosesBreaker(): void
+    {
+        $breaker = new CircuitBreaker(self::CACHE_KEY, failureThreshold: 1, cooldownSeconds: 30);
+        Cache::write('cb_api.example.com', [
+            'state' => 'half_open',
+            'failures' => 1,
+            'openedAt' => time() - 60,
+        ], self::CACHE_KEY);
+
+        $breaker->recordSuccess('api.example.com');
+
+        $stored = Cache::read('cb_api.example.com', self::CACHE_KEY);
+        $this->assertSame('closed', $stored['state']);
+        $this->assertSame(0, $stored['failures']);
+    }
+
+    public function testHalfOpenFailureReopensBreaker(): void
+    {
+        $breaker = new CircuitBreaker(self::CACHE_KEY, failureThreshold: 99, cooldownSeconds: 30);
+        Cache::write('cb_api.example.com', [
+            'state' => 'half_open',
+            'failures' => 1,
+            'openedAt' => time() - 60,
+        ], self::CACHE_KEY);
+
+        $breaker->recordFailure('api.example.com');
+
+        $stored = Cache::read('cb_api.example.com', self::CACHE_KEY);
+        $this->assertSame('open', $stored['state']);
+        $this->assertGreaterThanOrEqual(time() - 2, (int)$stored['openedAt']);
+    }
 }
