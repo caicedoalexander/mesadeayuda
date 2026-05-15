@@ -124,33 +124,27 @@
     min-width: 0;
 }
 
-.cell-subject .meta-row .row-tag-chip {
-    display: inline-flex;
-    align-items: center;
-    padding: 1px 7px;
-    border-radius: 999px;
-    border: 1px solid transparent;
-    font-size: 11px;
-    font-weight: 500;
-    line-height: 1.5;
+/* Row-context modifier of .ticket-tag-chip: truncate long names inside
+   the dense table row. All other tokens (padding, radius, color tinting)
+   are inherited from the canonical chip in tickets-view.css. */
+.cell-subject .meta-row .ticket-tag-chip--row {
     max-width: 140px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    background: var(--gray-100);
-    color: var(--gray-700);
 }
 
 .cell-subject .meta-row .row-tag-more {
     display: inline-flex;
     align-items: center;
-    padding: 1px 6px;
-    border-radius: 999px;
+    padding: 3px 9px;
+    border-radius: 6px;
+    border: 1px solid transparent;
     background: var(--gray-100);
     color: var(--gray-600);
     font-size: 11px;
     font-weight: 600;
-    line-height: 1.5;
+    line-height: 1.4;
     letter-spacing: 0.01em;
 }
 

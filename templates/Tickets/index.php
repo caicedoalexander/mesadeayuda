@@ -207,8 +207,8 @@ $activeFiltersCount = (int)!empty($filters['filterPriority'])
                                                 <span class="row-tags">
                                                     <?php foreach ($visibleTags as $tag): ?>
                                                         <span class="thread-meta-sep"></span>
-                                                        <span class="row-tag-chip"
-                                                              style="background:<?= h($tag->color) ?>1a; color:<?= h($tag->color) ?>; border-color:<?= h($tag->color) ?>33;"
+                                                        <span class="ticket-tag-chip ticket-tag-chip--row"
+                                                              style="background:<?= h($tag->color) ?>20; color:<?= h($tag->color) ?>; border-color:<?= h($tag->color) ?>40;"
                                                               title="<?= h($tag->name) ?>">
                                                             <?= h($tag->name) ?>
                                                         </span>
@@ -220,7 +220,7 @@ $activeFiltersCount = (int)!empty($filters['filterPriority'])
                                                 <?php if ($commentsCount > 0): ?>
                                                     <span class="thread-meta-sep"></span>
                                                     <span class="row-comments" title="<?= $commentsCount ?> comentario<?= $commentsCount === 1 ? '' : 's' ?>">
-                                                        <i class="bi bi-chat-left-text"></i>
+                                                        <i class="bi bi-chat-left"></i>
                                                         <span class="mono"><?= $commentsCount ?></span>
                                                     </span>
                                                 <?php endif; ?>
