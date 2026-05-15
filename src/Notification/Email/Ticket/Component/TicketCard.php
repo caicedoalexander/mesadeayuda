@@ -26,6 +26,12 @@ final class TicketCard
         '#00A85E', '#CD6A15', '#0066cc', '#7c3aed', '#0891b2', '#dc3545',
     ];
 
+    /**
+     * Render the ticket card.
+     *
+     * @param \App\Model\Entity\Ticket $ticket Hydrated ticket entity (requester/assignee/tags expected)
+     * @return string HTML markup
+     */
     public static function render(Ticket $ticket): string
     {
         $number = (string)($ticket->ticket_number ?? '');
@@ -62,11 +68,16 @@ final class TicketCard
             headerLeftHtml: $headerLeft,
             headerRightHtml: $headerRight,
             title: $subject,
-            tags: array_values(array_filter(array_map('strval', $tags), static fn ($t) => $t !== '')),
+            tags: array_values(array_filter(array_map('strval', $tags), static fn($t) => $t !== '')),
             metaColumns: $metaColumns,
         );
     }
 
+    /**
+     * @param mixed $person User entity or null
+     * @param string|null $fallbackLabel Text shown when $person is null; null renders an "unassigned" pill
+     * @return string HTML markup
+     */
     private static function renderPerson(mixed $person, ?string $fallbackLabel): string
     {
         if ($person === null) {

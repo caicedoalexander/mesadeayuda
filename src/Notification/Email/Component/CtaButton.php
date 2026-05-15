@@ -9,6 +9,14 @@ namespace App\Notification\Email\Component;
  */
 final class CtaButton
 {
+    /**
+     * Render the CTA button block.
+     *
+     * @param string $label Button label
+     * @param string $accent Accent hex color used for background and shadow
+     * @param string $url Destination URL
+     * @return string HTML markup
+     */
     public static function render(string $label, string $accent, string $url): string
     {
         $safeLabel = htmlspecialchars($label, ENT_QUOTES | ENT_HTML5, 'UTF-8');

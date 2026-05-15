@@ -17,6 +17,15 @@ final class InfoBox
     public const VARIANT_SOLID = 'solid';
     public const VARIANT_SOFT = 'soft';
 
+    /**
+     * Render a boxed section with an uppercase label header.
+     *
+     * @param string $label Label text (escaped)
+     * @param string $contentHtml Raw HTML body content
+     * @param string $variant One of VARIANT_DASHED, VARIANT_SOLID, VARIANT_SOFT
+     * @param string|null $accentSoft Soft accent hex color (required for VARIANT_SOFT)
+     * @return string HTML markup
+     */
     public static function render(
         string $label,
         string $contentHtml,

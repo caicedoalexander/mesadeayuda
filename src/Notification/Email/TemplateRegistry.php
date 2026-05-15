@@ -15,9 +15,14 @@ use InvalidArgumentException;
  */
 final class TemplateRegistry
 {
-    /** @var array<string, EmailTemplate> */
+    /**
+     * @var array<string, \App\Notification\Email\EmailTemplate>
+     */
     private array $templates = [];
 
+    /**
+     * Build the registry with every known template implementation.
+     */
     public function __construct()
     {
         $instances = [
@@ -32,6 +37,11 @@ final class TemplateRegistry
         }
     }
 
+    /**
+     * @param string $key Template registry key
+     * @return \App\Notification\Email\EmailTemplate
+     * @throws \InvalidArgumentException When the key is not registered
+     */
     public function get(string $key): EmailTemplate
     {
         if (!isset($this->templates[$key])) {
@@ -41,7 +51,7 @@ final class TemplateRegistry
         return $this->templates[$key];
     }
 
-    /** @return list<EmailTemplate> */
+    /** @return list<\App\Notification\Email\EmailTemplate> */
     public function all(): array
     {
         return array_values($this->templates);

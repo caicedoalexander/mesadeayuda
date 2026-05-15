@@ -12,6 +12,14 @@ use App\Notification\Email\EmailTheme;
  */
 final class EmailFrame
 {
+    /**
+     * Render the full email wrap around the given inner HTML.
+     *
+     * @param \App\Notification\Email\EmailTheme $theme Theme that drives the accent bar/footer colors
+     * @param string $innerHtml Body HTML to embed
+     * @param string $ticketReference Short ticket reference shown in header/footer
+     * @return string HTML markup
+     */
     public static function render(EmailTheme $theme, string $innerHtml, string $ticketReference): string
     {
         $canvasStyle = 'background:#E8E6E1;padding:32px 20px;'
@@ -32,6 +40,10 @@ final class EmailFrame
             . '</div></div>';
     }
 
+    /**
+     * @param string $ticketReference Short ticket reference (e.g. "#1284")
+     * @return string Header HTML
+     */
     private static function renderHeader(string $ticketReference): string
     {
         $h = 'padding:26px 48px 20px;display:flex;align-items:center;gap:12px;'
@@ -50,6 +62,11 @@ final class EmailFrame
         return '<div style="' . $h . '">' . $logo . $title . $ref . '</div>';
     }
 
+    /**
+     * @param \App\Notification\Email\EmailTheme $theme Theme used for the accent link color
+     * @param string $ticketReference Short ticket reference
+     * @return string Footer HTML
+     */
     private static function renderFooter(EmailTheme $theme, string $ticketReference): string
     {
         $wrap = 'padding:24px 48px 32px;border-top:1px solid #F3F4F6;background:#FAFAF9;';

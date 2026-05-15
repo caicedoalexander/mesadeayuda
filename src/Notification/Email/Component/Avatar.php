@@ -9,6 +9,14 @@ namespace App\Notification\Email\Component;
  */
 final class Avatar
 {
+    /**
+     * Render the avatar markup.
+     *
+     * @param string $initials Already-escaped or plain initials text
+     * @param string $color Background hex color
+     * @param int $size Pixel size for width/height
+     * @return string HTML markup
+     */
     public static function render(string $initials, string $color, int $size = 32): string
     {
         $fontSize = (int)round($size * 0.4);

@@ -9,7 +9,16 @@ namespace App\Notification\Email;
  */
 interface EmailTemplate
 {
+    /**
+     * Unique registry key for this template (e.g. "ticket_created").
+     */
     public function key(): string;
 
+    /**
+     * Render subject + body HTML against the given context.
+     *
+     * @param \App\Notification\Email\TemplateContext $ctx Input bag
+     * @return \App\Notification\Email\RenderedEmail Rendered subject + body
+     */
     public function render(TemplateContext $ctx): RenderedEmail;
 }

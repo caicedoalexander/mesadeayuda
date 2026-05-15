@@ -22,11 +22,17 @@ use DateTimeInterface;
  */
 final class TicketCommentAddedTemplate implements EmailTemplate
 {
+    /**
+     * @inheritDoc
+     */
     public function key(): string
     {
         return 'ticket_comment_added';
     }
 
+    /**
+     * @inheritDoc
+     */
     public function render(TemplateContext $ctx): RenderedEmail
     {
         $theme = EmailTheme::comentario();
@@ -69,6 +75,10 @@ final class TicketCommentAddedTemplate implements EmailTemplate
         ));
     }
 
+    /**
+     * @param \App\Notification\Email\TemplateContext $ctx Context with optional actor
+     * @return string Display name, falling back to "Mesa de Ayuda"
+     */
     private function resolveAgentName(TemplateContext $ctx): string
     {
         if ($ctx->actor === null) {
@@ -80,6 +90,10 @@ final class TicketCommentAddedTemplate implements EmailTemplate
         return $name === '' ? 'Mesa de Ayuda' : $name;
     }
 
+    /**
+     * @param \App\Notification\Email\EmailTheme $theme Theme used for the hint icon
+     * @return string Reply-hint HTML
+     */
     private function renderReplyHint(EmailTheme $theme): string
     {
         $wrap = 'display:flex;align-items:center;gap:12px;padding:12px 14px;'

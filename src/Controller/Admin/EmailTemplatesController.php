@@ -21,6 +21,10 @@ use InvalidArgumentException;
  */
 class EmailTemplatesController extends AppController
 {
+    /**
+     * @param \Cake\Event\EventInterface $event Filter event
+     * @return \Cake\Http\Response|null Redirect when the role check fails
+     */
     public function beforeFilter(EventInterface $event)
     {
         parent::beforeFilter($event);
@@ -66,6 +70,10 @@ class EmailTemplatesController extends AppController
         ]);
     }
 
+    /**
+     * @param string $key Template registry key
+     * @return \App\Notification\Email\Admin\TemplateDescriptor
+     */
     private function descriptorFor(string $key): TemplateDescriptor
     {
         return match ($key) {

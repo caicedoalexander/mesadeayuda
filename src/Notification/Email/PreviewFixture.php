@@ -21,6 +21,12 @@ final class PreviewFixture
     public const VARIANT_COMMENT = 'comment';
     public const VARIANT_UPDATED = 'updated';
 
+    /**
+     * Build a TemplateContext for the given preview variant.
+     *
+     * @param string $variant One of the VARIANT_* constants
+     * @return \App\Notification\Email\TemplateContext
+     */
     public static function context(string $variant): TemplateContext
     {
         $requester = new User();
@@ -65,7 +71,7 @@ final class PreviewFixture
             'created' => new DateTime('2026-05-14 13:50:00'),
         ], ['guard' => false]);
 
-        $ctx = static fn (array $extra): TemplateContext => new TemplateContext(
+        $ctx = static fn(array $extra): TemplateContext => new TemplateContext(
             ticket: $ticket,
             ticketUrl: 'https://example.com/tickets/view/1',
             recipientName: 'Alexander',

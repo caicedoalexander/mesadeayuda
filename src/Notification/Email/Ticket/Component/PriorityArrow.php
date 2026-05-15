@@ -18,6 +18,12 @@ final class PriorityArrow
         'baja' => ['color' => '#6B7280', 'glyph' => '↓', 'label' => 'Baja'],
     ];
 
+    /**
+     * Render the priority indicator.
+     *
+     * @param string $priority Priority key (alta|media|baja); unknown values fall back to a gray pill
+     * @return string HTML markup
+     */
     public static function render(string $priority): string
     {
         $t = self::MAP[$priority] ?? [

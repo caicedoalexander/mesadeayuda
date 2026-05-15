@@ -19,11 +19,17 @@ use App\Notification\Email\Ticket\Component\TicketCard;
  */
 final class TicketCreatedTemplate implements EmailTemplate
 {
+    /**
+     * @inheritDoc
+     */
     public function key(): string
     {
         return 'ticket_created';
     }
 
+    /**
+     * @inheritDoc
+     */
     public function render(TemplateContext $ctx): RenderedEmail
     {
         $theme = EmailTheme::creacion();
@@ -40,7 +46,8 @@ final class TicketCreatedTemplate implements EmailTemplate
         $inner =
             Greeting::render(
                 headline: 'Tu ticket fue creado',
-                intro: 'hemos recibido tu solicitud y la asignaremos pronto a un agente. Mientras tanto, este es el resumen:',
+                intro: 'hemos recibido tu solicitud y la asignaremos pronto a un agente. '
+                    . 'Mientras tanto, este es el resumen:',
                 recipientName: $ctx->recipientName,
             )
             . TicketCard::render($ctx->ticket)

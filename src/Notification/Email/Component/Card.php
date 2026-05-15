@@ -10,8 +10,14 @@ namespace App\Notification\Email\Component;
 final class Card
 {
     /**
-     * @param list<string> $tags Plain text tags rendered as gray pills.
-     * @param list<array{label:string, valueHtml:string}> $metaColumns 0, 1 or 2 columns.
+     * Render the generic card.
+     *
+     * @param string $headerLeftHtml Raw HTML for the left header slot
+     * @param string $headerRightHtml Raw HTML for the right header slot
+     * @param string $title Card title (escaped)
+     * @param list<string> $tags Plain text tags rendered as gray pills
+     * @param list<array{label:string, valueHtml:string}> $metaColumns 0, 1 or 2 meta columns
+     * @return string HTML markup
      */
     public static function render(
         string $headerLeftHtml,

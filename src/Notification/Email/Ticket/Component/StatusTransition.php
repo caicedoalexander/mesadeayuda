@@ -11,6 +11,14 @@ use App\Notification\Email\Component\Pill;
  */
 final class StatusTransition
 {
+    /**
+     * Render the status transition block.
+     *
+     * @param string $from Previous status key
+     * @param string $to New status key
+     * @param string $accent Hex accent color used on the "after" box
+     * @return string HTML markup
+     */
     public static function render(string $from, string $to, string $accent): string
     {
         $boxStyle = 'border:1px solid #E5E7EB;border-radius:10px;'

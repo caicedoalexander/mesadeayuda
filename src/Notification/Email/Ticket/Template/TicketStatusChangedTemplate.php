@@ -21,11 +21,17 @@ use App\Service\Renderer\NotificationRenderer;
  */
 final class TicketStatusChangedTemplate implements EmailTemplate
 {
+    /**
+     * @inheritDoc
+     */
     public function key(): string
     {
         return 'ticket_status_changed';
     }
 
+    /**
+     * @inheritDoc
+     */
     public function render(TemplateContext $ctx): RenderedEmail
     {
         $theme = EmailTheme::estado();
@@ -40,7 +46,8 @@ final class TicketStatusChangedTemplate implements EmailTemplate
         $inner =
             Greeting::render(
                 headline: 'El estado de tu ticket cambió',
-                intro: 'te avisamos porque hay un cambio en el seguimiento. El nuevo estado refleja la acción más reciente del agente:',
+                intro: 'te avisamos porque hay un cambio en el seguimiento. '
+                    . 'El nuevo estado refleja la acción más reciente del agente:',
                 recipientName: $ctx->recipientName,
             )
             . StatusTransition::render($oldStatus, $newStatus, $theme->accent)
@@ -53,6 +60,11 @@ final class TicketStatusChangedTemplate implements EmailTemplate
         return new RenderedEmail($subject, $body);
     }
 
+    /**
+     * @param \App\Notification\Email\TemplateContext $ctx Context with optional actor
+     * @param \App\Notification\Email\EmailTheme $theme Theme used for the banner
+     * @return string Banner HTML, or empty string when no actor
+     */
     private function renderActorBanner(TemplateContext $ctx, EmailTheme $theme): string
     {
         if ($ctx->actor === null) {

@@ -12,6 +12,18 @@ use App\Notification\Email\Component\Avatar;
  */
 final class CommentBlock
 {
+    /**
+     * Render the comment block.
+     *
+     * @param string $authorName Comment author display name
+     * @param string $authorRole Comment author role label
+     * @param string $authorColor Hex color used for the avatar background
+     * @param string $bodyHtml Already-sanitized comment body HTML (inserted raw)
+     * @param string $accent Accent hex color
+     * @param string $accentSoft Soft accent hex color used for the header background
+     * @param string $timestamp Pre-formatted timestamp shown next to the author
+     * @return string HTML markup
+     */
     public static function render(
         string $authorName,
         string $authorRole,

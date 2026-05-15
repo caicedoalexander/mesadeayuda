@@ -20,11 +20,17 @@ use App\Notification\Email\Ticket\Component\TicketCard;
  */
 final class TicketUpdatedTemplate implements EmailTemplate
 {
+    /**
+     * @inheritDoc
+     */
     public function key(): string
     {
         return 'ticket_updated';
     }
 
+    /**
+     * @inheritDoc
+     */
     public function render(TemplateContext $ctx): RenderedEmail
     {
         $theme = EmailTheme::actualizacion();
@@ -35,7 +41,8 @@ final class TicketUpdatedTemplate implements EmailTemplate
         $inner =
             Greeting::render(
                 headline: 'Tu ticket fue actualizado',
-                intro: 'hubo dos cambios en tu ticket: cambió el estado y un agente añadió un comentario. Aquí el detalle:',
+                intro: 'hubo dos cambios en tu ticket: cambió el estado y un agente añadió un comentario. '
+                    . 'Aquí el detalle:',
                 recipientName: $ctx->recipientName,
             )
             . $this->renderBadgeBanner($theme)
@@ -63,6 +70,10 @@ final class TicketUpdatedTemplate implements EmailTemplate
         ));
     }
 
+    /**
+     * @param \App\Notification\Email\TemplateContext $ctx Context with optional actor
+     * @return string Display name, falling back to "Mesa de Ayuda"
+     */
     private function resolveAgentName(TemplateContext $ctx): string
     {
         if ($ctx->actor === null) {
@@ -74,6 +85,10 @@ final class TicketUpdatedTemplate implements EmailTemplate
         return $name === '' ? 'Mesa de Ayuda' : $name;
     }
 
+    /**
+     * @param \App\Notification\Email\EmailTheme $theme Theme used for the banner pills
+     * @return string Badge banner HTML
+     */
     private function renderBadgeBanner(EmailTheme $theme): string
     {
         $wrap = 'display:flex;align-items:center;gap:8px;padding:12px 14px;'

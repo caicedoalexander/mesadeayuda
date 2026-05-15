@@ -9,6 +9,14 @@ namespace App\Notification\Email\Component;
  */
 final class Greeting
 {
+    /**
+     * Render the greeting block.
+     *
+     * @param string $headline Top headline (escaped)
+     * @param string $intro Intro paragraph (escaped)
+     * @param string $recipientName Recipient name; empty string omits "Hola"
+     * @return string HTML markup
+     */
     public static function render(string $headline, string $intro, string $recipientName): string
     {
         $h = htmlspecialchars($headline, ENT_QUOTES | ENT_HTML5, 'UTF-8');

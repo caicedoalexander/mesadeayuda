@@ -8,6 +8,10 @@ namespace App\Notification\Email;
  */
 final readonly class RenderedEmail
 {
+    /**
+     * @param string $subject Email subject line
+     * @param string $bodyHtml Fully-rendered email body HTML
+     */
     public function __construct(
         public string $subject,
         public string $bodyHtml,

@@ -21,6 +21,15 @@ final class Pill
         'resuelto' => ['bg' => '#E6F7EE', 'fg' => '#00432a', 'dot' => '#00A85E', 'label' => 'Resuelto'],
     ];
 
+    /**
+     * Render a pill badge.
+     *
+     * @param string $label Visible text label (escaped)
+     * @param string $bg Background hex color
+     * @param string $fg Foreground hex color
+     * @param string|null $dotColor Optional left-side dot hex color
+     * @return string HTML markup
+     */
     public static function render(
         string $label,
         string $bg,
