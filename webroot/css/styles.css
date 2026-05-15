@@ -832,3 +832,10 @@ body {
 }
 
 .agent-chip.option .agent-name { font-weight: 500; font-size: 13px; }
+
+.thread-meta-sep {
+    width: 3px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--gray-300);
+}
