@@ -519,7 +519,7 @@
 
 .composer-recipients-card:focus-within {
     border-color: var(--admin-green);
-    box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.16);
+    box-shadow: var(--focus-ring);
 }
 
 .composer-recipient-row {

@@ -81,7 +81,18 @@ Todos los tokens viven como CSS variables en `webroot/css/styles.css :root`.
 | --------------- | -------------------------------------- |
 | `--transition`  | `all 0.2s cubic-bezier(0.4, 0, 0.2, 1)` |
 
-### 1.7 · Tipografía
+### 1.7 · Focus ring
+
+| Token           | Valor                                            | Uso                                  |
+| --------------- | ------------------------------------------------ | ------------------------------------ |
+| `--focus-ring`  | `0 0 0 3px rgba(0, 168, 94, 0.18)`               | `box-shadow` de inputs y triggers    |
+
+Aplicar como `box-shadow: var(--focus-ring)` cuando un elemento recibe
+foco; combinar con `border-color: var(--admin-green)`. Es la única
+opacidad/spread canónica — no introducir 0.12 / 0.16 ni cambiar la
+extensión a 2 / 4 px sin justificación.
+
+### 1.8 · Tipografía
 
 - **Familia primaria:** `'Google Sans'` (declarado en `styles.css :root`).
 - **Datos tabulares** (IDs, timestamps, métricas): clase `.mono` →

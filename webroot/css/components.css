@@ -141,7 +141,7 @@
 .modal-body .form-control:focus,
 .modal-body .form-select:focus {
     border-color: var(--admin-green);
-    box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.12);
+    box-shadow: var(--focus-ring);
 }
 
 .modal-footer {
@@ -1338,7 +1338,7 @@ textarea.app-input {
 .app-input:focus {
     outline: none;
     border-color: var(--admin-green);
-    box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.16);
+    box-shadow: var(--focus-ring);
 }
 
 .app-form-group input[readonly],
@@ -1764,7 +1764,7 @@ textarea.app-input {
 }
 
 .status-dot-pill.active   { background: var(--admin-green-soft); color: var(--admin-green-ink); }
-.status-dot-pill.active::before { background: var(--admin-green); box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.18); }
+.status-dot-pill.active::before { background: var(--admin-green); box-shadow: var(--focus-ring); }
 .status-dot-pill.inactive { background: var(--danger-soft); color: var(--danger-ink); }
 .status-dot-pill.inactive::before { background: var(--danger-color); }
 
@@ -2170,7 +2170,7 @@ textarea.app-input {
 
 .app-input-group:focus-within {
     border-color: var(--admin-green);
-    box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.16);
+    box-shadow: var(--focus-ring);
 }
 
 .app-input-group > i,

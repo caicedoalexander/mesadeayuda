@@ -275,7 +275,7 @@
 .table-assign-form .select2-container.select2-container--bootstrap-5.select2-container--focus .select2-selection {
     border-color: var(--admin-green) !important;
     background: #fff !important;
-    box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.12) !important;
+    box-shadow: var(--focus-ring) !important;
 }
 
 .table-assign-form .select2-container.select2-container--bootstrap-5 .select2-selection__rendered {
@@ -483,7 +483,7 @@
     border-color: var(--admin-green) !important;
     background-color: #fff !important;
     border-radius: var(--radius-md) !important;
-    box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.1) !important;
+    box-shadow: var(--focus-ring) !important;
     outline: none;
 }
 

@@ -34,6 +34,7 @@
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --focus-ring: 0 0 0 3px rgba(0, 168, 94, 0.18);
 
     /* Brand color variants — soft = pill bg, ink = text on soft */
     --admin-green-light: #00D477;
@@ -270,7 +271,7 @@ body {
 .select2-container--bootstrap-5.select2-container--focus .select2-selection,
 .select2-container--bootstrap-5.select2-container--open .select2-selection {
     border-color: var(--admin-green) !important;
-    box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.12),
+    box-shadow: var(--focus-ring),
                 0 2px 4px rgba(0, 0, 0, 0.06) !important;
     outline: none;
 }
@@ -470,7 +471,7 @@ body {
 
 .select2-search--dropdown .select2-search__field:focus {
     border-color: var(--admin-green);
-    box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.12);
+    box-shadow: var(--focus-ring);
 }
 
 /* No Results Message */
@@ -785,7 +786,7 @@ body {
 .focus-ring:focus-within {
     outline: none;
     border-color: var(--admin-green) !important;
-    box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.16);
+    box-shadow: var(--focus-ring);
     border-radius: var(--radius-md);
 }
 
