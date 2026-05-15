@@ -13,15 +13,24 @@
     function setCommentType(type) {
         document.getElementById('comment-type').value = type;
 
-        const textarea = document.getElementById('comment-textarea');
+        const editor = document.getElementById('comment-textarea');
         const editorContainer = document.getElementById('editor-container');
         const typeLabel = document.getElementById('comment-type-label');
         const typeIcon = document.getElementById('comment-type-icon');
         const recipientsText = document.getElementById('comment-type-recipients');
 
+        // `#comment-textarea` is a contenteditable div in the new composer;
+        // placeholder lives in `data-placeholder` and is rendered via
+        // `.composer-editor:empty::before` in tickets-view.css.
+        const setPlaceholder = function (text) {
+            if (!editor) return;
+            if ('placeholder' in editor) editor.placeholder = text;
+            editor.setAttribute('data-placeholder', text);
+        };
+
         if (type === 'internal') {
             // Internal note: yellow background
-            textarea.placeholder = 'Escribe una nota interna...';
+            setPlaceholder('Escribe una nota interna...');
             editorContainer.classList.add('internal-note-mode');
 
             // Update dropdown label and icon
@@ -32,7 +41,7 @@
             if (recipientsText) recipientsText.style.display = 'none';
         } else {
             // Public response: white background
-            textarea.placeholder = 'Escribe tu respuesta aquí...';
+            setPlaceholder('Escribe tu respuesta aquí...');
             editorContainer.classList.remove('internal-note-mode');
 
             // Update dropdown label and icon
@@ -214,7 +223,9 @@
     // Spinner: Show when submitting comment/response or changing status
     const replyForm = document.getElementById('reply-form');
     if (replyForm) replyForm.addEventListener('submit', function (e) {
-        const commentBody = document.getElementById('comment-textarea').value.trim();
+        // `#comment-textarea` is a contenteditable div; read its plain text.
+        const editorEl = document.getElementById('comment-textarea');
+        const commentBody = (editorEl ? (editorEl.innerText || editorEl.textContent || '') : '').trim();
         const commentType = document.getElementById('comment-type').value;
         const statusHidden = document.getElementById('status-hidden');
         const currentStatus = window.ticketViewData.currentStatus;

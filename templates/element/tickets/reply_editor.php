@@ -118,17 +118,18 @@ $requesterEmail = $entity->requester->email ?? '';
             </button>
         </div>
 
-        <?= $this->Form->control('comment_body', [
-            'type'        => 'textarea',
-            'label'       => false,
-            'placeholder' => 'Escribe tu respuesta a ' . h($requesterName) . '…',
-            'class'       => 'composer-textarea',
-            'required'    => false,
-            'id'          => 'comment-textarea',
-            'rows'        => 4,
-            'maxlength'   => 5000,
-            'data-max'    => 5000,
-        ]) ?>
+        <?= $this->Form->hidden('comment_body', ['id' => 'comment-body-hidden']) ?>
+        <div
+            id="comment-textarea"
+            class="composer-editor"
+            contenteditable="true"
+            role="textbox"
+            aria-multiline="true"
+            aria-label="Cuerpo de la respuesta"
+            data-placeholder="<?= h('Escribe tu respuesta a ' . $requesterName . '…') ?>"
+            data-max="5000"
+            spellcheck="true"
+        ></div>
 
         <!-- Footer: attach + emoji + counter + ⌘⏎ + send -->
         <div class="composer-footer">
