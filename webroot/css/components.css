@@ -48,10 +48,6 @@
    sigue funcionando.
    =========================================================== */
 
-.modal-backdrop.show {
-    opacity: 0.5;
-}
-
 .modal-content {
     border: none;
     border-radius: 12px;
@@ -393,26 +389,6 @@
     to   { transform: translateX(110%); opacity: 0; }
 }
 
-/* Toast con acción (Deshacer, Ver, etc.) */
-.app-toast-action {
-    height: 26px;
-    padding: 0 10px;
-    border-radius: 5px;
-    border: 1px solid var(--gray-200);
-    background: #fff;
-    color: var(--gray-800);
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: background 0.12s ease, border-color 0.12s ease;
-}
-
-.app-toast-action:hover {
-    background: var(--gray-50);
-    border-color: var(--gray-300);
-}
-
 /* Inline banner — contexto permanente, no anclado, no animado */
 .app-banner {
     display: flex;
@@ -436,16 +412,6 @@
     opacity: 0.85;
     margin-top: 1px;
     font-size: 12px;
-}
-
-.app-banner-action {
-    background: none;
-    border: none;
-    color: inherit;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    padding: 0;
 }
 
 
@@ -746,31 +712,6 @@
     transform: translate(0, -50%);
 }
 
-/* Keycap pill — usar dentro del data-tip via <span class="keycap"> es imposible
-   (CSS attr no parsea HTML). Para tooltips con keycap, render un wrapper real
-   .app-tip-bubble en lugar del data-tip CSS. */
-.app-tip-bubble {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: var(--gray-900);
-    color: #fff;
-    padding: 5px 9px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 500;
-    box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.25);
-}
-
-.app-tip-keycap {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    padding: 1px 5px;
-    border-radius: 3px;
-    background: rgba(255, 255, 255, 0.18);
-    font-variant-numeric: tabular-nums;
-}
-
 
 /* ===========================================================
    13 · FILE UPLOAD
@@ -928,37 +869,6 @@
 .file-item.error .file-item-size {
     color: var(--danger-color);
     font-weight: 500;
-}
-
-/* Progress bar (estado uploading) */
-.file-item-progress {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 4px;
-}
-
-.file-item-progress-bar {
-    flex: 1;
-    height: 4px;
-    background: var(--gray-100);
-    border-radius: 2px;
-    overflow: hidden;
-}
-
-.file-item-progress-bar > span {
-    display: block;
-    height: 100%;
-    background: var(--admin-blue);
-    border-radius: 2px;
-    transition: width 0.2s ease;
-}
-
-.file-item-progress-pct {
-    font-family: var(--font-mono);
-    font-variant-numeric: tabular-nums;
-    font-size: 10px;
-    color: var(--gray-500);
 }
 
 .file-item-remove {
@@ -1271,62 +1181,6 @@
     font-size: 14px;
 }
 
-/* Paginación simple — Anterior / 5 / 24 / Siguiente */
-.app-pagination-simple {
-    display: inline-flex;
-    align-items: center;
-    gap: 12px;
-    font-family: var(--font-mono);
-    font-size: 13px;
-    color: var(--gray-700);
-    font-variant-numeric: tabular-nums;
-}
-
-/* Resumen + page-size para footer de tabla */
-.app-pagination-summary {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    font-size: 13px;
-    color: var(--gray-600);
-    flex-wrap: wrap;
-}
-
-.app-pagination-summary strong {
-    color: var(--gray-900);
-    font-weight: 600;
-}
-
-.app-pagination-summary .spacer { flex: 1; }
-
-/* Jump-to-page */
-.app-pagination-jump {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    color: var(--gray-700);
-}
-
-.app-pagination-jump input {
-    height: 32px;
-    padding: 0 10px;
-    border: 1px solid var(--gray-200);
-    border-radius: 7px;
-    background: #fff;
-    width: 70px;
-    font-family: var(--font-mono);
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    text-align: center;
-}
-
-.app-pagination-jump input:focus {
-    outline: none;
-    border-color: var(--admin-green);
-    box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.18);
-}
-
 
 /* ===========================================================
    16 · APP CARD — superficie genérica para formularios y bloques
@@ -1389,12 +1243,6 @@
     font-size: 12px;
     color: var(--gray-500);
     margin-top: 2px;
-}
-
-.app-card-header-actions {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
 }
 
 .app-card-body { padding: 18px; }
@@ -2492,24 +2340,6 @@ textarea.app-input {
 }
 
 .app-login-help-message a:hover { color: var(--admin-green); text-decoration: underline; }
-
-/* Status indicator en top bar del form */
-.app-login-status {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: var(--gray-600);
-    padding: 6px 10px;
-}
-
-.app-login-status .dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--admin-green);
-    box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.18);
-}
 
 .app-login-topbar {
     display: flex;
