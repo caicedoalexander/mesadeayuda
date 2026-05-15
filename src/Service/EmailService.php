@@ -5,27 +5,22 @@ namespace App\Service;
 
 use App\Constants\CacheConstants;
 use App\Constants\SettingKeys;
-use App\Model\Entity\EmailTemplate;
-use App\Model\Entity\User;
+use App\Notification\Email\TemplateContext;
+use App\Notification\Email\TemplateRegistry;
 use App\Service\Dto\SystemConfig;
 use App\Service\Renderer\NotificationRenderer;
 use App\Service\Traits\GenericAttachmentTrait;
-use App\View\Helper\UserHelper;
 use Cake\Datasource\EntityInterface;
 use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
-use Cake\Routing\Router;
-use Cake\View\View;
 use Exception;
 
 /**
- * Email Service
+ * Email Service.
  *
- * Sends ticket notifications via Gmail API using templates from database:
- * - New ticket
- * - Status change
- * - New comment
- * - Response (comment + status change)
+ * Builds a TemplateContext from a ticket-side mutation and dispatches the
+ * rendered email through Gmail. Templates and components live in
+ * App\Notification\Email\* — this class is the thin orchestrator.
  */
 class EmailService
 {
@@ -39,39 +34,24 @@ class EmailService
     private const ATTACHMENTS_PROPERTY = 'attachments';
     private const COMMENT_FOREIGN_KEY = 'comment_id';
 
-    /**
-     * Variable keys whose values are already-sanitized HTML produced by our
-     * own renderers; the rest are user-supplied text and must be escaped
-     * by EmailTemplateRenderer::render() before substitution.
-     */
-    private const RAW_HTML_VARIABLES = [
-        'comment_body',
-        'attachments_list',
-        'status_change_section',
-    ];
-
     private NotificationRenderer $renderer;
-    private EmailTemplateRenderer $templateRenderer;
+    private TemplateRegistry $templates;
     private ?SystemConfig $config;
     /**
      * Lazy view of {@see $config} as a flat settings array. Required by
-     * {@see ConfigResolutionTrait} (uses $this->systemConfig['key'] lookups)
-     * and by {@see EmailTemplateRenderer}, which still consumes the array
-     * form. SystemConfig remains the single source of truth — this is just
-     * a derived projection.
+     * {@see ConfigResolutionTrait} (uses $this->systemConfig['key'] lookups).
+     *
+     * @var array<string, mixed>|null
      */
     private ?array $systemConfig = null;
     private ?GmailService $gmailService = null;
 
-    /**
-     * @param \App\Service\Dto\SystemConfig|null $config System configuration VO
-     */
     public function __construct(?SystemConfig $config = null)
     {
         $this->config = $config;
         $this->systemConfig = $config?->toSettingsArray();
         $this->renderer = new NotificationRenderer();
-        $this->templateRenderer = new EmailTemplateRenderer($this->systemConfig);
+        $this->templates = new TemplateRegistry();
     }
 
     private function getSettingValue(string $key, string $default = ''): string
@@ -79,83 +59,138 @@ class EmailService
         return $this->resolveSettingValue($key, $default);
     }
 
-    private function getSystemVariables(): array
-    {
-        return $this->templateRenderer->getSystemVariables();
-    }
-
     public function sendNewEntityNotification(EntityInterface $entity): bool
     {
-        $ticketsTable = $this->fetchTable(self::ENTITY_TABLE);
-        $entity = $ticketsTable->get($entity->id, contain: ['Requesters']);
+        try {
+            $entity = $this->fetchTable(self::ENTITY_TABLE)->get($entity->id, contain: ['Requesters']);
 
-        $excludeEmails = [
-            strtolower($entity->requester->email),
-            strtolower($this->getSettingValue(SettingKeys::GMAIL_USER_EMAIL)),
-        ];
-        $additionalTo = $this->filterEmailRecipients($entity->email_to, $excludeEmails);
-        $additionalCc = $this->filterEmailRecipients($entity->email_cc, $excludeEmails);
+            $excludeEmails = [
+                strtolower($entity->requester->email),
+                strtolower($this->getSettingValue(SettingKeys::GMAIL_USER_EMAIL)),
+            ];
+            $additionalTo = $this->filterEmailRecipients($entity->email_to, $excludeEmails);
+            $additionalCc = $this->filterEmailRecipients($entity->email_cc, $excludeEmails);
 
-        return $this->sendGenericTemplateEmail('nuevo_ticket', $entity, [], [], $additionalTo, $additionalCc);
+            $ctx = new TemplateContext(
+                ticket: $entity,
+                ticketUrl: $this->renderer->getTicketUrl($entity->id),
+                recipientName: (string)($entity->requester->name ?? ''),
+            );
+
+            $rendered = $this->templates->get('ticket_created')->render($ctx);
+
+            return $this->sendEmail(
+                to: (string)($entity->requester->email ?? ''),
+                subject: $rendered->subject,
+                body: $rendered->bodyHtml,
+                attachments: [],
+                additionalTo: $additionalTo,
+                additionalCc: $additionalCc,
+            );
+        } catch (Exception $e) {
+            Log::error('Failed to send ticket created email', [
+                'entity_id' => $entity->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
     }
 
     public function sendEntityStatusChangeNotification(EntityInterface $entity, string $oldStatus, string $newStatus): bool
     {
-        $entityTable = $this->fetchTable(self::ENTITY_TABLE);
-        $entity = $entityTable->get($entity->id, contain: self::ENTITY_CONTAIN);
+        try {
+            $entity = $this->fetchTable(self::ENTITY_TABLE)->get($entity->id, contain: self::ENTITY_CONTAIN);
 
-        $assigneeName = isset($entity->assignee) && $entity->assignee ? $entity->assignee->name : 'No asignado';
+            $ctx = new TemplateContext(
+                ticket: $entity,
+                ticketUrl: $this->renderer->getTicketUrl($entity->id),
+                recipientName: (string)($entity->requester->name ?? ''),
+                oldStatus: $oldStatus,
+                newStatus: $newStatus,
+                actor: $entity->assignee ?? null,
+            );
 
-        return $this->sendGenericTemplateEmail('ticket_estado', $entity, [
-            'status_change_section' => $this->renderer->renderStatusChangeHtml($oldStatus, $newStatus, $assigneeName),
-        ]);
+            $rendered = $this->templates->get('ticket_status_changed')->render($ctx);
+
+            return $this->sendEmail(
+                to: (string)($entity->requester->email ?? ''),
+                subject: $rendered->subject,
+                body: $rendered->bodyHtml,
+            );
+        } catch (Exception $e) {
+            Log::error('Failed to send ticket status email', [
+                'entity_id' => $entity->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
     }
 
     public function sendEntityCommentNotification(EntityInterface $entity, EntityInterface $comment, array $additionalTo = [], array $additionalCc = []): bool
     {
-        return $this->sendCommentBasedNotification('nuevo_comentario', $entity, $comment, null, null, $additionalTo, $additionalCc);
+        return $this->sendCommentBasedNotification('ticket_comment_added', $entity, $comment, null, null, $additionalTo, $additionalCc);
     }
 
     public function sendEntityResponseNotification(EntityInterface $entity, EntityInterface $comment, string $oldStatus, string $newStatus, array $additionalTo = [], array $additionalCc = []): bool
     {
-        return $this->sendCommentBasedNotification('ticket_respuesta', $entity, $comment, $oldStatus, $newStatus, $additionalTo, $additionalCc);
+        return $this->sendCommentBasedNotification('ticket_updated', $entity, $comment, $oldStatus, $newStatus, $additionalTo, $additionalCc);
     }
 
-    /**
-     * Sends a notification to the agent that has just been assigned the ticket.
-     * Routed through the `ticket_asignacion` template; recipient is the
-     * assignee (not the requester). Returns false when the ticket has no
-     * assignee or no resolvable assignee email — both are valid no-ops, not
-     * error conditions, so the listener doesn't need to special-case them.
-     */
-    public function sendEntityAssignmentNotification(EntityInterface $entity): bool
-    {
-        $entityTable = $this->fetchTable(self::ENTITY_TABLE);
-        $entity = $entityTable->get($entity->id, contain: self::ENTITY_CONTAIN);
+    private function sendCommentBasedNotification(
+        string $templateKey,
+        EntityInterface $entity,
+        EntityInterface $comment,
+        ?string $oldStatus,
+        ?string $newStatus,
+        array $additionalTo = [],
+        array $additionalCc = [],
+    ): bool {
+        try {
+            $entity = $this->fetchTable(self::ENTITY_TABLE)->get($entity->id, contain: self::ENTITY_CONTAIN);
+            $comment = $this->fetchTable(self::COMMENTS_TABLE)->get($comment->id, contain: ['Users']);
 
-        if (empty($entity->assignee) || empty($entity->assignee->email)) {
+            $commentAttachments = [];
+            if (!empty($entity->{self::ATTACHMENTS_PROPERTY})) {
+                foreach ($entity->{self::ATTACHMENTS_PROPERTY} as $attachment) {
+                    if ($attachment->{self::COMMENT_FOREIGN_KEY} === $comment->id && !$attachment->is_inline) {
+                        $commentAttachments[] = $attachment;
+                    }
+                }
+            }
+
+            $ctx = new TemplateContext(
+                ticket: $entity,
+                ticketUrl: $this->renderer->getTicketUrl($entity->id),
+                recipientName: (string)($entity->requester->name ?? ''),
+                comment: $comment,
+                oldStatus: $oldStatus,
+                newStatus: $newStatus,
+                actor: $comment->user ?? null,
+                commentAttachments: $commentAttachments,
+            );
+
+            $rendered = $this->templates->get($templateKey)->render($ctx);
+
+            return $this->sendEmail(
+                to: (string)($entity->requester->email ?? ''),
+                subject: $rendered->subject,
+                body: $rendered->bodyHtml,
+                attachments: $commentAttachments,
+                additionalTo: $additionalTo,
+                additionalCc: $additionalCc,
+            );
+        } catch (Exception $e) {
+            Log::error('Failed to send ticket comment notification', [
+                'entity_id' => $entity->id,
+                'comment_id' => $comment->id,
+                'template' => $templateKey,
+                'error' => $e->getMessage(),
+            ]);
+
             return false;
         }
-
-        return $this->sendGenericTemplateEmail(
-            'ticket_asignacion',
-            $entity,
-            ['assignee_name' => $entity->assignee->name ?? ''],
-            [],
-            [],
-            [],
-            $entity->assignee->email,
-        );
-    }
-
-    private function getTemplate(string $templateKey): ?EmailTemplate
-    {
-        return $this->templateRenderer->getTemplate($templateKey);
-    }
-
-    private function replaceVariables(string $template, array $variables): string
-    {
-        return $this->templateRenderer->render($template, $variables, self::RAW_HTML_VARIABLES);
     }
 
     private function getGmailService(): GmailService
@@ -175,30 +210,24 @@ class EmailService
 
             $toRecipients = [$to => $to];
 
-            if (!empty($additionalTo)) {
-                foreach ($additionalTo as $recipient) {
-                    if (!empty($recipient['email'])) {
-                        $toRecipients[$recipient['email']] = $recipient['name'] ?? $recipient['email'];
-                    }
+            foreach ($additionalTo as $recipient) {
+                if (!empty($recipient['email'])) {
+                    $toRecipients[$recipient['email']] = $recipient['name'] ?? $recipient['email'];
                 }
             }
 
             $ccRecipients = [];
-            if (!empty($additionalCc)) {
-                foreach ($additionalCc as $recipient) {
-                    if (!empty($recipient['email'])) {
-                        $ccRecipients[$recipient['email']] = $recipient['name'] ?? $recipient['email'];
-                    }
+            foreach ($additionalCc as $recipient) {
+                if (!empty($recipient['email'])) {
+                    $ccRecipients[$recipient['email']] = $recipient['name'] ?? $recipient['email'];
                 }
             }
 
             $attachmentPaths = [];
-            if (!empty($attachments)) {
-                foreach ($attachments as $attachment) {
-                    $filePath = $this->getFullPath($attachment);
-                    if (file_exists($filePath)) {
-                        $attachmentPaths[] = $filePath;
-                    }
+            foreach ($attachments as $attachment) {
+                $filePath = $this->getFullPath($attachment);
+                if (file_exists($filePath)) {
+                    $attachmentPaths[] = $filePath;
                 }
             }
 
@@ -211,8 +240,7 @@ class EmailService
                 $options['cc'] = $ccRecipients;
             }
 
-            $gmailService = $this->getGmailService();
-            $result = $gmailService->sendEmail($toRecipients, $subject, $body, $attachmentPaths, $options);
+            $result = $this->getGmailService()->sendEmail($toRecipients, $subject, $body, $attachmentPaths, $options);
 
             if ($result) {
                 Log::info('Email sent successfully via Gmail API', ['to' => $to, 'subject' => $subject]);
@@ -224,130 +252,10 @@ class EmailService
                 'to' => $to,
                 'subject' => $subject,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
             ]);
 
             return false;
         }
-    }
-
-    private function sendCommentBasedNotification(
-        string $templateKey,
-        EntityInterface $entity,
-        EntityInterface $comment,
-        ?string $oldStatus,
-        ?string $newStatus,
-        array $additionalTo = [],
-        array $additionalCc = [],
-    ): bool {
-        try {
-            $entityTable = $this->fetchTable(self::ENTITY_TABLE);
-            $entity = $entityTable->get($entity->id, contain: self::ENTITY_CONTAIN);
-
-            $commentsTable = $this->fetchTable(self::COMMENTS_TABLE);
-            $comment = $commentsTable->get($comment->id, contain: ['Users']);
-
-            $commentAttachments = [];
-            if (!empty($entity->{self::ATTACHMENTS_PROPERTY})) {
-                foreach ($entity->{self::ATTACHMENTS_PROPERTY} as $attachment) {
-                    if ($attachment->{self::COMMENT_FOREIGN_KEY} === $comment->id && !$attachment->is_inline) {
-                        $commentAttachments[] = $attachment;
-                    }
-                }
-            }
-
-            $template = $this->getTemplate($templateKey);
-            if (!$template) {
-                Log::error("Email template not found: {$templateKey}");
-
-                return false;
-            }
-
-            $author = $comment->user ? $comment->user->name : 'Sistema';
-            $agentProfileImageUrl = $this->getAgentProfileImageUrl($comment->user);
-
-            $variables = array_merge(
-                $this->getSystemVariables(),
-                $this->buildCommentVariables($entity, $comment, $author, $agentProfileImageUrl, $commentAttachments),
-            );
-
-            if ($oldStatus !== null && $newStatus !== null) {
-                $hasStatusChange = ($oldStatus !== $newStatus);
-                $assigneeName = isset($entity->assignee) && $entity->assignee ? $entity->assignee->name : 'No asignado';
-                $variables['status_change_section'] = $hasStatusChange
-                    ? $this->renderer->renderStatusChangeHtml($oldStatus, $newStatus, $assigneeName)
-                    : '';
-            }
-
-            $subject = $this->replaceVariables($template->subject, $variables);
-            $body = $this->replaceVariables($template->body_html, $variables);
-            $recipientEmail = $entity->requester->email ?? '';
-
-            return $this->sendEmail($recipientEmail, $subject, $body, $commentAttachments, $additionalTo, $additionalCc);
-        } catch (Exception $e) {
-            Log::error('Failed to send ticket comment notification', [
-                'entity_id' => $entity->id,
-                'comment_id' => $comment->id,
-                'template' => $templateKey,
-                'error' => $e->getMessage(),
-            ]);
-
-            return false;
-        }
-    }
-
-    private function buildCommentVariables(
-        EntityInterface $entity,
-        EntityInterface $comment,
-        string $author,
-        string $agentProfileImageUrl,
-        array $commentAttachments,
-    ): array {
-        return [
-            'subject' => $entity->subject,
-            'comment_author' => $author,
-            'comment_body' => $comment->body,
-            'attachments_list' => $this->renderer->renderAttachmentsHtml($commentAttachments),
-            'agent_profile_image_url' => $agentProfileImageUrl,
-            'agent_name' => $author,
-            'ticket_number' => $entity->ticket_number,
-            'requester_name' => $entity->requester->name ?? 'N/A',
-            'ticket_url' => $this->renderer->getTicketUrl($entity->id),
-        ];
-    }
-
-    private function getAgentProfileImageUrl(?User $user): string
-    {
-        $userHelper = new UserHelper($this->getView());
-        $url = $user && $user->profile_image
-            ? $userHelper->profileImage($user->profile_image)
-            : $userHelper->defaultAvatar();
-
-        return $this->getAbsoluteUrl($url);
-    }
-
-    private function getView(): View
-    {
-        return new View();
-    }
-
-    private function getAbsoluteUrl(string $relativeUrl): string
-    {
-        if (
-            str_starts_with($relativeUrl, 'http://') ||
-            str_starts_with($relativeUrl, 'https://') ||
-            str_starts_with($relativeUrl, 'data:')
-        ) {
-            return $relativeUrl;
-        }
-
-        $baseUrl = rtrim(Router::url('/', true), '/');
-
-        if (!str_starts_with($relativeUrl, '/')) {
-            $relativeUrl = '/' . $relativeUrl;
-        }
-
-        return $baseUrl . $relativeUrl;
     }
 
     private function filterEmailRecipients(string|array|null $recipients, array $excludeEmails): array
@@ -372,53 +280,5 @@ class EmailService
         }
 
         return $filtered;
-    }
-
-    private function sendGenericTemplateEmail(
-        string $templateKey,
-        EntityInterface $entity,
-        array $extraVariables = [],
-        array $attachments = [],
-        array $additionalTo = [],
-        array $additionalCc = [],
-        ?string $recipientEmail = null,
-    ): bool {
-        try {
-            $table = $this->fetchTable(self::ENTITY_TABLE);
-            $entity = $table->get($entity->id, contain: self::ENTITY_CONTAIN);
-
-            $template = $this->getTemplate($templateKey);
-            if (!$template) {
-                Log::error("Email template not found: {$templateKey}");
-
-                return false;
-            }
-
-            $variables = array_merge(
-                $this->getSystemVariables(),
-                [
-                    'ticket_number' => $entity->ticket_number,
-                    'subject' => $entity->subject,
-                    'requester_name' => $entity->requester->name ?? 'N/A',
-                    'created_date' => $this->renderer->formatDate($entity->created),
-                    'ticket_url' => $this->renderer->getTicketUrl($entity->id),
-                ],
-                $extraVariables,
-            );
-
-            $subject = $this->replaceVariables($template->subject, $variables);
-            $body = $this->replaceVariables($template->body_html, $variables);
-            $recipientEmail = $recipientEmail ?? ($entity->requester->email ?? '');
-
-            return $this->sendEmail($recipientEmail, $subject, $body, $attachments, $additionalTo, $additionalCc);
-        } catch (Exception $e) {
-            Log::error('Failed to send ticket email', [
-                'template' => $templateKey,
-                'entity_id' => $entity->id,
-                'error' => $e->getMessage(),
-            ]);
-
-            return false;
-        }
     }
 }
