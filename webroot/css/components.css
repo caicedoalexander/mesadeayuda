@@ -2045,38 +2045,308 @@ textarea.app-input {
 
 /* ── Lado claro: form ─────────────────────── */
 .app-login-form {
-    padding: 38px 38px 28px;
     display: flex;
     flex-direction: column;
+    min-height: 0;
+}
+
+.app-login-form-inner {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 8px 38px 18px;
+    overflow-y: auto;
 }
 
 .app-login-form-head {
-    margin-bottom: 22px;
+    margin-bottom: 26px;
 }
 
-
 .app-login-form-head h2 {
-    font-size: 20px;
+    font-size: 28px;
     font-weight: 700;
     color: var(--gray-900);
-    margin: 0 0 4px;
-    letter-spacing: -0.3px;
+    margin: 0 0 6px;
+    letter-spacing: -0.6px;
+    line-height: 1.15;
 }
 
 .app-login-form-head p {
     margin: 0;
-    font-size: 13px;
-    color: var(--gray-500);
+    font-size: 14px;
+    color: var(--gray-600);
 }
 
 .app-login-form-body {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 14px;
     flex: 1;
 }
 
 .app-login-form-body .app-form-group { margin-bottom: 0; }
+
+/* SSO button (Google Workspace) */
+.app-sso-btn {
+    width: 100%;
+    height: 44px;
+    border-radius: 9px;
+    border: 1px solid var(--gray-200);
+    background: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-800);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    text-decoration: none;
+}
+
+.app-sso-btn:hover:not(:disabled) {
+    border-color: var(--gray-300);
+    background: var(--gray-50);
+    color: var(--gray-900);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.app-sso-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.app-sso-btn svg { flex-shrink: 0; }
+
+/* "O CON EMAIL" divider */
+.app-login-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 4px 0;
+}
+
+.app-login-divider::before,
+.app-login-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--gray-200);
+}
+
+.app-login-divider span {
+    font-size: 11px;
+    color: var(--gray-500);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+/* Input group: icon-left + field + icon-right (validación / toggle) */
+.app-input-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--gray-200);
+    border-radius: 9px;
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+}
+
+.app-input-group:hover { border-color: var(--gray-300); }
+
+.app-input-group:focus-within {
+    border-color: var(--admin-green);
+    box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.16);
+}
+
+.app-input-group > i,
+.app-input-group > .app-input-icon {
+    color: var(--gray-500);
+    font-size: 16px;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.app-input-group input {
+    flex: 1;
+    height: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 14px;
+    color: var(--gray-900);
+    font-family: inherit;
+    padding: 0;
+    min-width: 0;
+}
+
+.app-input-group input::placeholder { color: var(--gray-400); }
+
+.app-input-group .app-input-trail {
+    border: none;
+    background: none;
+    color: var(--gray-500);
+    padding: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 4px;
+    transition: color 0.15s ease;
+}
+
+.app-input-group .app-input-trail:hover { color: var(--gray-800); }
+.app-input-group .app-input-trail.success { color: var(--admin-green); }
+
+/* Password label row with forgot-password link */
+.app-login-label-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.app-login-label-row label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin: 0;
+}
+
+.app-login-forgot {
+    font-size: 12px;
+    color: var(--admin-green-ink);
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+.app-login-forgot:hover { color: var(--admin-green); text-decoration: underline; }
+
+/* Remember row */
+.app-login-remember-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 4px 0 8px;
+}
+
+.app-login-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--gray-700);
+    cursor: pointer;
+    user-select: none;
+}
+
+.app-login-check input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    accent-color: var(--admin-green);
+    cursor: pointer;
+    margin: 0;
+}
+
+/* Primary CTA (override del .btn-brand-primary para login con chevron) */
+.app-login-submit {
+    width: 100%;
+    height: 46px !important;
+    border-radius: 9px !important;
+    font-size: 14px !important;
+    margin-top: 4px;
+}
+
+.app-login-submit i { transition: transform 0.2s ease; }
+.app-login-submit:hover i { transform: translateX(2px); }
+
+/* Help card al pie del form */
+.app-login-help {
+    margin-top: 18px;
+    padding: 14px;
+    border-radius: 10px;
+    border: 1px solid var(--gray-200);
+    background: #fff;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: var(--shadow-sm);
+}
+
+.app-login-help-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--admin-green-soft);
+    color: var(--admin-green-ink);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 18px;
+}
+
+.app-login-help-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-login-help-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.app-login-help-message {
+    font-size: 12px;
+    color: var(--gray-600);
+    margin-top: 1px;
+    line-height: 1.5;
+}
+
+.app-login-help-message a,
+.app-login-help-message strong {
+    color: var(--gray-900);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.app-login-help-message a:hover { color: var(--admin-green); text-decoration: underline; }
+
+/* Status indicator en top bar del form */
+.app-login-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--gray-600);
+    padding: 6px 10px;
+}
+
+.app-login-status .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--admin-green);
+    box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.18);
+}
+
+.app-login-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 14px 24px;
+    flex-shrink: 0;
+}
 
 .app-login-submit {
     width: 100%;
@@ -2084,8 +2354,7 @@ textarea.app-input {
 }
 
 .app-login-foot {
-    margin-top: 26px;
-    padding-top: 16px;
+    padding: 14px 38px 18px;
     border-top: 1px solid var(--gray-100);
     text-align: center;
     font-size: 11px;
@@ -2095,6 +2364,7 @@ textarea.app-input {
     gap: 6px;
     justify-content: center;
     flex-wrap: wrap;
+    flex-shrink: 0;
 }
 
 .app-login-foot span { color: var(--gray-300); }
@@ -2109,7 +2379,9 @@ textarea.app-input {
         text-align: left;
     }
     .app-login-brand-meta { padding-top: 18px; }
-    .app-login-form { padding: 28px 24px 22px; }
+    .app-login-topbar { padding: 12px 18px; }
+    .app-login-form-inner { padding: 8px 24px 18px; }
+    .app-login-foot { padding: 12px 24px 16px; }
 }
 
 
