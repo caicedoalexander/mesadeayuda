@@ -497,77 +497,141 @@
 
 .composer-locked i { font-size: 18px; }
 
-/* Recipients (To / CC) when public reply */
+/* Recipients (To / CC) — panel expandido del composer.
+   Tokens del DS: focus ring verde, chips soft, inputs sin borde interno. */
 .composer-recipients-expanded {
-    padding: 12px 18px;
-    border-bottom: 1px solid var(--gray-200);
+    padding: 12px 18px 14px;
+    border-bottom: 1px solid var(--gray-100);
+    background: var(--gray-50);
     display: flex;
     flex-direction: column;
-    gap: 8px;
-}
-
-.composer-recipient-row {
-    display: flex;
-    align-items: center;
     gap: 10px;
 }
 
+.composer-recipient-row {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    align-items: start;
+    gap: 12px;
+}
+
 .composer-recipient-label {
-    width: 36px;
-    font-size: 12px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
     font-weight: 600;
     color: var(--gray-600);
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
     margin: 0;
 }
 
-.composer-recipient-field {
-    flex: 1;
-    min-width: 0;
-}
+.composer-recipient-field { min-width: 0; }
 
 .tag-input-container {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 4px;
-    padding: 4px 8px;
+    gap: 6px;
+    padding: 5px 8px;
     border: 1px solid var(--gray-200);
-    border-radius: 7px;
+    border-radius: var(--radius-md);
     background: #fff;
-    min-height: 32px;
+    min-height: 36px;
+    transition: var(--transition);
+    box-shadow: var(--shadow-sm);
 }
+
+.tag-input-container:hover { border-color: var(--gray-300); }
 
 .tag-input-container:focus-within {
     border-color: var(--admin-green);
-    box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.12);
+    box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.16);
 }
 
 .tag-input-field {
     border: 0;
     outline: none;
     flex: 1;
-    min-width: 100px;
+    min-width: 140px;
+    height: 24px;
     font-size: 12px;
-    padding: 2px 4px;
+    font-family: inherit;
+    padding: 0 4px;
+    background: transparent;
+    color: var(--gray-900);
 }
 
+.tag-input-field::placeholder { color: var(--gray-400); }
+
+/* Email recipient chip — pill suave en verde DS, X roja en hover */
+.email-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 4px 3px 10px;
+    border-radius: 999px;
+    background: var(--admin-green-soft);
+    color: var(--admin-green-ink);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1px;
+    line-height: 1;
+    max-width: 280px;
+}
+
+.email-tag-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.email-tag-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--admin-green-ink);
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.email-tag-remove i { font-size: 13px; line-height: 1; }
+
+.email-tag-remove:hover {
+    background: var(--danger-soft);
+    color: var(--danger-color);
+}
+
+/* Botón de colapsar (chevron arriba) del panel de destinatarios */
 .btn-icon-collapse {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     border: 1px solid var(--gray-200);
     background: #fff;
     color: var(--gray-500);
     cursor: pointer;
     transition: var(--transition);
+    padding: 0;
 }
+
+.btn-icon-collapse i { font-size: 12px; }
 
 .btn-icon-collapse:hover {
     border-color: var(--admin-green);
     color: var(--admin-green);
+    background: var(--admin-green-soft);
 }
 
 /* ============================================================

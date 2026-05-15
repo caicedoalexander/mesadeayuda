@@ -990,25 +990,45 @@
 }
 
 .file-chip-icon {
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
     border-radius: 5px;
     background: var(--gray-100);
     color: var(--gray-600);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: 13px;
+    flex-shrink: 0;
 }
+
+.file-chip-icon.green  { background: var(--admin-green-soft);  color: var(--admin-green-ink); }
+.file-chip-icon.orange { background: var(--admin-orange-soft); color: var(--admin-orange-ink); }
+.file-chip-icon.blue   { background: var(--admin-blue-soft);   color: var(--admin-blue-ink); }
+.file-chip-icon.danger { background: var(--danger-soft);       color: var(--danger-color); }
 
 .file-chip-name {
     font-weight: 500;
     color: var(--gray-900);
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .file-chip-size {
     color: var(--gray-500);
     font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--gray-100);
+}
+
+.file-chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
 }
 
 

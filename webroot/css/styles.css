@@ -246,47 +246,6 @@ body {
 }
 
 /* ============================================
-   ATTACHMENTS
-   ============================================ */
-.attachment-item,
-.attachment-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    background: #f8f9fa;
-    border-radius: 6px;
-    margin-right: 10px;
-    margin-bottom: 10px;
-    text-decoration: none;
-    color: #333;
-    border: 1px solid #dee2e6;
-    max-width: 175px;
-    transition: all 0.2s ease;
-}
-
-.attachment-item:hover,
-.attachment-link:hover {
-    background: #e9ecef;
-    border: 1px solid #adb5bd;
-}
-
-/* Fix para text-truncate dentro de attachment links */
-.attachment-link .text-truncate {
-    display: inline-block;
-    max-width: 100px; /* Ajusta según el espacio disponible */
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    vertical-align: middle;
-}
-
-.attachment-icon {
-    width: 20px;
-    height: 20px;
-}
-
-/* ============================================
    SELECT2 CUSTOM STYLES - Refined Professional
    ============================================ */
 

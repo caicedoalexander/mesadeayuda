@@ -99,7 +99,10 @@ trait TicketViewTrait
         $contain = [
             'Requesters',
             'Assignees',
-            'TicketComments' => ['Users'],
+            'TicketComments' => [
+                'Users',
+                'sort' => ['TicketComments.created' => 'ASC', 'TicketComments.id' => 'ASC'],
+            ],
             'Attachments',
             'Tags',
             'TicketFollowers' => ['Users'],

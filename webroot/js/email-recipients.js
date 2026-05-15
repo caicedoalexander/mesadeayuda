@@ -92,37 +92,29 @@
             const existingTags = container.querySelectorAll('.email-tag');
             existingTags.forEach(tag => tag.remove());
 
-            // Insert tags before the input
             recipients.forEach(recipient => {
                 const tag = document.createElement('span');
-                tag.className = 'email-tag badge bg-light text-dark border d-inline-flex align-items-center';
-                tag.style.fontSize = '13px';
-                tag.style.padding = '8px 12px';
-                tag.style.borderRadius = '8px';
-                tag.style.fontWeight = '400';
+                tag.className = 'email-tag';
 
-                const emailText = document.createElement('span');
-                emailText.textContent = recipient.email;
-                tag.appendChild(emailText);
+                const text = document.createElement('span');
+                text.className = 'email-tag-text';
+                text.textContent = recipient.email;
+                tag.appendChild(text);
 
                 const removeBtn = document.createElement('button');
                 removeBtn.type = 'button';
-                removeBtn.className = 'btn-close ms-2';
-                removeBtn.style.fontSize = '10px';
-                removeBtn.style.width = '12px';
-                removeBtn.style.height = '12px';
-                removeBtn.setAttribute('aria-label', 'Eliminar');
+                removeBtn.className = 'email-tag-remove';
+                removeBtn.setAttribute('aria-label', 'Eliminar ' + recipient.email);
+                removeBtn.innerHTML = '<i class="bi bi-x"></i>';
                 removeBtn.onclick = (e) => {
                     e.stopPropagation();
                     removeRecipient(recipient.email);
                 };
                 tag.appendChild(removeBtn);
 
-                // Insert before the input
                 container.insertBefore(tag, input);
             });
 
-            // Update summary when tags change
             if (typeof window.updateRecipientsSummary === 'function') {
                 window.updateRecipientsSummary();
             }
