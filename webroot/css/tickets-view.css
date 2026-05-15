@@ -498,9 +498,10 @@
 .composer-locked i { font-size: 18px; }
 
 /* Recipients (To / CC) — panel expandido del composer.
-   Tokens del DS: focus ring verde, chips soft, inputs sin borde interno. */
+   Layout: card único con divisor entre filas (estilo "form inline").
+   Cada fila tiene un eyebrow label izquierdo y el field a la derecha. */
 .composer-recipients-expanded {
-    padding: 12px 18px 14px;
+    padding: 14px 18px 16px;
     border-bottom: 1px solid var(--gray-100);
     background: var(--gray-50);
     display: flex;
@@ -508,46 +509,63 @@
     gap: 10px;
 }
 
+.composer-recipients-toolbar {
+    display: flex;
+    justify-content: center;
+    margin-top: -6px;
+}
+
+.composer-recipients-card {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.composer-recipients-card:focus-within {
+    border-color: var(--admin-green);
+    box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.16);
+}
+
 .composer-recipient-row {
     display: grid;
-    grid-template-columns: 44px 1fr;
-    align-items: start;
+    grid-template-columns: 56px 1fr;
+    align-items: center;
     gap: 12px;
+    padding: 8px 12px 8px 14px;
+    min-height: 42px;
+}
+
+.composer-recipient-row + .composer-recipient-row {
+    border-top: 1px solid var(--gray-100);
 }
 
 .composer-recipient-label {
-    height: 32px;
     display: inline-flex;
     align-items: center;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--gray-600);
-    letter-spacing: 0.4px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--gray-500);
+    letter-spacing: 0.8px;
     text-transform: uppercase;
     margin: 0;
 }
 
 .composer-recipient-field { min-width: 0; }
 
+/* Field interior: chips + input. Sin borde — la card padre lo provee. */
 .tag-input-container {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 6px;
-    padding: 5px 8px;
-    border: 1px solid var(--gray-200);
-    border-radius: var(--radius-md);
-    background: #fff;
-    min-height: 36px;
-    transition: var(--transition);
-    box-shadow: var(--shadow-sm);
-}
-
-.tag-input-container:hover { border-color: var(--gray-300); }
-
-.tag-input-container:focus-within {
-    border-color: var(--admin-green);
-    box-shadow: 0 0 0 3px rgba(0, 168, 94, 0.16);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    min-height: 26px;
+    box-shadow: none;
 }
 
 .tag-input-field {

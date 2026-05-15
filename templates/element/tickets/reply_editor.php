@@ -73,27 +73,29 @@ $requesterEmail = $entity->requester->email ?? '';
         <div id="email-recipients-section" class="composer-recipients" style="display: none;">
             <div id="recipients-collapsed"></div>
             <div id="recipients-expanded" class="composer-recipients-expanded" style="display: none;">
-                <div class="d-flex justify-content-center">
-                    <button type="button" class="btn-icon-collapse" data-action="collapse-recipients" title="Ocultar">
+                <div class="composer-recipients-toolbar">
+                    <button type="button" class="btn-icon-collapse" data-action="collapse-recipients" data-tip="Ocultar" data-tip-side="top" title="Ocultar">
                         <i class="bi bi-chevron-up"></i>
                     </button>
                 </div>
-                <div class="composer-recipient-row">
-                    <label for="email-to" class="composer-recipient-label">Para</label>
-                    <div class="composer-recipient-field">
-                        <div id="email-to-container" class="tag-input-container">
-                            <input type="text" id="email-to" placeholder="Agregar destinatario" autocomplete="off" class="tag-input-field">
+                <div class="composer-recipients-card">
+                    <div class="composer-recipient-row">
+                        <label for="email-to" class="composer-recipient-label">Para</label>
+                        <div class="composer-recipient-field">
+                            <div id="email-to-container" class="tag-input-container">
+                                <input type="text" id="email-to" placeholder="Agregar destinatario" autocomplete="off" class="tag-input-field">
+                            </div>
+                            <input type="hidden" name="email_to" id="email-to-hidden" value="">
                         </div>
-                        <input type="hidden" name="email_to" id="email-to-hidden" value="">
                     </div>
-                </div>
-                <div class="composer-recipient-row">
-                    <label for="email-cc" class="composer-recipient-label">CC</label>
-                    <div class="composer-recipient-field">
-                        <div id="email-cc-container" class="tag-input-container">
-                            <input type="text" id="email-cc" placeholder="Agregar copia" autocomplete="off" class="tag-input-field">
+                    <div class="composer-recipient-row">
+                        <label for="email-cc" class="composer-recipient-label">CC</label>
+                        <div class="composer-recipient-field">
+                            <div id="email-cc-container" class="tag-input-container">
+                                <input type="text" id="email-cc" placeholder="Agregar copia" autocomplete="off" class="tag-input-field">
+                            </div>
+                            <input type="hidden" name="email_cc" id="email-cc-hidden" value="">
                         </div>
-                        <input type="hidden" name="email_cc" id="email-cc-hidden" value="">
                     </div>
                 </div>
             </div>
