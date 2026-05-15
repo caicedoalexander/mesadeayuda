@@ -175,7 +175,7 @@ trait SecureHttpTrait
         try {
             return $this->resilientHttp()->send(
                 $url,
-                fn (): array => $this->executeRawCurlPost($url, $jsonPayload, $headers, $timeout, $resolution),
+                fn(): array => $this->executeRawCurlPost($url, $jsonPayload, $headers, $timeout, $resolution),
             );
         } catch (CircuitOpenException $e) {
             return [

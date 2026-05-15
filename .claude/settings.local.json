@@ -12,7 +12,22 @@
       "Bash(tar -xzf pkg.tar.gz)",
       "WebFetch(domain:api.anthropic.com)",
       "Bash(git add *)",
-      "Bash(git commit -m 'feat\\(resilience\\): add ResilientHttpClient orchestrator *)"
+      "Bash(git commit -m 'feat\\(resilience\\): add ResilientHttpClient orchestrator *)",
+      "Bash(vendor/bin/phpunit tests/TestCase/Notification/Email/RenderedEmailTest.php)",
+      "Bash(composer cs-fix *)",
+      "Bash(composer cs-check *)",
+      "Bash(git commit *)",
+      "Bash(vendor/bin/phpunit tests/TestCase/Notification/Email/EmailThemeTest.php)",
+      "Bash(vendor/bin/phpunit tests/TestCase/Notification/Email/EmailBrandTest.php)",
+      "Bash(vendor/bin/phpunit tests/TestCase/Notification/Email/TemplateContextTest.php)",
+      "Bash(vendor/bin/phpunit tests/TestCase/Notification/Email/Component/PillTest.php)",
+      "Bash(vendor/bin/phpunit tests/TestCase/Notification/Email/Component/AvatarTest.php)",
+      "Bash(vendor/bin/phpunit tests/TestCase/Notification/Email/Ticket/Template/TicketCreatedTemplateTest.php)",
+      "Bash(vendor/bin/phpunit tests/TestCase/Notification/Email/Ticket/Template/TicketStatusChangedTemplateTest.php)",
+      "Bash(vendor/bin/phpunit tests/TestCase/Notification/Email/Ticket/Template/TicketCommentAddedTemplateTest.php)",
+      "Bash(vendor/bin/phpunit tests/TestCase/Notification/Email/Ticket/Template/TicketUpdatedTemplateTest.php)",
+      "Bash(vendor/bin/phpunit tests/TestCase/Notification/Email/TemplateRegistryTest.php)",
+      "Bash(composer test *)"
     ]
   }
 }

@@ -19,7 +19,9 @@ use Cake\Log\Log;
  */
 final class ResilientHttpClient
 {
-    /** @var callable(int): void */
+    /**
+     * @var callable(int): void
+     */
     private $sleepFn;
 
     /**
@@ -30,13 +32,13 @@ final class ResilientHttpClient
         private readonly RetryPolicy $retryPolicy,
         ?callable $sleepFn = null,
     ) {
-        $this->sleepFn = $sleepFn ?? static fn (int $micros) => usleep($micros);
+        $this->sleepFn = $sleepFn ?? static fn(int $micros) => usleep($micros);
     }
 
     /**
      * @param callable(): array{success: bool, http_code: int, response: ?string, error: ?string, curl_errno: int} $executor
      * @return array{success: bool, http_code: int, response: ?string, error: ?string, curl_errno?: int}
-     * @throws CircuitOpenException When the breaker is open for this host.
+     * @throws \App\Service\Resilience\CircuitOpenException When the breaker is open for this host.
      */
     public function send(string $url, callable $executor): array
     {
