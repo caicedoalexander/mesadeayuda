@@ -73,7 +73,7 @@ $requesterEmail = $entity->requester->email ?? '';
         <div id="email-recipients-section" class="composer-recipients" style="display: none;">
             <div id="recipients-collapsed"></div>
             <div id="recipients-expanded" class="composer-recipients-expanded" style="display: none;">
-                <div class="composer-recipients-toolbar">
+                <div class="composer-recipients-toolbar mb-2">
                     <button type="button" class="btn-icon-collapse" data-action="collapse-recipients" data-tip="Ocultar" data-tip-side="top" title="Ocultar">
                         <i class="bi bi-chevron-up"></i>
                     </button>
