@@ -12,7 +12,8 @@
         "cakephp/plugin-installer": "^2.0.2",
         "ezyang/htmlpurifier": "^4.19",
         "google/apiclient": "^2.19.3",
-        "mobiledetect/mobiledetectlib": "^4.8.03"
+        "mobiledetect/mobiledetectlib": "^4.8.03",
+        "symfony/cache": "^7.4"
     },
     "require-dev": {
         "cakephp/bake": "^3.6.3",

@@ -19,6 +19,7 @@ use Google\Service\Gmail;
 use Google\Service\Gmail\Message;
 use Google\Service\Gmail\MessagePart;
 use Google\Service\Gmail\ModifyMessageRequest;
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 
 /**
  * Gmail Service
@@ -134,6 +135,26 @@ class GmailService
         $this->client->addScope(Gmail::GMAIL_MODIFY);
         $this->client->setAccessType('offline');
         $this->client->setPrompt('consent'); // Force to always get refresh_token
+
+        // M-1: PSR-6 cache so the access_token persists across GmailService
+        // instances and consecutive requests within its ~1h TTL. Without this,
+        // every new instance burns a token-endpoint round trip on construction.
+        $cacheDir = TMP . 'gmail_oauth_cache';
+        if (!is_dir($cacheDir) && !mkdir($cacheDir, 0775, true) && !is_dir($cacheDir)) {
+            Log::warning('Failed to create Gmail OAuth cache dir', ['cache_dir' => $cacheDir]);
+        }
+        if (is_dir($cacheDir) && is_writable($cacheDir)) {
+            $pool = new FilesystemAdapter('gmail_oauth', 3500, $cacheDir);
+            $this->client->setCache($pool);
+            $this->client->setCacheConfig(['lifetime' => 3500]); // < 3600s access_token TTL
+            $this->client->setTokenCallback(static function (string $cacheKey, string $accessToken): void {
+                Log::debug('Gmail access token refreshed by SDK', ['cache_key' => $cacheKey]);
+            });
+        } else {
+            Log::warning('Gmail OAuth cache dir not writable; falling back to per-request token refresh', [
+                'cache_dir' => $cacheDir,
+            ]);
+        }
 
         // Set redirect URI for OAuth2 flow
         if (!empty($this->config['redirect_uri'])) {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Constants\CacheConstants;
+use App\Constants\SettingKeys;
 use App\Service\Traits\SettingsEncryptionTrait;
 use Cake\Cache\Cache;
 use Cake\I18n\DateTime;
@@ -66,6 +67,9 @@ class SettingsService
 
         if ($result) {
             $this->clearAllCaches();
+            if (in_array($key, [SettingKeys::GMAIL_CLIENT_SECRET_JSON, SettingKeys::GMAIL_REFRESH_TOKEN], true)) {
+                $this->clearGmailOAuthCache();
+            }
         }
 
         return $result;
@@ -105,6 +109,31 @@ class SettingsService
     {
         foreach (self::CACHE_KEYS as $cacheKey) {
             Cache::delete($cacheKey, self::CACHE_CONFIG);
+        }
+    }
+
+    /**
+     * Purge the Gmail OAuth PSR-6 cache directory used by GmailService so the
+     * next instance fetches a fresh access_token bound to the new credentials.
+     *
+     * @return void
+     */
+    private function clearGmailOAuthCache(): void
+    {
+        $cacheDir = TMP . 'gmail_oauth_cache';
+        if (!is_dir($cacheDir)) {
+            return;
+        }
+        foreach (glob($cacheDir . '/*') ?: [] as $entry) {
+            if (is_file($entry)) {
+                unlink($entry);
+            } elseif (is_dir($entry)) {
+                foreach (glob($entry . '/*') ?: [] as $nested) {
+                    if (is_file($nested)) {
+                        unlink($nested);
+                    }
+                }
+            }
         }
     }
 }
