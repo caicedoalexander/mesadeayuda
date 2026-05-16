@@ -27,7 +27,8 @@
       "Bash(vendor/bin/phpunit tests/TestCase/Notification/Email/Ticket/Template/TicketCommentAddedTemplateTest.php)",
       "Bash(vendor/bin/phpunit tests/TestCase/Notification/Email/Ticket/Template/TicketUpdatedTemplateTest.php)",
       "Bash(vendor/bin/phpunit tests/TestCase/Notification/Email/TemplateRegistryTest.php)",
-      "Bash(composer test *)"
+      "Bash(composer test *)",
+      "WebFetch(domain:developers.google.com)"
     ]
   }
 }
