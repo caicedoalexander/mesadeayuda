@@ -10,6 +10,7 @@ use App\Service\Exception\SettingsEncryptionException;
 use App\Service\Traits\HtmlSanitizerTrait;
 use App\Service\Traits\SettingsEncryptionTrait;
 use App\Service\Util\EmailHeaderParser;
+use App\Service\Util\NotificationStamp;
 use Cake\Cache\Cache;
 use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
@@ -465,51 +466,75 @@ class GmailService
     }
 
     /**
-     * Detect if email is a response to a system notification
+     * Detect if email is a response to a system notification.
      *
-     * Checks multiple indicators to detect replies to automated notifications:
-     * 1. Custom header X-Mesa-Ayuda-Notification (added by system emails)
-     * 2. Sender is system email address (gmail_user_email)
-     * 3. Subject contains notification patterns (Re: Tu Solicitud fue recibida, etc.)
+     * Three inclusive checks (any one is enough to skip ingest):
+     *  1. HMAC stamp embedded by our own EmailService — see {@see NotificationStamp}.
+     *  2. Legacy X-Mesa-Ayuda-Notification header, trusted ONLY when
+     *     Authentication-Results reports dkim=pass for our own domain. This
+     *     branch is a 30-day compatibility grace; remove after rollout.
+     *  3. From header equals the configured system email.
      *
-     * This prevents infinite loops where users reply to automated notifications.
+     * Prevents infinite loops where a customer replies to an automated
+     * notification and the reply gets ingested as a brand-new ticket.
      *
      * @param array $headers Array of header objects from Gmail API
-     * @return bool True if system notification response detected, false otherwise
+     * @return bool True if system notification reply detected, false otherwise
      */
     public function isSystemNotification(array $headers): bool
     {
-        // Check 1: Custom Mesa de Ayuda notification header (original method)
-        $notificationHeader = $this->getHeader($headers, 'X-Mesa-Ayuda-Notification');
-        if ($notificationHeader === 'true') {
+        $subject = $this->getHeader($headers, 'Subject');
+
+        // 1) Canonical: HMAC stamp embedded by our own EmailService (H-3).
+        if (NotificationStamp::verifiedTicketNumber($subject) !== null) {
             return true;
         }
 
-        // Check 2: Sender is system email address
+        // 2) Legacy header — trusted ONLY when Gmail-verified DKIM passes for
+        //    our own domain. Grace window during the H-3 rollout; remove after
+        //    ~30 days post-deploy (see docs/superpowers/specs/2026-05-16-gmail-audit-p0-design.md §5.2.6).
+        $legacy = $this->getHeader($headers, 'X-Mesa-Ayuda-Notification');
+        if ($legacy === 'true' && $this->dkimPassesForOwnDomain($headers)) {
+            return true;
+        }
+
+        // 3) From == system email. DMARC-spoof-mitigated but not perfect; unchanged.
         $from = $this->getHeader($headers, 'From');
         $fromEmail = EmailHeaderParser::extractEmailAddress($from);
-
-        // Load system email from settings
         $systemEmail = $this->getSystemEmail();
-        if (!empty($systemEmail) && strtolower($fromEmail) === strtolower($systemEmail)) {
-            // Email is FROM the system itself - likely a reply loop
+        if ($systemEmail !== '' && strtolower($fromEmail) === strtolower($systemEmail)) {
             return true;
         }
 
-        // Check 3: Subject contains notification patterns
-        $subject = $this->getHeader($headers, 'Subject');
-        $notificationPatterns = [
-            'Re: [Ticket #',        // Matches all ticket notification replies
-            'Re: Tu Solicitud',     // Generic confirmation pattern (if used)
-        ];
-
-        foreach ($notificationPatterns as $pattern) {
-            if (stripos($subject, $pattern) !== false) {
-                return true;
-            }
-        }
-
+        // Removed (dead code): subject-prefix "Re: [Ticket #" / "Re: Tu Solicitud" check.
+        // Templates produce "Tu ticket #N fue creado", never "[Ticket #N]", so the
+        // branch never matched in production.
         return false;
+    }
+
+    /**
+     * True iff the Authentication-Results header (added by Gmail itself on
+     * inbound mail) reports dkim=pass for our own domain. Used by the H-3
+     * grace-window branch to authenticate the legacy X-Mesa-Ayuda-Notification
+     * header.
+     *
+     * @param array $headers Array of header objects from Gmail API
+     * @return bool
+     */
+    private function dkimPassesForOwnDomain(array $headers): bool
+    {
+        $authResults = $this->getHeader($headers, 'Authentication-Results');
+        $systemEmail = $this->getSystemEmail();
+        $atPos = strrpos($systemEmail, '@');
+        if ($authResults === '' || $atPos === false) {
+            return false;
+        }
+        $ownDomain = substr($systemEmail, $atPos + 1);
+
+        return (bool)preg_match(
+            '/dkim=pass[^;]*?header\.d=' . preg_quote($ownDomain, '/') . '\b/i',
+            $authResults,
+        );
     }
 
     /**
@@ -519,6 +544,12 @@ class GmailService
      */
     private function getSystemEmail(): string
     {
+        // Allow callers (and unit tests) to inject the system email through
+        // the constructor config, bypassing the SystemSettings table lookup.
+        if (!empty($this->config['user_email']) && is_string($this->config['user_email'])) {
+            return $this->config['user_email'];
+        }
+
         try {
             $settingsTable = $this->fetchTable('SystemSettings');
             $setting = $settingsTable->find()

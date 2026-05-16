@@ -8,6 +8,7 @@ use App\Constants\SettingKeys;
 use App\Notification\Channel\NotificationMessage;
 use App\Service\Dto\SystemConfig;
 use App\Service\Traits\GenericAttachmentTrait;
+use App\Service\Util\NotificationStamp;
 use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
 use Exception;
@@ -79,6 +80,13 @@ class EmailService
         try {
             $systemTitle = $this->getSettingValue(SettingKeys::SYSTEM_TITLE, CacheConstants::DEFAULT_SYSTEM_TITLE);
             $fromEmail = $this->getSettingValue(SettingKeys::GMAIL_USER_EMAIL, 'noreply@localhost');
+
+            // H-3: stamp outgoing notifications with HMAC so a customer reply
+            // is recognized as a system-notification thread by isSystemNotification().
+            // Subject already contains "#<ticketNumber>" in every template; extract it.
+            if (preg_match('/#(\d+)/', $subject, $matches)) {
+                $subject = NotificationStamp::append($subject, $matches[1]);
+            }
 
             $toRecipients = [$to => $to];
 
