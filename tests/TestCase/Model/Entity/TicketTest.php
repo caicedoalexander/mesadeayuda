@@ -168,4 +168,65 @@ final class TicketTest extends TestCase
         $user = $this->makeUser(['role' => 'asesor_tic', 'is_active' => true]);
         self::assertFalse($ticket->canBeAssignedTo($user));
     }
+
+    public function testFromEmailIngestSetsInitialStatusAndPriority(): void
+    {
+        $ticket = Ticket::fromEmailIngest(
+            ticketNumber: 'T-0001',
+            requesterId: 42,
+            subject: 'Mi pedido',
+            sanitizedDescription: '<p>cuerpo limpio</p>',
+            channel: 'email',
+            sourceEmail: 'cliente@example.com',
+        );
+
+        self::assertSame('nuevo', $ticket->status);
+        self::assertSame('media', $ticket->priority);
+        self::assertSame('T-0001', $ticket->ticket_number);
+        self::assertSame(42, $ticket->requester_id);
+        self::assertSame('Mi pedido', $ticket->subject);
+        self::assertSame('<p>cuerpo limpio</p>', $ticket->description);
+        self::assertSame('email', $ticket->channel);
+        self::assertSame('cliente@example.com', $ticket->source_email);
+    }
+
+    public function testFromEmailIngestFallsBackToSinAsuntoWhenSubjectEmpty(): void
+    {
+        $ticket = Ticket::fromEmailIngest(
+            ticketNumber: 'T-0002',
+            requesterId: 1,
+            subject: '',
+            sanitizedDescription: '',
+            channel: 'email',
+            sourceEmail: 'x@y.z',
+        );
+
+        self::assertSame('(Sin asunto)', $ticket->subject);
+    }
+
+    public function testFromEmailIngestPassesThroughGmailIdsAndRecipients(): void
+    {
+        $emailTo = [['email' => 'a@b.com', 'name' => 'A B']];
+        $emailCc = [['email' => 'c@d.com', 'name' => 'C D']];
+
+        $ticket = Ticket::fromEmailIngest(
+            ticketNumber: 'T-0003',
+            requesterId: 1,
+            subject: 'x',
+            sanitizedDescription: '',
+            channel: 'email',
+            sourceEmail: 'x@y.z',
+            gmailMessageId: 'gm-msg-1',
+            gmailThreadId: 'gm-thr-1',
+            emailTo: $emailTo,
+            emailCc: $emailCc,
+        );
+
+        self::assertSame('gm-msg-1', $ticket->gmail_message_id);
+        self::assertSame('gm-thr-1', $ticket->gmail_thread_id);
+        // email_to/email_cc are JSON-encoded by EmailRecipientsTrait setters;
+        // the canonical read-side is the *_array virtual getter.
+        self::assertSame($emailTo, $ticket->email_to_array);
+        self::assertSame($emailCc, $ticket->email_cc_array);
+    }
 }

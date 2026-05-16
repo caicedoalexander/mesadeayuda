@@ -92,11 +92,7 @@ class TicketIngestionService
         // Generate ticket number
         $ticketNumber = $ticketsTable->generateTicketNumber();
 
-        // Ensure subject is not empty
         $subject = trim($emailData['subject'] ?? '');
-        if (empty($subject)) {
-            $subject = '(Sin asunto)';
-        }
 
         // Determine channel: if email comes from the configured WhatsApp bot
         // address, classify as whatsapp instead of email.
@@ -106,27 +102,20 @@ class TicketIngestionService
             $channel = TicketConstants::CHANNEL_WHATSAPP;
         }
 
-        // Create ticket
-        $ticket = $ticketsTable->newEntity([
-            'ticket_number' => $ticketNumber,
-            'gmail_message_id' => $emailData['gmail_message_id'] ?? null,
-            'gmail_thread_id' => $emailData['gmail_thread_id'] ?? null,
-            'subject' => $subject,
-            'description' => $description,
-            'status' => TicketConstants::STATUS_NUEVO,
-            'priority' => TicketConstants::PRIORITY_MEDIA,
-            'requester_id' => $user->id,
-            'channel' => $channel,
-            'source_email' => $fromEmail,
-        ], ['accessibleFields' => [
-            'ticket_number' => true, 'gmail_message_id' => true, 'gmail_thread_id' => true,
-            'status' => true, 'requester_id' => true, 'channel' => true, 'source_email' => true,
-        ]]);
-        assert($ticket instanceof Ticket);
-
-        // Set email recipients directly (bypass marshalling to avoid validation issues)
-        $ticket->email_to = !empty($emailData['email_to']) ? $emailData['email_to'] : null;
-        $ticket->email_cc = !empty($emailData['email_cc']) ? $emailData['email_cc'] : null;
+        // Build ticket via domain factory: status/priority defaults and
+        // (Sin asunto) fallback live in the entity, not in this IO layer.
+        $ticket = Ticket::fromEmailIngest(
+            ticketNumber: $ticketNumber,
+            requesterId: (int)$user->id,
+            subject: $subject,
+            sanitizedDescription: $description,
+            channel: $channel,
+            sourceEmail: $fromEmail,
+            gmailMessageId: $emailData['gmail_message_id'] ?? null,
+            gmailThreadId: $emailData['gmail_thread_id'] ?? null,
+            emailTo: !empty($emailData['email_to']) ? $emailData['email_to'] : null,
+            emailCc: !empty($emailData['email_cc']) ? $emailData['email_cc'] : null,
+        );
 
         if (!$ticketsTable->save($ticket)) {
             Log::error('Failed to save ticket', ['errors' => $ticket->getErrors()]);
