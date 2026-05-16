@@ -28,25 +28,25 @@ class TicketIngestionService
     use HtmlSanitizerTrait;
 
     private TicketAttachmentService $attachments;
-    private TicketNotificationService $notifications;
+    private N8nService $n8n;
     private SystemConfig $config;
     private EventManagerInterface $eventManager;
 
     /**
      * @param \App\Service\Dto\SystemConfig|null $config System configuration VO
      * @param \App\Service\TicketAttachmentService|null $attachments Optional injected attachment service
-     * @param \App\Service\TicketNotificationService|null $notifications Optional injected notification service
+     * @param \App\Service\N8nService|null $n8n Optional injected n8n webhook service
      * @param \Cake\Event\EventManagerInterface|null $eventManager Optional injected event manager
      */
     public function __construct(
         ?SystemConfig $config = null,
         ?TicketAttachmentService $attachments = null,
-        ?TicketNotificationService $notifications = null,
+        ?N8nService $n8n = null,
         ?EventManagerInterface $eventManager = null,
     ) {
         $this->config = $config ?? SystemConfig::empty();
         $this->attachments = $attachments ?? new TicketAttachmentService();
-        $this->notifications = $notifications ?? new TicketNotificationService($this->config);
+        $this->n8n = $n8n ?? new N8nService($this->config);
         $this->eventManager = $eventManager ?? EventManager::instance();
     }
 
@@ -148,7 +148,7 @@ class TicketIngestionService
 
         // Send n8n webhook for AI tag assignment (lazy loaded only when creating tickets)
         try {
-            $this->notifications->getN8nService()->sendTicketCreatedWebhook($ticket);
+            $this->n8n->sendTicketCreatedWebhook($ticket);
         } catch (Exception $e) {
             Log::warning('n8n webhook failed (non-blocking): ' . $e->getMessage());
             // Don't block ticket creation if webhook fails
