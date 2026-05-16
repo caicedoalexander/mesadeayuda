@@ -5,6 +5,7 @@ namespace App\Service;
 
 use App\Constants\CacheConstants;
 use App\Constants\SettingKeys;
+use App\Notification\Channel\NotificationMessage;
 use App\Notification\Email\TemplateContext;
 use App\Notification\Email\TemplateRegistry;
 use App\Service\Dto\SystemConfig;
@@ -200,6 +201,27 @@ class EmailService
         }
 
         return $this->gmailService;
+    }
+
+    /**
+     * Transport entry-point used by EmailChannel. Delegates to the same
+     * Gmail-backed implementation as the legacy methods but accepts an
+     * already-rendered NotificationMessage instead of per-event arguments.
+     */
+    public function dispatch(NotificationMessage $message): bool
+    {
+        if ($message->channel !== 'email') {
+            return false;
+        }
+
+        return $this->sendEmail(
+            to: $message->recipient,
+            subject: (string)$message->subject,
+            body: (string)$message->bodyHtml,
+            attachments: $message->attachments,
+            additionalTo: $message->additionalTo,
+            additionalCc: $message->additionalCc,
+        );
     }
 
     private function sendEmail(string $to, string $subject, string $body, array $attachments = [], array $additionalTo = [], array $additionalCc = []): bool
