@@ -62,7 +62,8 @@ trait TicketBulkTrait
         $agentId = $this->normalizeAssigneeId($agentId);
         $actor = $this->Authentication->getIdentity();
         $userId = $this->getCurrentUserId();
-        [$table, $service, $entityName] = $this->getEntityComponents();
+        $table = $this->fetchTable('Tickets');
+        $service = $this->ticketPipeline;
 
         // Early actor guard: abort whole batch if actor cannot assign
         if ($this->authService->isAssignmentDisabled($actor)) {
@@ -88,13 +89,13 @@ trait TicketBulkTrait
             }
         }
         if ($successCount > 0) {
-            $this->Flash->success(__("{$successCount} {$entityName}(s) asignado(s) correctamente."));
+            $this->Flash->success(__("{$successCount} Ticket(s) asignado(s) correctamente."));
         }
         if ($unauthorizedCount > 0) {
-            $this->Flash->warning(__("{$unauthorizedCount} {$entityName}(s) no se asignaron por reglas de autorización (lockeado, usuario inactivo o no-staff)."));
+            $this->Flash->warning(__("{$unauthorizedCount} Ticket(s) no se asignaron por reglas de autorización (lockeado, usuario inactivo o no-staff)."));
         }
         if ($errorCount > 0) {
-            $this->Flash->error(__("{$errorCount} {$entityName}(s) no pudieron ser asignados."));
+            $this->Flash->error(__("{$errorCount} Ticket(s) no pudieron ser asignados."));
         }
 
         return $this->redirect(['action' => 'index']);
@@ -113,7 +114,8 @@ trait TicketBulkTrait
         $entityIds = $this->parseEntityIds();
         $newPriority = $this->request->getData('priority');
         $userId = $this->getCurrentUserId();
-        [$table, $service, $entityName] = $this->getEntityComponents();
+        $table = $this->fetchTable('Tickets');
+        $service = $this->ticketPipeline;
 
         $successCount = 0;
         $errorCount = 0;
@@ -136,13 +138,13 @@ trait TicketBulkTrait
             }
         }
         if ($successCount > 0) {
-            $this->Flash->success(__("{$successCount} {$entityName}(s) actualizado(s) correctamente."));
+            $this->Flash->success(__("{$successCount} Ticket(s) actualizado(s) correctamente."));
         }
         if ($lockedCount > 0) {
-            $this->Flash->warning(__("{$lockedCount} {$entityName}(s) en estado final no fueron modificados."));
+            $this->Flash->warning(__("{$lockedCount} Ticket(s) en estado final no fueron modificados."));
         }
         if ($errorCount > 0) {
-            $this->Flash->error(__("{$errorCount} {$entityName}(s) no pudieron ser actualizados."));
+            $this->Flash->error(__("{$errorCount} Ticket(s) no pudieron ser actualizados."));
         }
 
         return $this->redirect(['action' => 'index']);
@@ -156,7 +158,6 @@ trait TicketBulkTrait
         $this->request->allowMethod(['post']);
         $entityIds = $this->parseEntityIds();
         $tagId = (int)$this->request->getData('tag_id');
-        [, , $entityName] = $this->getEntityComponents();
         $tagsTable = $this->fetchTable('TicketTags');
         $foreignKey = 'ticket_id';
         $successCount = 0;
@@ -186,10 +187,10 @@ trait TicketBulkTrait
             }
         }
         if ($successCount > 0) {
-            $this->Flash->success(__("Etiqueta agregada a {$successCount} {$entityName}(s)."));
+            $this->Flash->success(__("Etiqueta agregada a {$successCount} Ticket(s)."));
         }
         if ($errorCount > 0) {
-            $this->Flash->error(__("{$errorCount} {$entityName}(s) no pudieron ser etiquetados."));
+            $this->Flash->error(__("{$errorCount} Ticket(s) no pudieron ser etiquetados."));
         }
 
         return $this->redirect(['action' => 'index']);
@@ -202,7 +203,7 @@ trait TicketBulkTrait
     {
         $this->request->allowMethod(['post']);
         $entityIds = $this->parseEntityIds();
-        [$table, , $entityName] = $this->getEntityComponents();
+        $table = $this->fetchTable('Tickets');
         $successCount = 0;
         $errorCount = 0;
         foreach ($entityIds as $entityId) {
@@ -219,10 +220,10 @@ trait TicketBulkTrait
             }
         }
         if ($successCount > 0) {
-            $this->Flash->success(__("{$successCount} {$entityName}(s) eliminado(s) correctamente."));
+            $this->Flash->success(__("{$successCount} Ticket(s) eliminado(s) correctamente."));
         }
         if ($errorCount > 0) {
-            $this->Flash->error(__("{$errorCount} {$entityName}(s) no pudieron ser eliminados."));
+            $this->Flash->error(__("{$errorCount} Ticket(s) no pudieron ser eliminados."));
         }
 
         return $this->redirect(['action' => 'index']);

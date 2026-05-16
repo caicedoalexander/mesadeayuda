@@ -79,26 +79,6 @@ trait TicketServiceInitializerTrait
     // region: TicketSystemController helpers
 
     /**
-     * @return array{table: \Cake\ORM\Table, service: ?\App\Service\TicketPipelineService, displayName: string, tableName: string, foreignKey: string, 0: \Cake\ORM\Table, 1: ?\App\Service\TicketPipelineService, 2: string}
-     */
-    private function getEntityComponents(): array
-    {
-        $components = [
-            'table' => $this->Tickets ?? $this->fetchTable('Tickets'),
-            'service' => $this->ticketPipeline ?? null,
-            'displayName' => 'Ticket',
-            'tableName' => 'Tickets',
-            'foreignKey' => 'ticket_id',
-        ];
-
-        return array_merge($components, [
-            0 => $components['table'],
-            1 => $components['service'],
-            2 => $components['displayName'],
-        ]);
-    }
-
-    /**
      * @return \Cake\ORM\Table
      */
     private function getHistoryTable(): Table

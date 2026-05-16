@@ -54,7 +54,7 @@ trait TicketListingTrait
         foreach ($config['filterParams'] as $paramName => $queryKey) {
             $additionalFilters[$paramName] = $this->request->getQuery($queryKey);
         }
-        [$table, , ] = $this->getEntityComponents();
+        $table = $this->fetchTable('Tickets');
         $tableAlias = $table->getAlias();
         $entityVariable = $this->getEntityVariable();
         $filters = array_merge([

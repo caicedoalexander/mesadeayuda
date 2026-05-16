@@ -40,10 +40,8 @@ trait TicketHistoryTrait
 
                 return;
             }
-            $components = $this->getEntityComponents();
-            $tableName = $components['tableName'];
-            $foreignKey = $components['foreignKey'];
-            $this->fetchTable($tableName)->get($id);
+            $foreignKey = 'ticket_id';
+            $this->fetchTable('Tickets')->get($id);
             $historyTable = $this->getHistoryTable();
             $history = $historyTable
                 ->find()

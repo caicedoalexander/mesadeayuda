@@ -116,9 +116,7 @@ trait TicketActionsTrait
         $userId = $this->getCurrentUserId();
         $actor = $this->Authentication->getIdentity();
 
-        $components = $this->getEntityComponents();
-        $entity = $components['table']->get($entityId);
-        $entityName = $components['displayName'];
+        $entity = $this->fetchTable('Tickets')->get($entityId);
 
         // Early actor guard: better UX than tripping the service exception
         if ($this->authService->isAssignmentDisabled($actor)) {
@@ -128,13 +126,13 @@ trait TicketActionsTrait
         }
 
         if ($entity->isLocked()) {
-            $this->Flash->error(__("No se puede modificar una {$entityName} en estado final."));
+            $this->Flash->error(__('No se puede modificar una Ticket en estado final.'));
 
             return $this->redirect(['action' => $redirectAction]);
         }
 
         try {
-            $result = $components['service']->assign($entity, $assigneeId, $userId, $actor);
+            $result = $this->ticketPipeline->assign($entity, $assigneeId, $userId, $actor);
         } catch (UnauthorizedAssignmentException $e) {
             $this->Flash->error($e->getMessage());
 
@@ -142,9 +140,9 @@ trait TicketActionsTrait
         }
 
         if ($result) {
-            $this->Flash->success(__("{$entityName} asignada correctamente."));
+            $this->Flash->success(__('Ticket asignada correctamente.'));
         } else {
-            $this->Flash->error(__("No se pudo asignar la {$entityName}."));
+            $this->Flash->error(__('No se pudo asignar la Ticket.'));
         }
 
         return $this->redirect(['action' => $redirectAction]);
@@ -163,27 +161,25 @@ trait TicketActionsTrait
         $this->request->allowMethod(['post', 'put']);
         $userId = $this->getCurrentUserId();
 
-        $components = $this->getEntityComponents();
-        $entity = $components['table']->get($entityId);
-        $entityName = $components['displayName'];
+        $entity = $this->fetchTable('Tickets')->get($entityId);
 
         if ($entity->isLocked()) {
-            $this->Flash->error(__("No se puede modificar una {$entityName} en estado final."));
+            $this->Flash->error(__('No se puede modificar una Ticket en estado final.'));
 
             return $this->redirect(['action' => $redirectAction]);
         }
 
         try {
-            $result = $components['service']->changeStatus($entity, $newStatus, $userId);
+            $result = $this->ticketPipeline->changeStatus($entity, $newStatus, $userId);
         } catch (InvalidStatusTransitionException $e) {
             $this->Flash->error(__('Transición de estado no permitida: {0}', [$e->getMessage()]));
 
             return $this->redirect(['action' => $redirectAction]);
         }
         if ($result) {
-            $this->Flash->success(__("Estado de {$entityName} actualizado."));
+            $this->Flash->success(__('Estado de Ticket actualizado.'));
         } else {
-            $this->Flash->error(__("Error al cambiar el estado de {$entityName}."));
+            $this->Flash->error(__('Error al cambiar el estado de Ticket.'));
         }
 
         return $this->redirect(['action' => $redirectAction]);
@@ -202,21 +198,19 @@ trait TicketActionsTrait
         $this->request->allowMethod(['post', 'put']);
         $userId = $this->getCurrentUserId();
 
-        $components = $this->getEntityComponents();
-        $entity = $components['table']->get($entityId);
-        $entityName = $components['displayName'];
+        $entity = $this->fetchTable('Tickets')->get($entityId);
 
         if ($entity->isLocked()) {
-            $this->Flash->error(__("No se puede modificar una {$entityName} en estado final."));
+            $this->Flash->error(__('No se puede modificar una Ticket en estado final.'));
 
             return $this->redirect(['action' => $redirectAction]);
         }
 
-        $result = $components['service']->changePriority($entity, $newPriority, $userId);
+        $result = $this->ticketPipeline->changePriority($entity, $newPriority, $userId);
         if ($result) {
-            $this->Flash->success(__("Prioridad de {$entityName} actualizada."));
+            $this->Flash->success(__('Prioridad de Ticket actualizada.'));
         } else {
-            $this->Flash->error(__("Error al cambiar la prioridad de {$entityName}."));
+            $this->Flash->error(__('Error al cambiar la prioridad de Ticket.'));
         }
 
         return $this->redirect(['action' => $redirectAction]);
@@ -230,19 +224,15 @@ trait TicketActionsTrait
         $this->request->allowMethod(['post']);
         $userId = $this->getCurrentUserId();
 
-        $components = $this->getEntityComponents();
-        $entityName = $components['displayName'];
-        $service = $components['service'];
-
         $data = $this->request->getData();
         $files = $this->request->getUploadedFiles();
 
-        $result = $service->handleResponse($entityId, $userId, $data, $files);
+        $result = $this->ticketPipeline->handleResponse($entityId, $userId, $data, $files);
 
         if ($result['success']) {
-            $this->Flash->success($result['message'] ?? __("Comentario agregado a {$entityName}."));
+            $this->Flash->success($result['message'] ?? __('Comentario agregado a Ticket.'));
         } else {
-            $this->Flash->error($result['message'] ?? __("Error al agregar comentario a {$entityName}."));
+            $this->Flash->error($result['message'] ?? __('Error al agregar comentario a Ticket.'));
         }
 
         return $this->redirect(['action' => 'view', $entityId]);
