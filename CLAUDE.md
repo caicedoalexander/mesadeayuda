@@ -79,9 +79,17 @@ Two layers:
 
 ### Notifications and integrations
 
-Outbound channels (email, WhatsApp, n8n webhooks) are dispatched through the notification service + `EmailTemplateRenderer`. Do NOT call `EmailService`, `WhatsappService`, or `N8nService` directly from controllers. To add a notification type, extend the renderer and templates rather than wiring integration calls into request handlers.
+Outbound channels are wired as adapters that implement `App\Notification\Channel\NotificationChannel` (`EmailChannel`, `WhatsappChannel`). A per-event Strategy under `App\Notification\Strategy\*` builds `NotificationMessage` value objects from a domain event; `TicketNotificationService` routes each message to the channel whose `name()` matches.
 
-`GmailImportService` + `TicketIngestionService` cover the inbound side; UTF-8 + markup-safe truncation lives in `TicketIngestionService` (commit b4413a1). Atomic ticket-number allocation runs through `NumberGenerationService` (commit 9ac752a) — don't reintroduce read-modify-write on the counter.
+To add a new ticket notification:
+1. Define a domain event under `App\Domain\Event\` (extending `DomainEvent`).
+2. Implement a `TicketNotificationStrategy` that `supports($event)` and `buildMessages($event)`.
+3. Subscribe the event in `TicketNotificationListener::implementedEvents()`.
+4. Register the strategy in `Application::registerDomainEventListeners()`.
+
+Do NOT call `EmailService`, `WhatsappService`, or any channel directly from controllers or services — publish a domain event and let the listener dispatch.
+
+`GmailImportService` + `TicketIngestionService` cover the inbound side; UTF-8 + markup-safe truncation lives in `TicketIngestionService`. Atomic ticket-number allocation runs through `NumberGenerationService` — don't reintroduce read-modify-write on the counter.
 
 ### Attachments
 
