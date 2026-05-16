@@ -5,6 +5,8 @@ namespace App\Service;
 
 use App\Constants\TicketConstants;
 use App\Domain\Event\TicketAssigned;
+use App\Domain\Event\TicketCommentAdded;
+use App\Domain\Event\TicketResponded;
 use App\Domain\Event\TicketStatusChanged;
 use App\Model\Entity\Ticket;
 use App\Model\Entity\User;
@@ -170,8 +172,12 @@ class TicketPipelineService
             }
         }
 
-        // TX2: status change. InvalidStatusTransitionException is caught to preserve
-        // the "comment already committed; don't tempt a retry" semantics.
+        // TX2: status change. The TicketStatusChanged event is only buffered when
+        // there's NO public comment — when there is, TicketResponded covers both
+        // effects and TicketStatusChanged would duplicate the email.
+        $hasPublicComment = $hasComment && $commentType === TicketConstants::COMMENT_PUBLIC && $comment !== null;
+        $emitTicketResponded = $hasPublicComment && $hasStatusChange;
+
         if ($hasStatusChange) {
             try {
                 $connection->transactional(function () use (
@@ -179,18 +185,31 @@ class TicketPipelineService
                     $newStatus,
                     $oldStatus,
                     $userId,
+                    $emitTicketResponded,
+                    $comment,
                     &$pendingEvents,
                 ): bool {
                     $ok = $this->changeStatus($entity, $newStatus, $userId, null, true, deferDispatch: true);
                     if (!$ok) {
                         return false;
                     }
-                    $pendingEvents[] = new TicketStatusChanged(
-                        ticketId: (int)$entity->id,
-                        oldStatus: $oldStatus,
-                        newStatus: $newStatus,
-                        actorId: $userId,
-                    );
+
+                    if ($emitTicketResponded) {
+                        $pendingEvents[] = new TicketResponded(
+                            ticketId: (int)$entity->id,
+                            commentId: (int)$comment->id,
+                            oldStatus: $oldStatus,
+                            newStatus: (string)$newStatus,
+                            actorId: $userId,
+                        );
+                    } else {
+                        $pendingEvents[] = new TicketStatusChanged(
+                            ticketId: (int)$entity->id,
+                            oldStatus: $oldStatus,
+                            newStatus: (string)$newStatus,
+                            actorId: $userId,
+                        );
+                    }
 
                     return true;
                 });
@@ -213,23 +232,21 @@ class TicketPipelineService
             }
         }
 
-        // Post-commit: dispatch buffered domain events. If TX2 rolled back without
-        // throwing (changeStatus returned false), pendingEvents is empty for that branch.
+        // Public-comment-only branch (no status change).
+        if ($hasPublicComment && !$hasStatusChange) {
+            $pendingEvents[] = new TicketCommentAdded(
+                ticketId: (int)$entity->id,
+                commentId: (int)$comment->id,
+                actorId: $userId,
+                isPublic: true,
+            );
+        }
+
+        // Post-commit: dispatch buffered domain events. Notification routing is
+        // fully delegated to the EventManager — no direct call to the service.
         foreach ($pendingEvents as $event) {
             $this->eventManager->dispatch($event);
         }
-
-        $this->notifications->sendResponseNotifications(
-            $entity,
-            $comment,
-            $oldStatus,
-            $newStatus,
-            $hasComment,
-            $commentType,
-            $hasStatusChange,
-            $emailTo,
-            $emailCc,
-        );
 
         return $this->buildResponseResult($hasComment, $hasStatusChange, $uploadedCount, $entity);
     }

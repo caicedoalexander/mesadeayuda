@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace App\Test\TestCase\Service;
 
 use App\Constants\TicketConstants;
+use App\Domain\Event\TicketCommentAdded;
+use App\Domain\Event\TicketResponded;
 use App\Domain\Event\TicketStatusChanged;
 use App\Model\Entity\Ticket;
 use App\Model\Entity\TicketComment;
@@ -58,7 +60,6 @@ class TicketPipelineServiceTest extends TestCase
         $attachments->expects($this->never())->method('saveUploadedFile');
 
         $notifications = $this->createMock(TicketNotificationService::class);
-        $notifications->expects($this->never())->method('sendResponseNotifications');
 
         $service = $this->buildService($comments, $attachments, $notifications);
         $this->stubTicketsTable($service);
@@ -84,10 +85,12 @@ class TicketPipelineServiceTest extends TestCase
 
         $attachments = $this->createMock(TicketAttachmentService::class);
         $notifications = $this->createMock(TicketNotificationService::class);
-        $notifications->expects($this->never())->method('sendResponseNotifications');
 
         $dispatched = [];
         $this->eventManager->on(TicketStatusChanged::NAME, function ($event) use (&$dispatched): void {
+            $dispatched[] = $event;
+        });
+        $this->eventManager->on(TicketResponded::NAME, function ($event) use (&$dispatched): void {
             $dispatched[] = $event;
         });
 
@@ -123,7 +126,7 @@ class TicketPipelineServiceTest extends TestCase
         $this->assertSame([], $dispatched);
     }
 
-    public function testHandleResponseDispatchesStatusEventAfterCommit(): void
+    public function testHandleResponseEmitsTicketRespondedWhenPublicCommentAndStatusChange(): void
     {
         $comment = new TicketComment(['id' => 99]);
         $comment->setNew(false);
@@ -135,9 +138,11 @@ class TicketPipelineServiceTest extends TestCase
         $notifications = $this->createMock(TicketNotificationService::class);
 
         $dispatched = [];
-        $this->eventManager->on(TicketStatusChanged::NAME, function ($event) use (&$dispatched): void {
-            $dispatched[] = $event;
-        });
+        foreach ([TicketStatusChanged::NAME, TicketResponded::NAME, TicketCommentAdded::NAME] as $name) {
+            $this->eventManager->on($name, function ($event) use (&$dispatched): void {
+                $dispatched[] = $event;
+            });
+        }
 
         $service = $this->getMockBuilder(TicketPipelineService::class)
             ->setConstructorArgs([
@@ -169,6 +174,79 @@ class TicketPipelineServiceTest extends TestCase
             entityId: 1,
             userId: 42,
             data: ['comment_body' => 'hello', 'status' => TicketConstants::STATUS_PENDIENTE],
+            files: [],
+        );
+
+        $this->assertTrue($result['success']);
+        $this->assertCount(1, $dispatched, 'Exactly one event should be dispatched (anti-duplication)');
+        $this->assertInstanceOf(TicketResponded::class, $dispatched[0]);
+    }
+
+    public function testHandleResponseEmitsTicketCommentAddedWhenOnlyPublicComment(): void
+    {
+        $comment = new TicketComment(['id' => 99]);
+        $comment->setNew(false);
+
+        $comments = $this->createMock(TicketCommentService::class);
+        $comments->method('addComment')->willReturn($comment);
+
+        $attachments = $this->createMock(TicketAttachmentService::class);
+        $notifications = $this->createMock(TicketNotificationService::class);
+
+        $dispatched = [];
+        foreach ([TicketStatusChanged::NAME, TicketResponded::NAME, TicketCommentAdded::NAME] as $name) {
+            $this->eventManager->on($name, function ($event) use (&$dispatched): void {
+                $dispatched[] = $event;
+            });
+        }
+
+        $service = $this->buildService($comments, $attachments, $notifications);
+        $this->stubTicketsTable($service);
+
+        $result = $service->handleResponse(
+            entityId: 1,
+            userId: 42,
+            data: ['comment_body' => 'hello', 'status' => null],
+            files: [],
+        );
+
+        $this->assertTrue($result['success']);
+        $this->assertCount(1, $dispatched);
+        $this->assertInstanceOf(TicketCommentAdded::class, $dispatched[0]);
+    }
+
+    public function testHandleResponseEmitsTicketStatusChangedWhenOnlyStatusChange(): void
+    {
+        $comments = $this->createMock(TicketCommentService::class);
+        $attachments = $this->createMock(TicketAttachmentService::class);
+        $notifications = $this->createMock(TicketNotificationService::class);
+
+        $dispatched = [];
+        foreach ([TicketStatusChanged::NAME, TicketResponded::NAME, TicketCommentAdded::NAME] as $name) {
+            $this->eventManager->on($name, function ($event) use (&$dispatched): void {
+                $dispatched[] = $event;
+            });
+        }
+
+        $service = $this->getMockBuilder(TicketPipelineService::class)
+            ->setConstructorArgs([
+                SystemConfig::empty(),
+                $comments,
+                $attachments,
+                $notifications,
+                new AuthorizationService(),
+                $this->eventManager,
+            ])
+            ->onlyMethods(['changeStatus'])
+            ->getMock();
+
+        $service->method('changeStatus')->willReturn(true);
+        $this->stubTicketsTable($service);
+
+        $result = $service->handleResponse(
+            entityId: 1,
+            userId: 42,
+            data: ['comment_body' => '', 'status' => TicketConstants::STATUS_PENDIENTE],
             files: [],
         );
 
