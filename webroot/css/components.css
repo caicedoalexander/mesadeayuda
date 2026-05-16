@@ -1448,10 +1448,18 @@ textarea.app-input {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 14px;
+    align-items: stretch;
 }
 
 .app-grid.compact { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
 .app-grid.wide    { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+
+/* Cards rendered as grid items must ignore the stacked `+` margin and
+   fill the row height so siblings line up regardless of content length. */
+.app-grid > .app-card {
+    margin: 0;
+    height: 100%;
+}
 
 
 /* ===========================================================
