@@ -65,8 +65,7 @@ final class TicketCommentAddedTemplate implements EmailTemplate
                 timestamp: $timestamp,
             )
             . TicketCard::render($ctx->ticket)
-            . $this->renderReplyHint($theme)
-            . CtaButton::render('Responder en la mesa de ayuda', $theme->accent, $ctx->ticketUrl);
+            . $this->renderReplyHint($theme);
 
         return new RenderedEmail($subject, EmailFrame::render(
             $theme,

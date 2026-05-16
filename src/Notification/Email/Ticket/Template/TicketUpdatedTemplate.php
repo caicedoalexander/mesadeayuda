@@ -60,8 +60,7 @@ final class TicketUpdatedTemplate implements EmailTemplate
                 accentSoft: $theme->accentSoft,
                 timestamp: '',
             )
-            . TicketCard::render($ctx->ticket)
-            . CtaButton::render('Ver actualización completa', $theme->accent, $ctx->ticketUrl);
+            . TicketCard::render($ctx->ticket);
 
         return new RenderedEmail($subject, EmailFrame::render(
             $theme,

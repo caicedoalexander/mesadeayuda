@@ -14,10 +14,10 @@ use Cake\Core\Configure;
 final class EmailBrand
 {
     public const ORG_NAME = 'Operadora Cafetera S.A.S.';
-    public const ORG_TAG_LINE = 'MESA DE AYUDA · OPERADORA CAFETERA';
-    public const ORG_ADDRESS = 'Carrera 43A #1-50, Medellín';
-    public const ORG_NIT = '901.234.567-8';
-    public const SUPPORT_EMAIL = 'soporte@operadoracafetera.com';
+    public const ORG_TAG_LINE = 'Mesa de Ayuda';
+    public const ORG_ADDRESS = 'Buenaventura, Valle del Cauca';
+    public const ORG_NIT = '800247852';
+    public const SUPPORT_EMAIL = 'mesadeayuda@operadoracafetera.com';
     public const HEADER_TITLE = 'Mesa de Ayuda';
     public const HEADER_SUBTITLE = 'Soporte Interno';
 

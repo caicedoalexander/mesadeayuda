@@ -40,7 +40,7 @@ final class TicketCreatedTemplate implements EmailTemplate
             . 'color:#374151;line-height:1.7;">'
             . '<li>Un agente tomará el ticket en los próximos <strong style="color:#111827;">30 minutos</strong>.</li>'
             . '<li>Recibirás un correo cuando el ticket sea asignado o cambie de estado.</li>'
-            . '<li>Puedes añadir información respondiendo este correo o desde la mesa de ayuda.</li>'
+            . '<li>Puedes añadir información respondiendo este correo.</li>'
             . '</ol>';
 
         $inner =
@@ -51,8 +51,7 @@ final class TicketCreatedTemplate implements EmailTemplate
                 recipientName: $ctx->recipientName,
             )
             . TicketCard::render($ctx->ticket)
-            . InfoBox::render('Próximos pasos', $nextSteps, InfoBox::VARIANT_DASHED)
-            . CtaButton::render('Ver mi ticket', $theme->accent, $ctx->ticketUrl);
+            . InfoBox::render('Próximos pasos', $nextSteps, InfoBox::VARIANT_DASHED);
 
         $body = EmailFrame::render($theme, $inner, '#' . $ctx->ticket->ticket_number);
 

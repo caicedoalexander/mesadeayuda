@@ -52,8 +52,7 @@ final class TicketStatusChangedTemplate implements EmailTemplate
             )
             . StatusTransition::render($oldStatus, $newStatus, $theme->accent)
             . TicketCard::render($ctx->ticket)
-            . $this->renderActorBanner($ctx, $theme)
-            . CtaButton::render('Ver el ticket', $theme->accent, $ctx->ticketUrl);
+            . $this->renderActorBanner($ctx, $theme);
 
         $body = EmailFrame::render($theme, $inner, '#' . $ctx->ticket->ticket_number);
 
