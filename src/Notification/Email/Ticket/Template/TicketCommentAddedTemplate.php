@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace App\Notification\Email\Ticket\Template;
 
-use App\Notification\Email\Component\CtaButton;
 use App\Notification\Email\Component\EmailFrame;
 use App\Notification\Email\Component\Greeting;
 use App\Notification\Email\EmailTemplate;
