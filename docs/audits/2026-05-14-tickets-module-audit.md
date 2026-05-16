@@ -13,10 +13,10 @@
 
 | Indicador | Valor inicial | Estado actual (2026-05-16) |
 |---|---|---|
-| Salud arquitectónica global | **68%** | **~85%** — 5 altos + 2 críticos + 1 medio cerrados |
+| Salud arquitectónica global | **68%** | **~90%** — 5 altos + 2 críticos + 4 medios cerrados + 1 regresión cerrada |
 | Hallazgos Críticos (rojo) | 3 | 1 (CRIT-1 y CRIT-2 cerrados) |
 | Hallazgos Altos (naranja) | 6 | 1 (HIGH-1/2/3/5/6 cerrados; HIGH-4 abierto) |
-| Hallazgos Medios (amarillo) | 7 | 6 (MED-1 cerrado) |
+| Hallazgos Medios (amarillo) | 7 | 3 (MED-1/4/6/7 cerrados) |
 | Hallazgos Bajos (verde) | 4 | 4 |
 
 **Diagnóstico:** El módulo está muy refactorizado respecto a la auditoría 2026-05-07. La capa de dominio (entidad `Ticket` con predicados + state machine), los traits cohesivos del controller, la lazy DI y el bus de eventos parcial son patrones aplicados correctamente. Sin embargo, persisten **tres frentes críticos**:
@@ -168,15 +168,15 @@ Son adapters naturales pero ninguno implementa `NotificationChannel` o `WebhookD
 
 ## 5. Hallazgos Medios (Amarillo)
 
-| ID | Hallazgo | Archivo | Fix sugerido |
+| ID | Hallazgo | Archivo | Estado |
 |---|---|---|---|
-| MED-1 | Notificaciones de "response" llamadas directo, no por bus (asimetría EDA) | `TicketPipelineService.php:156` | Crear `TicketResponded` event + handler |
-| MED-2 | `DomainEvent extends Cake\Event\Event` + `FrozenTime::now()` en service: fugas de framework en dominio | `Domain/Event/DomainEvent.php:19`, `TicketPipelineService.php:19` | Inyectar `ClockInterface` (PSR-20); documentar herencia pragmática |
-| MED-3 | Logs sin `correlation_id` / `event_id` / `actor_id` consistentes | múltiples | Estandarizar contexto base; middleware X-Request-ID |
-| MED-4 | `getEntityComponents()` residual del refactor de `$entityType` | `TicketServiceInitializerTrait.php:81-96` | Eliminar; usar accesos directos |
-| MED-5 | Chain of Responsibility ausente en ingesta de email (filtros concatenados imperativamente) | `GmailImportService.php:103-148`, `TicketIngestionService.php:59-164` | Generar `EmailIngestionFilter` chain |
-| MED-6 | Lazy DI inconsistente: N8n lazy, Email/WhatsApp eager | `TicketNotificationService.php:36-49` | Aplicar mismo patrón `??=` a Email/WhatsApp |
-| MED-7 | Builder ausente; `Ticket` se construye con array marshalling + bypass mixto | `TicketIngestionService.php:110-129` | `Ticket::fromEmailIngest(...)` factory method |
+| MED-1 | Notificaciones de "response" llamadas directo, no por bus (asimetría EDA) | `TicketPipelineService.php:156` | **Cerrado 2026-05-16** |
+| MED-2 | `DomainEvent extends Cake\Event\Event` + `FrozenTime::now()` en service: fugas de framework en dominio | `Domain/Event/DomainEvent.php:19`, `TicketPipelineService.php:19` | Abierto |
+| MED-3 | Logs sin `correlation_id` / `event_id` / `actor_id` consistentes | múltiples | Abierto |
+| MED-4 | `getEntityComponents()` residual del refactor de `$entityType` | `TicketServiceInitializerTrait.php:81-96` | **Cerrado 2026-05-16** |
+| MED-5 | Chain of Responsibility ausente en ingesta de email (filtros concatenados imperativamente) | `GmailImportService.php:103-148`, `TicketIngestionService.php:59-164` | Abierto |
+| MED-6 | Lazy DI inconsistente: N8n lazy, Email/WhatsApp eager | `TicketNotificationService.php:36-49` | **Cerrado obsoleto 2026-05-16** |
+| MED-7 | Builder ausente; `Ticket` se construye con array marshalling + bypass mixto | `TicketIngestionService.php:110-129` | **Cerrado 2026-05-16** |
 
 ---
 
@@ -244,9 +244,9 @@ El conflicto **más significativo** es EDA + Outbox + Transactional: aceptable h
 |---|---|---|
 | 9 | `TicketResponded` event + handler (cierra asimetría del bus) | **Completado 2026-05-16** |
 | 10 | Estandarizar contexto de logs (`ticket_id`, `actor_id`, `event_id`, `occurred_at`) | Pendiente |
-| 11 | Eliminar `getEntityComponents()` residual | Pendiente |
-| 12 | Lazy DI uniforme para Email/WhatsApp en `TicketNotificationService` | Pendiente |
-| 13 | Factory `Ticket::fromEmailIngest()` | Pendiente |
+| 11 | Eliminar `getEntityComponents()` residual | **Completado 2026-05-16** |
+| 12 | Lazy DI uniforme para Email/WhatsApp en `TicketNotificationService` | **Cerrado obsoleto 2026-05-16** (refactor previo eliminó la instanciación interna) |
+| 13 | Factory `Ticket::fromEmailIngest()` | **Completado 2026-05-16** |
 | 14 | Rate Limiter outbound WhatsApp/n8n | Pendiente |
 | 15 | Inyectar `ClockInterface` en `TicketPipelineService` | Pendiente |
 
@@ -401,4 +401,27 @@ LOW-1 a LOW-4: tratar cuando aparezca el caso de uso que los justifique.
 - CRIT-3 (Outbox) sigue abierto.
 - HIGH-4 (Bulkhead vía colas) depende de CRIT-3.
 - N8nService como canal de notificación: la arquitectura ahora lo permite con sólo crear `N8nChannel` + suscribirlo en la strategy que aplique.
+
+### 2026-05-16 (bis) — MED-4 + MED-6 + MED-7 cerrados + regresión Gmail-ingest reparada
+
+**Hallazgos cubiertos:** MED-4 (helper residual), MED-6 (lazy DI obsoleto), MED-7 (factory `Ticket::fromEmailIngest()`). Más una regresión runtime que el auditor original no detectó.
+
+**Regresión descubierta:** El refactor del 2026-05-16 (notification layer) eliminó el método `getN8nService()` y cambió la firma del constructor de `TicketNotificationService` a `(array $strategies, array $channels)`. Pero `TicketIngestionService` líneas 49 y 151 seguían usando el API viejo, así que `bin/cake import_gmail` y el webhook `POST /webhooks/gmail/import` crasheaban con `TypeError` antes de procesar el primer mensaje. El path estaba sin cobertura de tests, por eso el auditor no lo capturó.
+
+**Cambios:**
+- `src/Service/TicketIngestionService.php`: reemplazada dependencia indirecta vía `TicketNotificationService` por inyección directa de `N8nService`. N8n no es un canal de notificación a personas — es un webhook event-to-system; la dependencia anterior era una fachada accidental. Adoptado `Ticket::fromEmailIngest()` para construir tickets desde email.
+- `src/Model/Entity/Ticket.php`: nuevo método estático `fromEmailIngest()`. Encapsula los defaults de status/priority y el fallback `(Sin asunto)`. Bypasea `$_accessible` (legítimo desde dentro de la entidad).
+- `src/Controller/Trait/*`: eliminado helper `getEntityComponents()` y sus 11 callsites en 5 traits. El helper era residuo de un intento previo de soportar múltiples entity types — todos los callsites resolvían los mismos 5 literales.
+- `tests/TestCase/Service/TicketIngestionServiceTest.php`: nuevo. 2 tests de construcción bloquean la regresión.
+- `tests/TestCase/Model/Entity/TicketTest.php`: +3 tests del factory.
+
+**Despliegue:** sin migraciones, sin cambios de firma pública (`createFromEmail` y `createCommentFromEmail` mantienen sus signatures). Rollback granular vía commits separados.
+
+**Validaciones:**
+- `composer test`: PASS — 5 tests nuevos, suite completa verde respecto al baseline.
+- `phpstan analyse src`: sin nuevos errores.
+- `composer cs-check`: solo errores baseline en archivos no tocados.
+- `grep -r "getEntityComponents" src/`: 0 hits.
+
+**Lección operativa:** El refactor del 2026-05-16 tocó la API pública de `TicketNotificationService` sin grep transversal de callers. Para refactors similares, agregar a la checklist un grep del método/propiedad removido y un test de smoke que reconstruya las dependencias top-level (e.g. `GmailImportService::fromSettings`).
 
