@@ -46,11 +46,12 @@ final class EmailFrame
      */
     private static function renderHeader(string $ticketReference): string
     {
-        $h = 'padding:26px 48px 20px;display:flex;align-items:center;gap:12px;'
+        $h = 'padding:26px 48px 20px;display:flex;align-items:center;gap:8px;'
             . 'border-bottom:1px solid #F3F4F6;';
-        $title = '<div><div style="font-size:14px;font-weight:700;'
+        $title = '<div><div style="font-size:16px;font-weight:700;'
             . 'letter-spacing:-0.2px;color:#111827;">' . EmailBrand::HEADER_TITLE . '</div>'
-            . '<div style="font-size:11px;color:#6B7280;margin-top:1px;">'
+            . '<div style="font-size:13px;color:#6B7280;">'
+            . EmailBrand::HEADER_SUBTITLE
             . '</div></div>';
         $ref = '<div style="margin-left:auto;font-family:Geist Mono,Menlo,Consolas,monospace;'
             . 'font-size:10px;color:#9CA3AF;letter-spacing:0.5px;text-transform:uppercase;">'
