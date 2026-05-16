@@ -11,12 +11,12 @@
 
 ## 1. Resumen Ejecutivo
 
-| Indicador | Valor inicial | Estado actual (2026-05-15) |
+| Indicador | Valor inicial | Estado actual (2026-05-16) |
 |---|---|---|
-| Salud arquitectónica global | **68%** | **78%** — 2 altos + 2 críticos cerrados |
+| Salud arquitectónica global | **68%** | **~85%** — 5 altos + 2 críticos + 1 medio cerrados |
 | Hallazgos Críticos (rojo) | 3 | 1 (CRIT-1 y CRIT-2 cerrados) |
-| Hallazgos Altos (naranja) | 6 | 3 (HIGH-1, HIGH-2 y HIGH-3 cerrados) |
-| Hallazgos Medios (amarillo) | 7 | 7 |
+| Hallazgos Altos (naranja) | 6 | 1 (HIGH-1/2/3/5/6 cerrados; HIGH-4 abierto) |
+| Hallazgos Medios (amarillo) | 7 | 6 (MED-1 cerrado) |
 | Hallazgos Bajos (verde) | 4 | 4 |
 
 **Diagnóstico:** El módulo está muy refactorizado respecto a la auditoría 2026-05-07. La capa de dominio (entidad `Ticket` con predicados + state machine), los traits cohesivos del controller, la lazy DI y el bus de eventos parcial son patrones aplicados correctamente. Sin embargo, persisten **tres frentes críticos**:
@@ -36,7 +36,7 @@
 | Domain Entity rica | Sí | Alto (predicados + transitions) | Verde |
 | State machine | Sí | Alto (`TRANSITIONS` + `transitionTo`) | Verde |
 | Domain Events | Sí | Listener cubre 3/3 eventos (cerrado HIGH-2) | Verde |
-| EDA / EventManager | Parcial | Notif. de "response" se llaman directo, no por bus | Amarillo |
+| EDA / EventManager | Sí | Todos los eventos de notificación viajan por bus | Verde |
 | Outbox Pattern | No | Ausente | Rojo |
 | Saga Pattern | No | Sin compensación en ingesta multi-paso | Naranja |
 | Circuit Breaker | Sí | Alto (sobre `SecureHttpTrait`) | Verde |
@@ -44,10 +44,10 @@
 | Rate Limiter outbound | No | Solo inbound webhook tiene MIN_INTERVAL_SECONDS | Naranja |
 | Bulkhead | No | Canales de notif. ejecutan secuencialmente | Naranja |
 | Timeout | Sí | `secureCurlPost` clamp a 30s | Verde |
-| Adapter (implícito) | Sí | Sin interfaz común; viola DIP | Naranja |
+| Adapter (implícito) | Sí | Interfaz `NotificationChannel` + adapters concretos | Verde |
 | Facade | Sí | `handleResponse` bien aplicado | Verde |
 | Proxy / Lazy DI | Parcial | Inconsistente: N8n lazy, Email/WhatsApp eager | Amarillo |
-| Strategy | No | `switch($notificationType)` viola OCP | Naranja |
+| Strategy | Sí | Strategy por evento de dominio | Verde |
 | Chain of Responsibility | No | Filtros de ingesta concatenados imperativamente | Naranja |
 | Template Method (en traits) | Sí | Bien aplicado | Verde |
 | Factory | Parcial | `GmailImportService::fromSettings` OK; `Ticket` carece | Amarillo |
@@ -234,7 +234,7 @@ El conflicto **más significativo** es EDA + Outbox + Transactional: aceptable h
 |---|---|---|
 | 4 | Implementar `onAssigned` en listener + rama `'assignment'` | **Completado 2026-05-14** |
 | 5 | Promover `AuthorizationService` a propiedad del controller | **Completado 2026-05-14** |
-| 6 | Interfaz `NotificationChannel` + adapters para Email/WhatsApp/N8n | Pendiente |
+| 6 | Interfaz `NotificationChannel` + adapters para Email/WhatsApp/N8n | **Completado 2026-05-16** |
 | 7 | Bulkhead vía colas (`cakephp/queue`) — depende de #2 | Pendiente |
 | 8 | Chain of Responsibility en ingesta de email | Pendiente |
 
@@ -242,7 +242,7 @@ El conflicto **más significativo** es EDA + Outbox + Transactional: aceptable h
 
 | # | Acción | Estado |
 |---|---|---|
-| 9 | `TicketResponded` event + handler (cierra asimetría del bus) | Pendiente |
+| 9 | `TicketResponded` event + handler (cierra asimetría del bus) | **Completado 2026-05-16** |
 | 10 | Estandarizar contexto de logs (`ticket_id`, `actor_id`, `event_id`, `occurred_at`) | Pendiente |
 | 11 | Eliminar `getEntityComponents()` residual | Pendiente |
 | 12 | Lazy DI uniforme para Email/WhatsApp en `TicketNotificationService` | Pendiente |
@@ -374,4 +374,31 @@ LOW-1 a LOW-4: tratar cuando aparezca el caso de uso que los justifique.
 **Hallazgos derivados pendientes:**
 - CRIT-3 (Outbox) sigue abierto: la ventana entre commit y dispatch ahora es ~0ms pero un crash exactamente ahí sigue perdiendo el evento. Outbox sigue siendo necesario para at-least-once.
 - MED-1 (`sendResponseNotifications` fuera de bus) sigue abierto y mantiene la asimetría EDA.
+
+### 2026-05-16 — HIGH-5 + HIGH-6 + MED-1 cerrados: capa de notificaciones refactorizada
+
+**Hallazgos cubiertos:** HIGH-5 (Strategy ausente), HIGH-6 (sin interfaz común para canales), MED-1 (asimetría EDA — `sendResponseNotifications` directo). Cerrados como cluster por estar correlacionados.
+
+**Bug latente adicional cerrado:** `handleResponse` enviaba el email `status_change` dos veces cuando había cambio de estado sin comentario — el listener disparaba uno y `sendResponseNotifications` lo repetía.
+
+**Cambios:**
+- Nuevo namespace `App\Notification\Channel\*`: `NotificationMessage` (VO), `NotificationChannel` (interfaz), `EmailChannel`, `WhatsappChannel` (adaptadores).
+- Nuevo namespace `App\Notification\Strategy\*`: `TicketNotificationStrategy` (interfaz), `AbstractTicketStrategy` (helpers), 4 strategies concretas (`TicketCreatedStrategy`, `TicketStatusChangedStrategy`, `TicketCommentAddedStrategy`, `TicketRespondedStrategy`).
+- Eventos nuevos: `TicketCommentAdded`, `TicketResponded`.
+- `TicketNotificationService` reescrito como orquestador strategies+channels (constructor cambia: `array $strategies, array $channels`).
+- `TicketNotificationListener` simplificado a `forward(EventInterface)` genérico.
+- `TicketPipelineService::handleResponse` emite eventos nuevos al `EventManager`; regla anti-duplicación suprime `TicketStatusChanged` cuando se emite `TicketResponded`. La llamada directa a `sendResponseNotifications` se eliminó; la dependencia `TicketNotificationService` quedó fuera del constructor.
+- `EmailService` reducido a transporte: nuevo método público `dispatch(NotificationMessage)`; los 4 métodos por-evento eliminados.
+- `Application::registerDomainEventListeners()` wirea las 4 strategies y los 2 canales.
+
+**Despliegue:** sin migraciones, sin cambios de firma pública en controllers, sin variables de entorno nuevas.
+
+**Validaciones:**
+- `composer test`: PASS — suite completa verde respecto al baseline (176 tests, 439 asserts; 5 fallas preexistentes de templates HTML sin cambios).
+- `cs-check`: sólo errores baseline en archivos no tocados.
+
+**Hallazgos derivados pendientes:**
+- CRIT-3 (Outbox) sigue abierto.
+- HIGH-4 (Bulkhead vía colas) depende de CRIT-3.
+- N8nService como canal de notificación: la arquitectura ahora lo permite con sólo crear `N8nChannel` + suscribirlo en la strategy que aplique.
 
