@@ -131,8 +131,11 @@ class GmailService
             Log::error('Gmail client_secret not configured in system_settings');
         }
 
-        $this->client->addScope(Gmail::GMAIL_READONLY);
-        $this->client->addScope(Gmail::GMAIL_SEND);
+        // H-1: gmail.modify subsumes both readonly and send for every API call
+        // this codebase makes (messages.list/get/modify/attachments.get and
+        // messages.send). Requesting only this minimizes blast radius if the
+        // refresh_token is compromised and reduces friction in Google's OAuth
+        // verification flow.
         $this->client->addScope(Gmail::GMAIL_MODIFY);
         $this->client->setAccessType('offline');
         $this->client->setPrompt('consent'); // Force to always get refresh_token

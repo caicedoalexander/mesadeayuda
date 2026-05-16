@@ -174,4 +174,16 @@ final class GmailServiceTest extends TestCase
 
         $this->assertTrue($service->isSystemNotification($headers));
     }
+
+    public function testOnlyGmailModifyScopeIsRequested(): void
+    {
+        $service = $this->buildService();
+        $scopes = $this->getClient($service)->getScopes();
+
+        $this->assertSame(
+            ['https://www.googleapis.com/auth/gmail.modify'],
+            $scopes,
+            'Scope set must be exactly gmail.modify (subsumes readonly + send).',
+        );
+    }
 }
