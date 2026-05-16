@@ -3,52 +3,41 @@ declare(strict_types=1);
 
 namespace App\Listener;
 
+use App\Domain\Event\TicketCommentAdded;
 use App\Domain\Event\TicketCreated;
+use App\Domain\Event\TicketResponded;
 use App\Domain\Event\TicketStatusChanged;
 use App\Service\TicketNotificationService;
+use Cake\Event\EventInterface;
 use Cake\Event\EventListenerInterface;
 use Cake\Log\Log;
-use Cake\ORM\Locator\LocatorAwareTrait;
 use Closure;
 use Throwable;
 
 /**
- * Bridges domain events to TicketNotificationService.
+ * Generic bridge between the global EventManager and the strategy/channel
+ * pipeline. The listener does not know about specific events anymore —
+ * it forwards every supported event to TicketNotificationService::dispatch().
  *
- * Each handler reloads the ticket fresh from the database (the event payload
- * carries only IDs) and delegates to the appropriate notification dispatch
- * method. Exceptions are caught and logged — they never propagate back to
- * the dispatch site, mirroring the defensive behavior the service had when
- * called directly.
+ * Adding a new ticket event = one new line in implementedEvents() plus a
+ * matching strategy. The listener stays untouched.
  *
- * The dispatcher is constructed lazily through the factory closure passed
- * to the constructor so that CLI processes which never dispatch a domain
- * event (e.g. `bin/cake migrations migrate`) don't pay the cost of building
- * TicketNotificationService at bootstrap.
+ * The dispatcher is built lazily via a factory closure so CLI processes
+ * that never dispatch a ticket event (`bin/cake migrations migrate`)
+ * don't pay the cost of building the service at bootstrap.
  *
- * Scope: this listener only subscribes to events whose semantic is "notify
- * users via email/WhatsApp". Other domain events (e.g., future
- * TicketPriorityChanged) keep flowing through the global EventManager for
- * separate subscribers (audit, integrations) — they are NOT this listener's
- * concern.
- *
- * Assignment notification (`onAssigned`) was removed intentionally: we no
- * longer notify agents by email when a ticket is assigned to them. The
- * `TicketAssigned` domain event remains available on the global EventManager
- * for future audit/integration subscribers.
+ * Any Throwable raised during forwarding is caught and logged. The
+ * listener MUST NOT propagate exceptions back to the dispatcher.
  */
 final class TicketNotificationListener implements EventListenerInterface
 {
-    use LocatorAwareTrait;
-
     private ?TicketNotificationService $notifications = null;
 
     /**
-     * @param \Closure(): \App\Service\TicketNotificationService $notificationsFactory Factory for the dispatcher
+     * @param \Closure(): \App\Service\TicketNotificationService $notificationsFactory
      */
-    public function __construct(
-        private readonly Closure $notificationsFactory,
-    ) {
+    public function __construct(private readonly Closure $notificationsFactory)
+    {
     }
 
     /**
@@ -57,49 +46,25 @@ final class TicketNotificationListener implements EventListenerInterface
     public function implementedEvents(): array
     {
         return [
-            TicketCreated::NAME => 'onCreated',
-            TicketStatusChanged::NAME => 'onStatusChanged',
+            TicketCreated::NAME => 'forward',
+            TicketStatusChanged::NAME => 'forward',
+            TicketCommentAdded::NAME => 'forward',
+            TicketResponded::NAME => 'forward',
         ];
     }
 
-    /**
-     * @param \App\Domain\Event\TicketCreated $event Created event
-     */
-    public function onCreated(TicketCreated $event): void
+    public function forward(EventInterface $event): void
     {
         try {
-            $ticket = $this->fetchTable('Tickets')->get($event->ticketId, contain: ['Requesters']);
-            $this->notifications()->dispatchCreationNotifications($ticket);
+            $this->notifications()->dispatch($event);
         } catch (Throwable $e) {
-            Log::error('TicketNotificationListener::onCreated failed', [
-                'ticket_id' => $event->ticketId,
+            Log::error('TicketNotificationListener::forward failed', [
+                'event' => $event->getName(),
                 'error' => $e->getMessage(),
             ]);
         }
     }
 
-    /**
-     * @param \App\Domain\Event\TicketStatusChanged $event Status changed event
-     */
-    public function onStatusChanged(TicketStatusChanged $event): void
-    {
-        try {
-            $ticket = $this->fetchTable('Tickets')->get($event->ticketId, contain: ['Requesters', 'Assignees']);
-            $this->notifications()->dispatchUpdateNotifications($ticket, 'status_change', [
-                'old_status' => $event->oldStatus,
-                'new_status' => $event->newStatus,
-            ]);
-        } catch (Throwable $e) {
-            Log::error('TicketNotificationListener::onStatusChanged failed', [
-                'ticket_id' => $event->ticketId,
-                'error' => $e->getMessage(),
-            ]);
-        }
-    }
-
-    /**
-     * @return \App\Service\TicketNotificationService
-     */
     private function notifications(): TicketNotificationService
     {
         return $this->notifications ??= ($this->notificationsFactory)();
