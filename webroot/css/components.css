@@ -1194,6 +1194,8 @@
     box-shadow: var(--shadow-sm);
     overflow: hidden;
     animation: fadeIn 0.25s ease both;
+    display: flex;
+    flex-direction: column;
 }
 
 .app-card + .app-card { margin-top: 16px; }
@@ -1245,7 +1247,7 @@
     margin-top: 2px;
 }
 
-.app-card-body { padding: 18px; }
+.app-card-body { padding: 18px; flex: 1 1 auto; }
 
 .app-card-footer {
     padding: 12px 18px;
