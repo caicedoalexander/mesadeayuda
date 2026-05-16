@@ -72,9 +72,9 @@ final class PreviewFixture
         ], ['guard' => false]);
 
         $ctx = static fn(array $extra): TemplateContext => new TemplateContext(
-            ticket: $ticket,
-            ticketUrl: 'https://example.com/tickets/view/1',
-            recipientName: 'Alexander',
+            $ticket,
+            'https://example.com/tickets/view/1',
+            'Alexander',
             ...$extra,
         );
 
