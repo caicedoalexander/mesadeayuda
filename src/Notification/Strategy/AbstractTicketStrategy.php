@@ -11,6 +11,7 @@ use Cake\Event\EventInterface;
 use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
 use Throwable;
+use Traversable;
 
 /**
  * Shared plumbing for ticket-event strategies. Concrete subclasses focus
@@ -88,14 +89,24 @@ abstract class AbstractTicketStrategy implements TicketNotificationStrategy
      * Defensive wrapper for the message-building closure. Logs any throwable
      * and returns an empty list so the dispatcher keeps going.
      *
+     * Generators are eagerly iterated inside the try so exceptions thrown
+     * during yield bodies are caught (Generator bodies execute lazily, so
+     * returning the Generator directly would let exceptions escape to the
+     * caller).
+     *
      * @template T
      * @param callable(): iterable<T> $builder
-     * @return iterable<T>
+     * @return array<int, T>
      */
-    protected function safeBuild(callable $builder, EventInterface $event): iterable
+    protected function safeBuild(callable $builder, EventInterface $event): array
     {
         try {
-            return $builder();
+            $result = $builder();
+            if ($result instanceof Traversable) {
+                return iterator_to_array($result, false);
+            }
+
+            return is_array($result) ? array_values($result) : [];
         } catch (Throwable $e) {
             Log::error(static::class . ' failed to build messages', [
                 'event' => $event->getName(),
