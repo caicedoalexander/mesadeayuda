@@ -99,7 +99,6 @@ class TicketPipelineServiceTest extends TestCase
                 SystemConfig::empty(),
                 $comments,
                 $attachments,
-                $notifications,
                 new AuthorizationService(),
                 $this->eventManager,
             ])
@@ -149,7 +148,6 @@ class TicketPipelineServiceTest extends TestCase
                 SystemConfig::empty(),
                 $comments,
                 $attachments,
-                $notifications,
                 new AuthorizationService(),
                 $this->eventManager,
             ])
@@ -233,7 +231,6 @@ class TicketPipelineServiceTest extends TestCase
                 SystemConfig::empty(),
                 $comments,
                 $attachments,
-                $notifications,
                 new AuthorizationService(),
                 $this->eventManager,
             ])
@@ -276,7 +273,6 @@ class TicketPipelineServiceTest extends TestCase
                 SystemConfig::empty(),
                 $comments,
                 $attachments,
-                $notifications,
                 new AuthorizationService(),
                 $this->eventManager,
             ])
@@ -330,13 +326,14 @@ class TicketPipelineServiceTest extends TestCase
     private function buildService(
         TicketCommentService $comments,
         TicketAttachmentService $attachments,
-        TicketNotificationService $notifications,
+        ?TicketNotificationService $notifications = null,
     ): TicketPipelineService {
+        unset($notifications);
+
         return new TicketPipelineService(
             SystemConfig::empty(),
             $comments,
             $attachments,
-            $notifications,
             new AuthorizationService(),
             $this->eventManager,
         );

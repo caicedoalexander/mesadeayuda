@@ -34,7 +34,6 @@ class TicketPipelineService
 
     private TicketCommentService $comments;
     private TicketAttachmentService $attachments;
-    private TicketNotificationService $notifications;
     private AuthorizationService $authService;
     private SystemConfig $config;
     private EventManagerInterface $eventManager;
@@ -43,7 +42,6 @@ class TicketPipelineService
      * @param \App\Service\Dto\SystemConfig|null $config System configuration VO
      * @param \App\Service\TicketCommentService|null $comments Optional injected comment service
      * @param \App\Service\TicketAttachmentService|null $attachments Optional injected attachment service
-     * @param \App\Service\TicketNotificationService|null $notifications Optional injected notification service
      * @param \App\Service\AuthorizationService|null $authService Optional injected authorization service
      * @param \Cake\Event\EventManagerInterface|null $eventManager Optional injected event manager
      */
@@ -51,14 +49,12 @@ class TicketPipelineService
         ?SystemConfig $config = null,
         ?TicketCommentService $comments = null,
         ?TicketAttachmentService $attachments = null,
-        ?TicketNotificationService $notifications = null,
         ?AuthorizationService $authService = null,
         ?EventManagerInterface $eventManager = null,
     ) {
         $this->config = $config ?? SystemConfig::empty();
         $this->comments = $comments ?? new TicketCommentService($this->config);
         $this->attachments = $attachments ?? new TicketAttachmentService();
-        $this->notifications = $notifications ?? new TicketNotificationService($this->config);
         $this->authService = $authService ?? new AuthorizationService();
         $this->eventManager = $eventManager ?? EventManager::instance();
     }
