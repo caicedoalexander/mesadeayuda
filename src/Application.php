@@ -18,8 +18,16 @@ namespace App;
 
 use App\Constants\CacheConstants;
 use App\Listener\TicketNotificationListener;
+use App\Notification\Channel\EmailChannel;
+use App\Notification\Channel\WhatsappChannel;
+use App\Notification\Strategy\TicketCommentAddedStrategy;
+use App\Notification\Strategy\TicketCreatedStrategy;
+use App\Notification\Strategy\TicketRespondedStrategy;
+use App\Notification\Strategy\TicketStatusChangedStrategy;
 use App\Service\Dto\SystemConfig;
+use App\Service\EmailService;
 use App\Service\TicketNotificationService;
+use App\Service\WhatsappService;
 use Authentication\AuthenticationService;
 use Authentication\AuthenticationServiceInterface;
 use Authentication\AuthenticationServiceProviderInterface;
@@ -75,14 +83,24 @@ class Application extends BaseApplication implements AuthenticationServiceProvid
      */
     private function registerDomainEventListeners(): void
     {
-        // Lazy: TicketNotificationService is built only if/when a domain event
-        // actually fires, so CLI commands that never dispatch tickets
-        // (`bin/cake migrations migrate`, `bin/cake bake`, …) skip the work.
+        // Lazy: notification stack is built only when a ticket event fires.
         $notificationsFactory = static function (): TicketNotificationService {
             $raw = Cache::read(CacheConstants::CACHE_SETTINGS, CacheConstants::CACHE_CONFIG);
             $config = SystemConfig::fromSettingsArray(is_array($raw) ? $raw : null);
 
-            return new TicketNotificationService($config);
+            $strategies = [
+                new TicketCreatedStrategy($config),
+                new TicketStatusChangedStrategy($config),
+                new TicketCommentAddedStrategy($config),
+                new TicketRespondedStrategy($config),
+            ];
+
+            $channels = [
+                new EmailChannel(new EmailService($config)),
+                new WhatsappChannel(new WhatsappService($config)),
+            ];
+
+            return new TicketNotificationService($strategies, $channels);
         };
 
         EventManager::instance()->on(new TicketNotificationListener($notificationsFactory));
