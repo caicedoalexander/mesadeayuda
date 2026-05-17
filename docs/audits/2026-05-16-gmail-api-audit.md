@@ -28,12 +28,14 @@ Sin embargo hay **hallazgos importantes** que afectan privilegios OAuth, resilie
 
 | Severidad | Cantidad inicial | Estado actual (2026-05-16) |
 |-----------|------------------|----------------------------|
-| Alto      | 3 | 1 (H-1 y H-3 cerrados) |
-| Medio     | 5 | 4 (M-1 cerrado) |
-| Bajo      | 4 | 4 |
+| Alto      | 3 | 0 (H-1, H-2, H-3 cerrados) |
+| Medio     | 5 | 3 (M-1, M-3 cerrados) |
+| Bajo      | 4 | 3 (B-4 cerrado) |
 | Informativo | 3 | 3 |
 
 **P0 cerrado el mismo día:** los tres ítems P0 del §8 (H-1, H-3, M-1) fueron implementados y mergeados a `main` en commits `b8e3d2a`, `5b21651`, `8ae81f0`. Ver §11 para detalles operativos.
+
+**P1 cerrado el mismo día:** los tres ítems P1 del §8 (H-2, M-3, B-4) fueron implementados y mergeados a `main` en commits `78b9487`, `7894d98`, `0204c18`. Ver §11 para detalles operativos.
 
 ---
 
@@ -108,6 +110,8 @@ $this->client->addScope(Gmail::GMAIL_MODIFY);
 
 ### H-2 — Sin retry/backoff frente a 429/5xx
 
+> **Cerrado 2026-05-16 — commit `7894d98`.** Nuevo `App\Service\Gmail\RetryHandler` (factory stateless de middleware Guzzle) inyectado en `GoogleClient` vía `setHttpClient` en `GmailService::initializeClient`. Política: `MAX_RETRIES=5` (6 intentos totales), backoff exponencial con full jitter (`min(2^n * 250ms + rand(0, 1000ms), 32000ms)`), respeta header `Retry-After` (segundos o HTTP-date). Reintenta `429/500/502/503/504` y `ConnectException`. Log `Gmail API warning Gmail API retry` por intento. Tests: `RetryHandlerTest` (10 casos) + `GmailServiceTest::testRetryMiddlewareIsRegisteredOnTheGoogleClient` + `testRetryMiddlewareSucceedsAfter429Retries`. Trade-off explícito: `sendEmail` no persiste outbox; tras 6 intentos fallidos la notificación se loguea y se pierde (mismo contrato best-effort de hoy, solo más resiliente).
+
 **Archivos:** `GmailService::getMessages`, `parseMessage`, `downloadAttachment`, `markAsRead`, `sendEmail`.
 
 Todas las llamadas a la API están envueltas en un `try/catch (Exception)` que loguea y o bien retorna `[]`/`false`, o re-lanza. **No hay retry**, ni respeto a `Retry-After`, ni backoff exponencial. Bajo cuotas saturadas o errores 5xx transitorios:
@@ -178,6 +182,8 @@ El query default es `is:unread` con cap 200. Esto:
 
 ### M-3 — `catch (Exception)` genérico ahoga errores
 
+> **Cerrado 2026-05-16 — commit `78b9487`.** Nuevo `App\Service\Gmail\GmailErrorCategory` (constantes `auth`/`rate`/`transient`/`permanent`/`unknown` + mappers `categorize(Throwable)` / `fromHttpCode(int)`) y nuevo `App\Service\Exception\GmailApiException` (wrap con `category` readonly, preserva `getPrevious()`). Los cinco catches de `GmailService` (getMessages, parseMessage, downloadAttachment, markAsRead, sendEmail) ahora desdoblan `Google\Service\Exception` vs `Exception` genérico, loguean con `category` y `code`, y los métodos que propagan ahora lanzan `GmailApiException` en vez del SDK exception cruda. `GmailImportResult` agrega 5 campos readonly (`authErrors`, `rateErrors`, `transientErrors`, `permanentErrors`, `unknownErrors`) expuestos como `auth_errors`/etc en `toArray()`; `GmailImportService::run()` los acumula. Tests: `GmailErrorCategoryTest` (12 casos), `GmailApiExceptionTest` (2), `GmailImportResultTest` (3), `GmailServiceTest` typed-catch (3 nuevos vía `stubHttp`).
+
 **Archivo:** `src/Service/GmailService.php:230-234, 285-288, 376-379, 397-402, 555-562`
 
 Cada método del cliente captura `\Exception` genérico, loguea y retorna un valor neutral. Pierde la distinción crítica:
@@ -239,6 +245,8 @@ Para newsletters/bulk modernos (RFC 8058) los indicadores más fiables son `List
 
 ### B-4 — `gmail_user_email` setting no se valida contra `users.getProfile`
 
+> **Cerrado 2026-05-16 — commit `0204c18`.** Nuevo `GmailService::getUserEmail()` que llama `users.getProfile('me')` (hereda retry de H-2 y typing de M-3 vía el GoogleClient envuelto); lanza `GmailApiException(PERMANENT)` si el `emailAddress` viene vacío. `SettingsController::gmailAuth` ahora delega a un helper privado `syncGmailUserEmail()` después de persistir el refresh_token (sea token nuevo o reautorización con token existente). El helper reconstruye `GmailService` contra el token recién guardado, lee el email y lo persiste en `GMAIL_USER_EMAIL`. Override silencioso de cualquier valor previo, con log `Gmail user email changed via OAuth` (old/new enmascarados vía helper local `maskEmail`). Fail-soft: si `getProfile` falla, el OAuth ya quedó persistido y el operador recibe un Flash warning. Tests: `GmailServiceTest::testGetUserEmail*` (3 casos: success, empty emailAddress, 401 wrap).
+
 Si un operador rota la cuenta Gmail (nuevo `client_secret_json` + reautorización) pero olvida actualizar `GMAIL_USER_EMAIL`, todos los checks de `From == systemEmail` dejan de funcionar y se vuelven a abrir loops.
 
 **Recomendación:** al guardar el refresh_token en `gmailAuth`, llamar `users.getProfile('me')` y persistir el `emailAddress` retornado en `GMAIL_USER_EMAIL` automáticamente.
@@ -286,11 +294,11 @@ No es PII grave pero sí dato personal bajo LOPD/GDPR equivalentes. Considerar e
 2. **H-3** Reemplazar header `X-Mesa-Ayuda-Notification` por HMAC en subject o validar contra `Authentication-Results`. Pieza más sensible para evitar DoS por spoofing. — **Completado** (commit `5b21651`, ambas estrategias combinadas: HMAC canónico + DKIM-gated legacy en ventana de gracia).
 3. **M-1** `setCache()` PSR-6 en el `GoogleClient` + `setTokenCallback`. Reduce latencia de cada request y consumo de Identity quota. — **Completado** (commit `b8e3d2a`).
 
-### P1 (próximas dos iteraciones)
+### P1 (próximas dos iteraciones) — **Completado 2026-05-16**
 
-4. **H-2** Wrappear `GoogleClient` con retry middleware (Guzzle). Empezar por `sendEmail` (el más caro y crítico), luego `parseMessage` y `downloadAttachment`.
-5. **M-3** Tipar excepciones (`Google\Service\Exception` con `getCode()`) y enriquecer `GmailImportResult`.
-6. **B-4** `users.getProfile('me')` tras OAuth callback para persistir `gmail_user_email` automáticamente.
+4. **H-2** Wrappear `GoogleClient` con retry middleware (Guzzle). — **Completado** (commit `7894d98`). Implementación cubre las 5 llamadas API de una sola vez vía `setHttpClient` global, no solo `sendEmail`.
+5. **M-3** Tipar excepciones (`Google\Service\Exception` con `getCode()`) y enriquecer `GmailImportResult`. — **Completado** (commit `78b9487`).
+6. **B-4** `users.getProfile('me')` tras OAuth callback para persistir `gmail_user_email` automáticamente. — **Completado** (commit `0204c18`).
 
 ### P2 (mediano plazo)
 
@@ -407,6 +415,37 @@ No es PII grave pero sí dato personal bajo LOPD/GDPR equivalentes. Considerar e
 3. Smoke manual: asignar un test ticket, esperar la notificación, responder desde un email externo y confirmar que NO se crea un ticket duplicado (valida el stamp + `isSystemNotification` en conjunto).
 
 **Recordatorio calendario:** alrededor de **2026-06-15** (~30 días post-deploy), remover la rama legacy `X-Mesa-Ayuda-Notification` de `isSystemNotification` y la inyección del header en `EmailService::sendEmail`. Para entonces, los stamps habrán cubierto todos los hilos en vuelo.
+
+### 2026-05-16 — P1 cerrado (H-2 + M-3 + B-4)
+
+**Hallazgos cubiertos:** los tres ítems P1 del §8. Implementados como tres commits secuenciales en `main` siguiendo el plan en `docs/superpowers/plans/2026-05-16-gmail-audit-p1.md` y la spec `docs/superpowers/specs/2026-05-16-gmail-audit-p1-design.md`.
+
+**Commits:**
+
+| Commit | Hallazgo | Resumen |
+|---|---|---|
+| `78b9487` | M-3 | Nuevo `GmailErrorCategory` (constantes + mappers) + `GmailApiException` (wrap categorizado). Los cinco catches de `GmailService` (getMessages, parseMessage, downloadAttachment, markAsRead, sendEmail) ahora desdoblan `Google\Service\Exception` vs `Exception` genérico y loguean con categoría. `GmailImportResult` agrega cinco campos readonly de contadores expuestos en `toArray()`; `GmailImportService::run()` los acumula. |
+| `7894d98` | H-2 | Nuevo `RetryHandler` (factory stateless de middleware Guzzle) inyectado en `GoogleClient::setHttpClient` con backoff exponencial + full jitter, cap 32s, retry sobre 429/500/502/503/504/ConnectException, respeta `Retry-After`. Cubre las cinco llamadas API de un solo punto (no por llamada). |
+| `0204c18` | B-4 | Nuevo `GmailService::getUserEmail()` (vía `users.getProfile('me')`); `SettingsController::gmailAuth` delega a `syncGmailUserEmail()` helper privado tras el saveSetting del refresh_token y persiste el email en `GMAIL_USER_EMAIL`. Helper `maskEmail` privado para logs. Fail-soft con Flash warning si `getProfile` falla. |
+
+**Desviaciones del plan original (documentadas en commit bodies):**
+
+1. **PHPUnit 13 attributes:** el plan listaba el `dataProvider` como anotación PHPDoc; PHPUnit 13.1 lo deprecó, así que se usó `#[DataProvider]` en su lugar.
+2. **Middleware naming:** el plan no nombraba el push del retry middleware, lo que dejaba el name como `''` y rompía el test `testRetryMiddlewareIsRegisteredOnTheGoogleClient` (la HandlerStack stringificada no contenía la palabra `retry`). Se pushea con name explícito `'retry'` para que el test inspeccione el stack de forma estable.
+3. **Reflection setAccessible:** PHP 8.1+ hace innecesario `setAccessible(true)` sobre propiedades typed accesibles; se removió para evitar la deprecación de PHP 8.5.
+
+**Verificación ejecutada:**
+
+- `composer cs-check` sobre archivos tocados: sin nuevos errores/warnings versus la línea base pre-existente.
+- `vendor/bin/phpstan analyse src`: 38 errores de línea base (en `UserHelper.php`, `AppController.php`, `TicketActionsTrait.php`, `TicketBulkTrait.php`, `N8nService.php`, `TicketPipelineService.php` — funciones globales de CakePHP como `__()`, `h()`, `env()` y la clase `FrozenTime`, todos pre-existentes); sin nuevos errores en archivos tocados por P1.
+- `composer test`: 230 tests (35 nuevos a lo largo del bloque P1), 7 fallos idénticos a la línea base pre-trabajo (rendering de templates, sanitización de paths Windows, shape de circuit breaker — todos no relacionados con Gmail).
+- `bin/cake import_gmail --max 1`: omitido en el entorno de ejecución (sin DB/Gmail config).
+
+**Pendiente operativo post-deploy:**
+
+1. Monitorear logs `Gmail API retry` durante 24h post-deploy para dimensionar la tasa real de 429/5xx que la instalación absorbe; si la tasa es alta y consistente, considerar pre-empujar M-2 (history.list) en la próxima iteración.
+2. Re-OAuth en `/admin/settings/gmailAuth` con la cuenta actual; confirmar que el setting `GMAIL_USER_EMAIL` queda alineado y que el log `Gmail user email persisted` aparece (email enmascarado).
+3. Opcional: re-OAuth con una cuenta distinta para validar el log `Gmail user email changed via OAuth` con `old`/`new` ambos enmascarados.
 
 ---
 
