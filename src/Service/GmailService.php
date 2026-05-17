@@ -9,6 +9,7 @@ use App\Service\Exception\GmailApiException;
 use App\Service\Exception\GmailAuthenticationException;
 use App\Service\Exception\SettingsEncryptionException;
 use App\Service\Gmail\GmailErrorCategory;
+use App\Service\Gmail\RetryHandler;
 use App\Service\Traits\HtmlSanitizerTrait;
 use App\Service\Traits\SettingsEncryptionTrait;
 use App\Service\Util\EmailHeaderParser;
@@ -23,6 +24,9 @@ use Google\Service\Gmail;
 use Google\Service\Gmail\Message;
 use Google\Service\Gmail\MessagePart;
 use Google\Service\Gmail\ModifyMessageRequest;
+use GuzzleHttp\Client as GuzzleClient;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 
 /**
@@ -162,6 +166,24 @@ class GmailService
                 'cache_dir' => $cacheDir,
             ]);
         }
+
+        // H-2: register a Guzzle HandlerStack with retry middleware so every
+        // Gmail API call survives transient 429/5xx pressure. The Google SDK
+        // applies its own auth middleware on top of the handler we provide,
+        // so OAuth headers are not bypassed.
+        $stack = HandlerStack::create();
+        $stack->push(
+            Middleware::retry(
+                RetryHandler::decider(),
+                RetryHandler::delay(),
+            ),
+            'retry',
+        );
+        $this->client->setHttpClient(new GuzzleClient([
+            'handler' => $stack,
+            'timeout' => 30,
+            'connect_timeout' => 10,
+        ]));
 
         // Set redirect URI for OAuth2 flow
         if (!empty($this->config['redirect_uri'])) {

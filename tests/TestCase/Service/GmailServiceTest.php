@@ -5,6 +5,7 @@ namespace App\Test\TestCase\Service;
 
 use App\Service\Exception\GmailApiException;
 use App\Service\Gmail\GmailErrorCategory;
+use App\Service\Gmail\RetryHandler;
 use App\Service\GmailService;
 use App\Service\Util\NotificationStamp;
 use Cake\Core\Configure;
@@ -12,6 +13,7 @@ use Google\Client as GoogleClient;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
 use Psr\Cache\CacheItemPoolInterface;
@@ -248,5 +250,44 @@ final class GmailServiceTest extends TestCase
         )]);
 
         $this->assertSame([], $service->getMessages('is:unread', 5));
+    }
+
+    public function testRetryMiddlewareIsRegisteredOnTheGoogleClient(): void
+    {
+        $service = $this->buildService();
+        $httpClient = $this->getClient($service)->getHttpClient();
+        $this->assertInstanceOf(GuzzleClient::class, $httpClient);
+
+        // Guzzle\Client::getConfig() is deprecated in 7.5+; read the handler
+        // via reflection to stay version-stable.
+        $ref = new ReflectionClass($httpClient);
+        $configProp = $ref->getProperty('config');
+        $config = $configProp->getValue($httpClient);
+
+        $stack = $config['handler'] ?? null;
+        $this->assertInstanceOf(HandlerStack::class, $stack);
+        // HandlerStack stringifies its middleware list; the retry middleware
+        // identifies itself with the literal "retry".
+        $this->assertStringContainsString('retry', (string)$stack);
+    }
+
+    public function testRetryMiddlewareSucceedsAfter429Retries(): void
+    {
+        $mock = new MockHandler([
+            new Response(429, [], 'rate'),
+            new Response(429, [], 'rate'),
+            new Response(200, [], 'ok'),
+        ]);
+        $stack = HandlerStack::create($mock);
+        $stack->push(Middleware::retry(
+            RetryHandler::decider(),
+            // override delay to 0 so the test runs instantly
+            static fn(): int => 0,
+        ));
+        $client = new GuzzleClient(['handler' => $stack]);
+
+        $response = $client->request('GET', 'https://example.test/');
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame('ok', (string)$response->getBody());
     }
 }
