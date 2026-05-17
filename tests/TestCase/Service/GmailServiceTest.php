@@ -3,10 +3,16 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Service;
 
+use App\Service\Exception\GmailApiException;
+use App\Service\Gmail\GmailErrorCategory;
 use App\Service\GmailService;
 use App\Service\Util\NotificationStamp;
 use Cake\Core\Configure;
 use Google\Client as GoogleClient;
+use GuzzleHttp\Client as GuzzleClient;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
 use Psr\Cache\CacheItemPoolInterface;
 use ReflectionClass;
@@ -185,5 +191,62 @@ final class GmailServiceTest extends TestCase
             $scopes,
             'Scope set must be exactly gmail.modify (subsumes readonly + send).',
         );
+    }
+
+    /**
+     * Replace the underlying Guzzle client on the Google SDK client with a
+     * MockHandler queue. The SDK then thinks it talked to Gmail and throws
+     * Google\Service\Exception with the right code on non-2xx responses.
+     *
+     * @param list<\GuzzleHttp\Psr7\Response> $responses
+     */
+    private function stubHttp(GmailService $service, array $responses): void
+    {
+        $mock = new MockHandler($responses);
+        $stack = HandlerStack::create($mock);
+        $http = new GuzzleClient(['handler' => $stack]);
+        $this->getClient($service)->setHttpClient($http);
+    }
+
+    public function testParseMessageWrapsGoogleServiceExceptionWithRateCategory(): void
+    {
+        $service = $this->buildService();
+        $this->stubHttp($service, [new Response(
+            429,
+            [],
+            '{"error":{"code":429,"message":"quota"}}',
+        )]);
+
+        try {
+            $service->parseMessage('msg-id');
+            $this->fail('Expected GmailApiException');
+        } catch (GmailApiException $e) {
+            $this->assertSame(GmailErrorCategory::RATE, $e->getCategory());
+            $this->assertSame(429, $e->getCode());
+        }
+    }
+
+    public function testMarkAsReadReturnsFalseOnAuthError(): void
+    {
+        $service = $this->buildService();
+        $this->stubHttp($service, [new Response(
+            401,
+            [],
+            '{"error":{"code":401,"message":"unauth"}}',
+        )]);
+
+        $this->assertFalse($service->markAsRead('msg-id'));
+    }
+
+    public function testGetMessagesReturnsEmptyOnTransient5xx(): void
+    {
+        $service = $this->buildService();
+        $this->stubHttp($service, [new Response(
+            503,
+            [],
+            '{"error":{"code":503,"message":"unavailable"}}',
+        )]);
+
+        $this->assertSame([], $service->getMessages('is:unread', 5));
     }
 }

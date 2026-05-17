@@ -5,8 +5,10 @@ namespace App\Service;
 
 use App\Constants\CacheConstants;
 use App\Constants\SettingKeys;
+use App\Service\Exception\GmailApiException;
 use App\Service\Exception\GmailAuthenticationException;
 use App\Service\Exception\SettingsEncryptionException;
+use App\Service\Gmail\GmailErrorCategory;
 use App\Service\Traits\HtmlSanitizerTrait;
 use App\Service\Traits\SettingsEncryptionTrait;
 use App\Service\Util\EmailHeaderParser;
@@ -16,6 +18,7 @@ use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
 use Exception;
 use Google\Client as GoogleClient;
+use Google\Service\Exception as GoogleServiceException;
 use Google\Service\Gmail;
 use Google\Service\Gmail\Message;
 use Google\Service\Gmail\MessagePart;
@@ -252,8 +255,23 @@ class GmailService
             }
 
             return $messageIds;
+        } catch (GoogleServiceException $e) {
+            $category = GmailErrorCategory::categorize($e);
+            Log::error('Gmail API error', [
+                'method' => __FUNCTION__,
+                'category' => $category,
+                'code' => $e->getCode(),
+                'message' => $e->getMessage(),
+            ]);
+
+            return [];
         } catch (Exception $e) {
-            Log::error('Error fetching Gmail messages: ' . $e->getMessage());
+            Log::error('Gmail API error', [
+                'method' => __FUNCTION__,
+                'category' => GmailErrorCategory::UNKNOWN,
+                'message' => $e->getMessage(),
+                'class' => $e::class,
+            ]);
 
             return [];
         }
@@ -307,9 +325,25 @@ class GmailService
             }
 
             return $data;
+        } catch (GoogleServiceException $e) {
+            $category = GmailErrorCategory::categorize($e);
+            Log::error('Gmail API error', [
+                'method' => __FUNCTION__,
+                'category' => $category,
+                'code' => $e->getCode(),
+                'message' => $e->getMessage(),
+            ]);
+
+            throw new GmailApiException($category, $e->getCode(), $e->getMessage(), previous: $e);
         } catch (Exception $e) {
-            Log::error('Error parsing Gmail message: ' . $e->getMessage());
-            throw $e;
+            Log::error('Gmail API error', [
+                'method' => __FUNCTION__,
+                'category' => GmailErrorCategory::UNKNOWN,
+                'message' => $e->getMessage(),
+                'class' => $e::class,
+            ]);
+
+            throw new GmailApiException(GmailErrorCategory::UNKNOWN, 0, $e->getMessage(), previous: $e);
         }
     }
 
@@ -398,9 +432,25 @@ class GmailService
             $attachment = $service->users_messages_attachments->get('me', $messageId, $attachmentId);
 
             return base64_decode(strtr($attachment->getData(), '-_', '+/'));
+        } catch (GoogleServiceException $e) {
+            $category = GmailErrorCategory::categorize($e);
+            Log::error('Gmail API error', [
+                'method' => __FUNCTION__,
+                'category' => $category,
+                'code' => $e->getCode(),
+                'message' => $e->getMessage(),
+            ]);
+
+            throw new GmailApiException($category, $e->getCode(), $e->getMessage(), previous: $e);
         } catch (Exception $e) {
-            Log::error('Error downloading Gmail attachment: ' . $e->getMessage());
-            throw $e;
+            Log::error('Gmail API error', [
+                'method' => __FUNCTION__,
+                'category' => GmailErrorCategory::UNKNOWN,
+                'message' => $e->getMessage(),
+                'class' => $e::class,
+            ]);
+
+            throw new GmailApiException(GmailErrorCategory::UNKNOWN, 0, $e->getMessage(), previous: $e);
         }
     }
 
@@ -420,8 +470,23 @@ class GmailService
             $service->users_messages->modify('me', $messageId, $mods);
 
             return true;
+        } catch (GoogleServiceException $e) {
+            $category = GmailErrorCategory::categorize($e);
+            Log::error('Gmail API error', [
+                'method' => __FUNCTION__,
+                'category' => $category,
+                'code' => $e->getCode(),
+                'message' => $e->getMessage(),
+            ]);
+
+            return false;
         } catch (Exception $e) {
-            Log::error('Error marking Gmail message as read: ' . $e->getMessage());
+            Log::error('Gmail API error', [
+                'method' => __FUNCTION__,
+                'category' => GmailErrorCategory::UNKNOWN,
+                'message' => $e->getMessage(),
+                'class' => $e::class,
+            ]);
 
             return false;
         }
@@ -607,11 +672,26 @@ class GmailService
             $service->users_messages->send('me', $message);
 
             return true;
-        } catch (Exception $e) {
-            Log::error('Error sending Gmail message: ' . $e->getMessage(), [
+        } catch (GoogleServiceException $e) {
+            $category = GmailErrorCategory::categorize($e);
+            Log::error('Gmail API error', [
+                'method' => __FUNCTION__,
+                'category' => $category,
+                'code' => $e->getCode(),
                 'to' => is_array($to) ? implode(', ', array_keys($to)) : $to,
                 'subject' => $subject,
-                'error' => $e->getMessage(),
+                'message' => $e->getMessage(),
+            ]);
+
+            return false;
+        } catch (Exception $e) {
+            Log::error('Gmail API error', [
+                'method' => __FUNCTION__,
+                'category' => GmailErrorCategory::UNKNOWN,
+                'to' => is_array($to) ? implode(', ', array_keys($to)) : $to,
+                'subject' => $subject,
+                'message' => $e->getMessage(),
+                'class' => $e::class,
             ]);
 
             return false;

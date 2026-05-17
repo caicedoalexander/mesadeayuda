@@ -6,6 +6,7 @@ namespace App\Service;
 use App\Service\Dto\GmailImportResult;
 use App\Service\Dto\SystemConfig;
 use App\Service\Exception\GmailNotConfiguredException;
+use App\Service\Gmail\GmailErrorCategory;
 use App\Service\Traits\SettingsEncryptionTrait;
 use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
@@ -99,6 +100,13 @@ final class GmailImportService
         $skipped = 0;
         $errors = 0;
         $errorMessages = [];
+        $categoryCounters = [
+            GmailErrorCategory::AUTH => 0,
+            GmailErrorCategory::RATE => 0,
+            GmailErrorCategory::TRANSIENT => 0,
+            GmailErrorCategory::PERMANENT => 0,
+            GmailErrorCategory::UNKNOWN => 0,
+        ];
 
         foreach ($messageIds as $messageId) {
             try {
@@ -147,13 +155,16 @@ final class GmailImportService
                     }
                 }
             } catch (Throwable $e) {
+                $category = GmailErrorCategory::categorize($e);
                 Log::error('Gmail import per-message error', [
                     'message_id' => $messageId,
+                    'category' => $category,
                     'error' => $e->getMessage(),
                     'class' => $e::class,
                 ]);
                 $errors++;
                 $errorMessages[] = "{$messageId}: {$e->getMessage()}";
+                $categoryCounters[$category]++;
             }
 
             if ($delayMs > 0) {
@@ -169,6 +180,11 @@ final class GmailImportService
             errors: $errors,
             durationSeconds: microtime(true) - $startedAt,
             errorMessages: $errorMessages,
+            authErrors: $categoryCounters[GmailErrorCategory::AUTH],
+            rateErrors: $categoryCounters[GmailErrorCategory::RATE],
+            transientErrors: $categoryCounters[GmailErrorCategory::TRANSIENT],
+            permanentErrors: $categoryCounters[GmailErrorCategory::PERMANENT],
+            unknownErrors: $categoryCounters[GmailErrorCategory::UNKNOWN],
         );
 
         Log::info('Gmail import completed', $result->toArray());

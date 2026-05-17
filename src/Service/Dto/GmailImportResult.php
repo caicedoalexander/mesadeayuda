@@ -22,6 +22,11 @@ final readonly class GmailImportResult
         public int $errors,
         public float $durationSeconds,
         public array $errorMessages = [],
+        public int $authErrors = 0,
+        public int $rateErrors = 0,
+        public int $transientErrors = 0,
+        public int $permanentErrors = 0,
+        public int $unknownErrors = 0,
     ) {
     }
 
@@ -38,6 +43,11 @@ final readonly class GmailImportResult
             'errors' => $this->errors,
             'duration_seconds' => round($this->durationSeconds, 3),
             'error_messages' => $this->errorMessages,
+            'auth_errors' => $this->authErrors,
+            'rate_errors' => $this->rateErrors,
+            'transient_errors' => $this->transientErrors,
+            'permanent_errors' => $this->permanentErrors,
+            'unknown_errors' => $this->unknownErrors,
         ];
     }
 }
