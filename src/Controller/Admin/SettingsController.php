@@ -135,9 +135,11 @@ class SettingsController extends AppController
                 // Exchange code for tokens
                 $tokens = $gmailService->authenticate($code);
 
+                $tokenPersisted = false;
+
                 if (isset($tokens['refresh_token'])) {
-                    // Save refresh token to settings using service
                     if ($this->settingsService->saveSetting(SettingKeys::GMAIL_REFRESH_TOKEN, $tokens['refresh_token'])) {
+                        $tokenPersisted = true;
                         $this->Flash->success('Gmail autorizado exitosamente.');
                         Log::info('Gmail OAuth completed successfully');
                     } else {
@@ -149,12 +151,17 @@ class SettingsController extends AppController
                     // This is OK if we already have a stored refresh_token.
                     $existingToken = $allSettings[SettingKeys::GMAIL_REFRESH_TOKEN] ?? null;
                     if ($existingToken) {
+                        $tokenPersisted = true;
                         $this->Flash->success('Gmail reconectado exitosamente.');
                         Log::info('Gmail OAuth re-authorized (using existing refresh token)');
                     } else {
                         $this->Flash->warning('No se recibió refresh token. Intenta nuevamente.');
                         Log::warning('No refresh token in OAuth response', ['token_keys' => array_keys($tokens ?? [])]);
                     }
+                }
+
+                if ($tokenPersisted) {
+                    $this->syncGmailUserEmail($allSettings);
                 }
 
                 return $this->redirect(['action' => 'index']);
@@ -170,6 +177,62 @@ class SettingsController extends AppController
         $authUrl = $gmailService->getAuthUrl();
 
         return $this->redirect($authUrl);
+    }
+
+    /**
+     * After a successful OAuth refresh-token save, fetch the live email
+     * address via users.getProfile and persist it to GMAIL_USER_EMAIL.
+     * Fails soft: the OAuth itself is already saved, so a getProfile
+     * failure just leaves the operator a warning to fix manually.
+     *
+     * @param array<string, mixed> $previousSettings Snapshot of settings before this OAuth call
+     */
+    private function syncGmailUserEmail(array $previousSettings): void
+    {
+        try {
+            $reloaded = new GmailService(GmailService::loadConfigFromDatabase());
+            $email = $reloaded->getUserEmail();
+
+            $existingEmail = (string)($previousSettings[SettingKeys::GMAIL_USER_EMAIL] ?? '');
+            if (!$this->settingsService->saveSetting(SettingKeys::GMAIL_USER_EMAIL, $email)) {
+                Log::warning('Failed to persist GMAIL_USER_EMAIL after OAuth', [
+                    'email' => $this->maskEmail($email),
+                ]);
+
+                return;
+            }
+
+            if ($existingEmail !== '' && $existingEmail !== $email) {
+                Log::info('Gmail user email changed via OAuth', [
+                    'old' => $this->maskEmail($existingEmail),
+                    'new' => $this->maskEmail($email),
+                ]);
+            } else {
+                Log::info('Gmail user email persisted', ['email' => $this->maskEmail($email)]);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Failed to auto-populate gmail_user_email after OAuth', [
+                'error' => $e->getMessage(),
+            ]);
+            $this->Flash->warning(
+                'Gmail autorizado, pero no se pudo leer el email de la cuenta. '
+                . 'Revisa el setting GMAIL_USER_EMAIL.',
+            );
+        }
+    }
+
+    /**
+     * Return a partially masked email address suitable for logging.
+     * Example: "soporte@example.com" -> "s***@example.com".
+     */
+    private function maskEmail(string $email): string
+    {
+        $at = strpos($email, '@');
+        if ($at === false || $at === 0) {
+            return '***';
+        }
+
+        return substr($email, 0, 1) . '***' . substr($email, $at);
     }
 
     /**

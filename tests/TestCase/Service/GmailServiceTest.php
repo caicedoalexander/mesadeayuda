@@ -290,4 +290,54 @@ final class GmailServiceTest extends TestCase
         $this->assertSame(200, $response->getStatusCode());
         $this->assertSame('ok', (string)$response->getBody());
     }
+
+    public function testGetUserEmailReturnsAddressFromUsersGetProfile(): void
+    {
+        $service = $this->buildService();
+        $this->stubHttp($service, [new Response(
+            200,
+            ['Content-Type' => 'application/json'],
+            '{"emailAddress":"soporte@example.com","messagesTotal":42,"threadsTotal":17,"historyId":"123"}',
+        )]);
+
+        $this->assertSame('soporte@example.com', $service->getUserEmail());
+    }
+
+    public function testGetUserEmailThrowsPermanentExceptionOnEmptyAddress(): void
+    {
+        $service = $this->buildService();
+        $this->stubHttp($service, [new Response(
+            200,
+            ['Content-Type' => 'application/json'],
+            '{"emailAddress":"","messagesTotal":0,"threadsTotal":0,"historyId":"0"}',
+        )]);
+
+        try {
+            $service->getUserEmail();
+            $this->fail('Expected GmailApiException');
+        } catch (GmailApiException $e) {
+            $this->assertSame(GmailErrorCategory::PERMANENT, $e->getCategory());
+        }
+    }
+
+    public function testGetUserEmailWrapsGoogleServiceException(): void
+    {
+        $service = $this->buildService();
+        // 401 is not in the retriable set (decider returns false for 401),
+        // so the SDK throws Google\Service\Exception(401) after the first
+        // response and our typed catch wraps it.
+        $this->stubHttp($service, [new Response(
+            401,
+            ['Content-Type' => 'application/json'],
+            '{"error":{"code":401,"message":"token revoked"}}',
+        )]);
+
+        try {
+            $service->getUserEmail();
+            $this->fail('Expected GmailApiException');
+        } catch (GmailApiException $e) {
+            $this->assertSame(GmailErrorCategory::AUTH, $e->getCategory());
+            $this->assertSame(401, $e->getCode());
+        }
+    }
 }

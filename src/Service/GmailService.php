@@ -655,6 +655,44 @@ class GmailService
     }
 
     /**
+     * Return the authenticated mailbox's primary email address via
+     * users.getProfile('me'). Used after OAuth callback to keep
+     * GMAIL_USER_EMAIL in sync with the live account (B-4).
+     *
+     * Inherits retry/backoff (H-2) and categorized exception typing
+     * (M-3) automatically because the call goes through the wrapped
+     * GoogleClient.
+     *
+     * @throws \App\Service\Exception\GmailApiException
+     */
+    public function getUserEmail(): string
+    {
+        try {
+            $profile = $this->getService()->users->getProfile('me');
+            $email = (string)($profile->getEmailAddress() ?? '');
+            if ($email === '') {
+                throw new GmailApiException(
+                    GmailErrorCategory::PERMANENT,
+                    0,
+                    'Empty emailAddress in users.getProfile response',
+                );
+            }
+
+            return $email;
+        } catch (GoogleServiceException $e) {
+            $category = GmailErrorCategory::categorize($e);
+            Log::error('Gmail API error', [
+                'method' => __FUNCTION__,
+                'category' => $category,
+                'code' => $e->getCode(),
+                'message' => $e->getMessage(),
+            ]);
+
+            throw new GmailApiException($category, $e->getCode(), $e->getMessage(), previous: $e);
+        }
+    }
+
+    /**
      * Send email via Gmail
      *
      * @param string $to Recipient email address
