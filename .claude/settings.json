@@ -4,5 +4,16 @@
     "frontend-design@claude-plugins-official": true,
     "context7@claude-plugins-official": true,
     "superpowers@claude-plugins-official": true
+  },
+  "permissions": {
+    "allow": [
+      "mcp__codegraph__codegraph_search",
+      "mcp__codegraph__codegraph_context",
+      "mcp__codegraph__codegraph_callers",
+      "mcp__codegraph__codegraph_callees",
+      "mcp__codegraph__codegraph_impact",
+      "mcp__codegraph__codegraph_node",
+      "mcp__codegraph__codegraph_status"
+    ]
   }
 }
