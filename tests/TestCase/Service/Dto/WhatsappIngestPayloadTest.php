@@ -181,4 +181,72 @@ final class WhatsappIngestPayloadTest extends TestCase
 
         WhatsappIngestPayload::fromArray($raw);
     }
+
+    public function testAttachmentBase64HappyPath(): void
+    {
+        $raw = $this->validRaw();
+        $content = 'hello world';
+        $raw['attachments'] = [[
+            'filename' => 'note.txt',
+            'mime' => 'text/plain',
+            'size' => strlen($content),
+            'content_base64' => base64_encode($content),
+        ]];
+
+        $p = WhatsappIngestPayload::fromArray($raw);
+
+        self::assertCount(1, $p->attachments);
+        self::assertNull($p->attachments[0]->url);
+        self::assertSame(base64_encode($content), $p->attachments[0]->contentBase64);
+        self::assertSame('note.txt', $p->attachments[0]->filename);
+        self::assertSame(11, $p->attachments[0]->size);
+    }
+
+    public function testAttachmentRejectsBothUrlAndBase64(): void
+    {
+        $this->expectException(InvalidWhatsappPayloadException::class);
+        $this->expectExceptionMessageMatches("/exactly one of 'url' or 'content_base64'/");
+
+        $raw = $this->validRaw();
+        $raw['attachments'] = [[
+            'filename' => 'a.jpg',
+            'mime' => 'image/jpeg',
+            'size' => 100,
+            'url' => 'https://example.com/x',
+            'content_base64' => base64_encode('x'),
+        ]];
+
+        WhatsappIngestPayload::fromArray($raw);
+    }
+
+    public function testAttachmentRejectsNeitherUrlNorBase64(): void
+    {
+        $this->expectException(InvalidWhatsappPayloadException::class);
+        $this->expectExceptionMessageMatches("/exactly one of 'url' or 'content_base64'/");
+
+        $raw = $this->validRaw();
+        $raw['attachments'] = [[
+            'filename' => 'a.jpg',
+            'mime' => 'image/jpeg',
+            'size' => 100,
+        ]];
+
+        WhatsappIngestPayload::fromArray($raw);
+    }
+
+    public function testAttachmentRejectsInvalidBase64(): void
+    {
+        $this->expectException(InvalidWhatsappPayloadException::class);
+        $this->expectExceptionMessageMatches('/content_base64/');
+
+        $raw = $this->validRaw();
+        $raw['attachments'] = [[
+            'filename' => 'a.jpg',
+            'mime' => 'image/jpeg',
+            'size' => 100,
+            'content_base64' => '@@@not-valid-base64@@@',
+        ]];
+
+        WhatsappIngestPayload::fromArray($raw);
+    }
 }

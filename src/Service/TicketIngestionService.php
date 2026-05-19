@@ -591,9 +591,11 @@ class TicketIngestionService
     }
 
     /**
-     * Download a WhatsApp attachment via HTTPS and persist via the existing
-     * TicketAttachmentService binary path. On failure logs warning and
-     * continues — does NOT abort the ticket.
+     * Persist a WhatsApp attachment, choosing source by payload shape:
+     * - content_base64 → decode and save (Meta Cloud media path).
+     * - url             → secure HTTPS download (generic external link).
+     *
+     * Failures are logged at warning and do NOT abort the ticket.
      */
     private function downloadAndStoreWhatsappAttachment(
         Ticket $ticket,
@@ -601,28 +603,14 @@ class TicketIngestionService
         int $userId,
     ): void {
         try {
-            // SecureHttpTrait exposes only secureCurlPost() today; for binary
-            // GET we use file_get_contents with a stream_context restricted to
-            // https. If SecureHttpTrait grows a secureCurlGet() helper later,
-            // swap to it.
-            $context = stream_context_create([
-                'http' => [
-                    'method' => 'GET',
-                    'timeout' => 15,
-                    'follow_location' => 0,
-                    'header' => "User-Agent: MesaDeAyuda-WhatsAppIngest/1.0\r\n",
-                ],
-                'ssl' => ['verify_peer' => true, 'verify_peer_name' => true],
-            ]);
-            $binary = @file_get_contents($attachment->url, false, $context);
-            if ($binary === false) {
-                Log::warning('WhatsApp attachment download failed', [
-                    'url' => $attachment->url,
-                    'ticket_id' => $ticket->id,
-                ]);
+            $binary = $attachment->contentBase64 !== null
+                ? $this->decodeAttachmentBase64($attachment, $ticket)
+                : $this->fetchAttachmentFromUrl($attachment, $ticket);
 
+            if ($binary === null) {
                 return;
             }
+
             if (strlen($binary) !== $attachment->size) {
                 Log::warning('WhatsApp attachment size mismatch', [
                     'declared' => $attachment->size,
@@ -641,11 +629,65 @@ class TicketIngestionService
             );
         } catch (Exception $e) {
             Log::warning('WhatsApp attachment processing failed', [
-                'url' => $attachment->url,
                 'ticket_id' => $ticket->id,
+                'filename' => $attachment->filename,
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Decode an inline base64 attachment. Returns null on decode failure
+     * (already validated in DTO, but defense-in-depth at IO boundary).
+     */
+    private function decodeAttachmentBase64(
+        WhatsappIngestPayloadAttachment $attachment,
+        Ticket $ticket,
+    ): ?string {
+        $binary = base64_decode((string)$attachment->contentBase64, true);
+        if ($binary === false) {
+            Log::warning('WhatsApp attachment base64 decode failed', [
+                'ticket_id' => $ticket->id,
+                'filename' => $attachment->filename,
+            ]);
+
+            return null;
+        }
+
+        return $binary;
+    }
+
+    /**
+     * Download an attachment from an HTTPS URL via stream_context.
+     * SecureHttpTrait exposes only secureCurlPost() today; for binary GET
+     * we use file_get_contents restricted to https. Swap when a binary
+     * helper exists.
+     */
+    private function fetchAttachmentFromUrl(
+        WhatsappIngestPayloadAttachment $attachment,
+        Ticket $ticket,
+    ): ?string {
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'timeout' => 15,
+                'follow_location' => 0,
+                'header' => "User-Agent: MesaDeAyuda-WhatsAppIngest/1.0\r\n",
+            ],
+            'ssl' => ['verify_peer' => true, 'verify_peer_name' => true],
+        ]);
+
+        $binary = @file_get_contents((string)$attachment->url, false, $context);
+        if ($binary === false) {
+            Log::warning('WhatsApp attachment download failed', [
+                'url' => $attachment->url,
+                'ticket_id' => $ticket->id,
+            ]);
+
+            return null;
+        }
+
+        return $binary;
     }
 
     /**
