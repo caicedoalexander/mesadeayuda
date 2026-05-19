@@ -33,6 +33,8 @@ final class SettingKeys
     public const N8N_TIMEOUT = 'n8n_timeout';
 
     public const WEBHOOK_GMAIL_IMPORT_TOKEN = 'webhook_gmail_import_token';
+    public const WEBHOOK_WHATSAPP_IMPORT_TOKEN = 'webhook_whatsapp_import_token';
+    public const WEBHOOK_TICKETS_TAGS_TOKEN = 'webhook_tickets_tags_token';
 
     /**
      * Setting keys exposed in the admin general-settings form.
