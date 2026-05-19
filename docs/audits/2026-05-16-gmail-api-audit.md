@@ -30,7 +30,7 @@ Sin embargo hay **hallazgos importantes** que afectan privilegios OAuth, resilie
 |-----------|------------------|----------------------------|
 | Alto      | 3 | 0 (H-1, H-2, H-3 cerrados) |
 | Medio     | 5 | 3 (M-1, M-3 cerrados) |
-| Bajo      | 4 | 3 (B-4 cerrado) |
+| Bajo      | 4 | 2 (B-1 WONT_FIX, B-4 cerrado) |
 | Informativo | 3 | 3 |
 
 **P0 cerrado el mismo día:** los tres ítems P0 del §8 (H-1, H-3, M-1) fueron implementados y mergeados a `main` en commits `b8e3d2a`, `5b21651`, `8ae81f0`. Ver §11 para detalles operativos.
@@ -231,6 +231,8 @@ Flow: `save(ticket)` ⇒ `markAsRead(messageId)`. Si `markAsRead` falla (red, 5x
 
 ### B-1 — `usleep(200ms)` síncrono dentro del request HTTP
 
+> **Cerrado 2026-05-19 — WONT_FIX (riesgo aceptado).** El `usleep(200ms)` preventivo es defendible: con el volumen actual (pyme) el tiempo acumulado de sleeps cabe holgadamente en el `set_time_limit(300)` del webhook, y post-M-2 (delta polling) el número de adjuntos por corrida está limitado por el delta real, no por el cap de 200 mensajes. El `RetryHandler` introducido en H-2 ya absorbe 429/5xx con backoff exponencial; un token-bucket compartido duplicaría esa defensa con coste extra (cache miss = throttle inefectivo) sin atender un modo de falla nuevo. Reabrir si métricas futuras muestran >5 adjuntos/segundo sostenidos. Spec: `docs/superpowers/specs/2026-05-19-gmail-audit-p3-design.md` §4.
+
 **Archivo:** `src/Service/GmailService.php:369` (`ATTACHMENT_THROTTLE_US = 200_000`)
 
 Con 5 attachments en un mismo email, el request bloquea 1s solo en sleeps; el `set_time_limit(300)` del webhook deja margen pero si la corrida tiene 50 emails con 5 adjuntos cada uno son 50s solo en sleeps. El throttle es defensivo y sensato, pero podría ser **server-side rate-limiter compartido** (token bucket en cache) en lugar de sleep ciego: si el run anterior ya consumió cuota, el siguiente espera; si no, no espera.
@@ -315,7 +317,7 @@ No es PII grave pero sí dato personal bajo LOPD/GDPR equivalentes. Considerar e
 ### P3 (evaluar valor)
 
 10. `watch()` + Pub/Sub si crece volumen.
-11. `B-1` token-bucket compartido en lugar de sleep.
+11. `B-1` token-bucket compartido en lugar de sleep. — **Cerrado 2026-05-19 — WONT_FIX**. Ver spec P3 §4 y banner en §5.
 12. `B-2` selección correcta de rama en `multipart/alternative`.
 13. `I-3` enmascarar PII en logs `info`.
 
@@ -489,6 +491,33 @@ No es PII grave pero sí dato personal bajo LOPD/GDPR equivalentes. Considerar e
 3. Responder al ticket desde una cuenta externa (no Gmail). Esperado: comentario añadido al ticket existente (no ticket duplicado), `rfc_message_id` / `in_reply_to` poblados en `ticket_comments`.
 4. Smoke de la cola de retry: insertar manualmente `INSERT INTO gmail_mark_read_pending (gmail_message_id, attempts, created, modified) VALUES ('nonexistent-id', 0, NOW(), NOW());`. Tras el siguiente webhook, la fila debe desaparecer (Gmail responde 404 → categoría PERMANENT → drop inmediato).
 5. Monitorear el tamaño de `gmail_mark_read_pending` durante 24h. Filas con `attempts >= 2` indican un patrón de fallas recurrentes — investigar.
+
+### 2026-05-19 — P3 cerrado (B-2 + B-3 + I-3) y B-1 WONT_FIX
+
+**Hallazgos cubiertos:** los tres ítems de código del bloque P3 (B-2 multipart/alternative, B-3 List-Unsubscribe/Feedback-ID, I-3 enmascarado de PII en logs) y el cierre documental de B-1 como WONT_FIX. Implementados como tres commits secuenciales en `main` siguiendo el plan en `docs/superpowers/plans/2026-05-19-gmail-audit-p3.md` y la spec `docs/superpowers/specs/2026-05-19-gmail-audit-p3-design.md`.
+
+**Commits:**
+
+| Commit | Hallazgo | Resumen |
+|---|---|---|
+| `a98bf4e` | B-2 | `GmailService::extractMessageParts` ahora intercepta `multipart/alternative` y desciende solo en una rama (HTML > multipart con HTML > plain). Frena la duplicación de `body_html` en forwards anidados. Cinco tests en `GmailServiceTest`. |
+| `59a5b14` | B-3 | `isAutoReply` amplía `Auto-Submitted` a "cualquier valor distinto de `no`" (RFC 3834 §5) y suma `List-Unsubscribe` (RFC 2369/8058) y `Feedback-ID` (Google/Yahoo bulk-sender 2024+). Cinco tests. |
+| `1f58e5d` | I-3 | Nuevo `App\Service\Util\LogMasker::email`. Aplicado en cinco call sites de log (`EmailService` x2, `GmailService::sendEmail` x2, `TicketIngestionService` x1). Subject queda en claro porque carga el `#<ticketNumber>` operativo. Seis tests. |
+
+**B-1 — WONT_FIX:** documentado en §5 (banner) y §8 P3 #11. Razonamiento: el sleep preventivo es proporcional al volumen pyme y al cap post-M-2; el `RetryHandler` ya cubre 429/5xx reales; el token-bucket añade superficie sin nuevo beneficio. Métricas a vigilar antes de reabrir: tasa de adjuntos/segundo sostenida.
+
+**Verificación ejecutada:**
+
+- `vendor/bin/phpcs` sobre archivos tocados: sin nuevos errores/warnings versus la línea base pre-existente. Errores remanentes en `GmailService.php` (unused `$parts` en `parseMessage` línea 317, cuatro long-line warnings) y `EmailService.php` (cuatro `Missing doc comment` en métodos pre-existentes) ya estaban en `HEAD` antes de P3 (verificado vía `git stash` + `phpcs`).
+- `vendor/bin/phpstan analyse src`: 38 errores de línea base (los mismos archivos de P0/P1/P2); sin nuevos errores en archivos tocados por P3 (`GmailService.php`, `EmailService.php`, `TicketIngestionService.php`, `Util/LogMasker.php`).
+- `vendor/bin/phpunit`: 11 tests nuevos en `GmailServiceTest` (5 B-2 + 5 B-3) y 6 en `LogMaskerTest`. `GmailServiceTest` pasa 35/35; `LogMaskerTest` pasa 6/6. Línea base pre-trabajo seguía con 5 fallos de rendering de templates (no relacionados con Gmail) — no cambia.
+- `bin/cake import_gmail --max 1`: omitido en el entorno de ejecución (sin DB/Gmail config).
+
+**Pendiente operativo post-deploy:**
+
+1. Tras el primer run del webhook post-deploy, confirmar en un log `info` que `Created ticket from email` reporta el `from` enmascarado (`a***@dominio.tld`).
+2. Enviar un newsletter de prueba (uno con `List-Unsubscribe` real) a la cuenta de soporte y verificar que NO se crea un ticket (es decir, que `isAutoReply` lo intercepta).
+3. Smoke de `multipart/alternative`: reenviar un email forwardeado de Gmail con cuerpo HTML y verificar que el comentario o ticket persistido no muestre el cuerpo duplicado.
 
 ---
 
