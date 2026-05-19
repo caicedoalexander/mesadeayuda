@@ -4,7 +4,7 @@
 - **Workflow ID**: `YrY1cuaU5YobAUGu`
 - **Estado**: `active: false` (no en producción)
 - **Versión auditada**: `f2d7cf52-0fc4-4608-95fe-9aa59ca4a174`
-- **Estado de resolución**: #2, #3, #9 — **resueltos en Fase 1** (ver `docs/superpowers/plans/2026-05-19-n8n-whatsapp-audit-fase-1.md`). #1, #4, #5, #6, #7, #8, #10 pendientes (Fase 2/3).
+- **Estado de resolución**: #2, #3 — **resueltos en Fase 1** (ver `docs/superpowers/plans/2026-05-19-n8n-whatsapp-audit-fase-1.md`). #9 — **Coexistencia documentada (no migración)**: Bot WhatsApp usa Meta Cloud API en n8n; notificaciones de ticket usan Evolution API en backend. Ver `docs/superpowers/specs/2026-05-19-n8n-whatsapp-audit-fase-2-design.md` §0. #1, #4, #5, #6, #7, #8, #10 pendientes (Fase 2/3).
 
 El workflow mezcla dos funciones independientes con triggers distintos y cero estado compartido.
 

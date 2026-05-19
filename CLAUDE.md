@@ -89,10 +89,11 @@ To add a new ticket notification:
 
 Do NOT call `EmailService`, `WhatsappService`, or any channel directly from controllers or services — publish a domain event and let the listener dispatch.
 
-**WhatsApp = Evolution API (canónica).** Cualquier referencia a Meta Cloud
-API (`graph.facebook.com`) en n8n es deuda heredada y está agendada para
-migrar en la Fase 2 del audit 2026-05-18 (ver
-`docs/superpowers/specs/2026-05-19-n8n-whatsapp-audit-fase-1-design.md` §5).
+**WhatsApp: dos integraciones por diseño.**
+- **Bot WhatsApp (inbound + outbound conversacional)** → Meta Cloud API (`graph.facebook.com`), gestionado en n8n.
+- **Notificaciones outbound de ticket creado al equipo de soporte** → Evolution API, gestionado en backend (`WhatsappService::sendNewEntityNotification`).
+
+Cada API tiene su propio caso de uso y credenciales en `system_settings`.
 
 `GmailImportService` + `TicketIngestionService` cover the inbound side; UTF-8 + markup-safe truncation lives in `TicketIngestionService`. Atomic ticket-number allocation runs through `NumberGenerationService` — don't reintroduce read-modify-write on the counter.
 

@@ -1,0 +1,22 @@
+{
+  "_status": "PRE-REWRITE SNAPSHOT (Tasks 4-10 of Fase 2 BLOCKED)",
+  "id": "YrY1cuaU5YobAUGu",
+  "name": "Mesa de Ayuda - COPC SA",
+  "active": false,
+  "versionId": "f2d7cf52-0fc4-4608-95fe-9aa59ca4a174",
+  "_blocked_tasks": {
+    "task_4_remove_tagging_subflow": "Pendiente — eliminar 9 nodos: Asignacion de Tags (webhook), Set Data Webhook, Formatear JSON, Basic LLM Chain, Groq Chat Model, Structured Output Parser, Set Data Agent, Formatear datos, Insert rows in a table. Renombrar workflow a 'Mesa de Ayuda - WhatsApp Bot'.",
+    "task_5_replace_email_path": "Pendiente — reemplazar 8 nodos del path email (Aggregate, If1, Descargar Archivos, Enviar Ticket, Enviar Ticket con Archivos, Parse Email Data, Parse Attachments Data, Send message ack post-email) por cadena HTTP: Item Lists → HTTP Get Meta media URL → HTTP Get binary → Code base64 → Aggregate → Code Build payload → HTTP POST /webhooks/whatsapp/import → If success → Send WhatsApp success / Notificar Error.",
+    "task_6_remove_dead_nodes": "Pendiente — eliminar 3 nodos disabled: OpenAI, Asignación de Agente, Set Data Webhook1.",
+    "task_7_idempotency_message_id": "BLOCKED — n8n Redis v1 node no expone SET NX nativo. Requiere workaround con INCR+TTL (clave 'mesadeayuda:msg:{messageId}' con ttl=86400; INCR retorna 1=primer intento, >1=duplicado) o un Code node con cliente Redis npm.",
+    "task_8_lock_phone_number": "BLOCKED — mismo workaround SET NX. Clave 'mesadeayuda:lock:{phone}' con ttl=60. Delete lock al salir de confirm/cancel/error paths.",
+    "task_10_error_subflow": "Pendiente — sub-grafo 'Notificar Error al Usuario' con Build error msg → HTTP POST Meta → Log → Delete session → Delete lock. Conectar Continue On Fail en HTTP críticos al sub-flujo."
+  },
+  "_workaround_notes": {
+    "redis_set_nx": "n8n-nodes-base.redis@1 operations available: delete|get|incr|info|keys|llen|pop|publish|push|set. No SET NX. Options: (a) Code node + 'redis' npm package + SET key value NX EX. (b) INCR + EXPIRE (atomic with Lua via SCRIPT, or use n8n's INCR operation with expire flag — INCR returning 1 means key was newly created). (c) Migrate to a fork of the Redis node that exposes NX.",
+    "alternative_proposed": "Use Redis INCR with expire/ttl. INCR atomically increments key by 1, creating key if missing. If response.value === 1, lock acquired; if > 1, duplicate/contention. Combine with the existing 'expire'+'ttl' params on INCR operation."
+  },
+  "_current_node_count": 36,
+  "_current_node_summary": "30+ nodes including WhatsApp Trigger, Parse Data Whatsapp, Redis Get/Update/Delete Session, Switch (7-way FSM router), 11 Code nodes for FSM states, 4 Switch nodes for sub-routing, 2 HTTP Request for Meta API, 9 nodes for tagging sub-flow (to remove), 8 nodes for email path (to replace), 3 disabled nodes (to remove).",
+  "_source_of_truth": "Live workflow at https://n8n.alexandercaicedo.dev/workflow/YrY1cuaU5YobAUGu — fetch with mcp__claude_ai_n8n__get_workflow_details before each Task 4-10 attempt."
+}

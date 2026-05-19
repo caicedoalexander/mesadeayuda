@@ -30,6 +30,25 @@ curl -sS -X POST "$HOST/webhooks/whatsapp/import" \
     }" | tee /tmp/whatsapp_smoke_2.json
 echo
 
+echo "→ POST with content_base64 attachment (expect 200 created:true)"
+B64=$(printf '%s' 'Smoke binary content' | base64)
+curl -sS -X POST "$HOST/webhooks/whatsapp/import" \
+    -H "X-Webhook-Token: $WHATSAPP_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{
+        \"message_id\": \"wamid.smoke.b64.$(date +%s)\",
+        \"phone_number\": \"+573001234567\",
+        \"subject\": \"Smoke base64 ticket\",
+        \"description\": \"Adjunto inline\",
+        \"attachments\": [{
+            \"filename\": \"smoke.txt\",
+            \"mime\": \"text/plain\",
+            \"size\": 20,
+            \"content_base64\": \"$B64\"
+        }]
+    }" | tee /tmp/whatsapp_smoke_3.json
+echo
+
 echo "→ POST without token (expect 401)"
 curl -sS -o /dev/null -w "%{http_code}\n" -X POST "$HOST/webhooks/whatsapp/import" \
     -H "Content-Type: application/json" -d '{}'

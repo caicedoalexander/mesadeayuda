@@ -1,0 +1,32 @@
+{
+  "id": "wtodIjJQFyr58F4R",
+  "name": "Mesa de Ayuda - Smoke Tests",
+  "active": false,
+  "isArchived": false,
+  "versionId": "2560e1d2-9dce-4682-8b78-1f83f8d16ea3",
+  "description": "Smoke tests programaticos para los endpoints de Fase 1 (whatsapp/import + tickets/{id}/tags). Trigger manual.",
+  "settings": { "executionOrder": "v1", "availableInMCP": true },
+  "connections": {
+    "Start Smoke Tests": { "main": [[{ "node": "Load Test Config", "type": "main", "index": 0 }]] },
+    "Load Test Config": { "main": [[{ "node": "Case 1: Happy import base64", "type": "main", "index": 0 }]] },
+    "Case 1: Happy import base64": { "main": [[{ "node": "Assert Case 1: 200 + created:true", "type": "main", "index": 0 }]] },
+    "Assert Case 1: 200 + created:true": { "main": [[{ "node": "Case 2: Repeat (idempotency)", "type": "main", "index": 0 }], [{ "node": "Assertion Failed", "type": "main", "index": 0 }]] },
+    "Case 2: Repeat (idempotency)": { "main": [[{ "node": "Assert Case 2: 200 + created:false", "type": "main", "index": 0 }]] },
+    "Assert Case 2: 200 + created:false": { "main": [[{ "node": "Case 3: Tags mixed valid/invalid", "type": "main", "index": 0 }], [{ "node": "Assertion Failed", "type": "main", "index": 0 }]] },
+    "Case 3: Tags mixed valid/invalid": { "main": [[{ "node": "Assert Case 3: 200 + skipped_unknown non-empty", "type": "main", "index": 0 }]] },
+    "Assert Case 3: 200 + skipped_unknown non-empty": { "main": [[{ "node": "Case 4: Tags 404 on missing ticket", "type": "main", "index": 0 }], [{ "node": "Assertion Failed", "type": "main", "index": 0 }]] },
+    "Case 4: Tags 404 on missing ticket": { "main": [[{ "node": "Assert Case 4: 404", "type": "main", "index": 0 }]] },
+    "Assert Case 4: 404": { "main": [[{ "node": "Case 5: Import without token", "type": "main", "index": 0 }], [{ "node": "Assertion Failed", "type": "main", "index": 0 }]] },
+    "Case 5: Import without token": { "main": [[{ "node": "Assert Case 5: 401", "type": "main", "index": 0 }]] },
+    "Assert Case 5: 401": { "main": [[{ "node": "Summary Log", "type": "main", "index": 0 }], [{ "node": "Assertion Failed", "type": "main", "index": 0 }]] }
+  },
+  "_notes": {
+    "credentials_pending": [
+      "5 HTTP Request nodes (Cases 1-4) require 'Header Auth' credential 'Mesa de Ayuda WhatsApp Webhook' (X-Webhook-Token) or 'Mesa de Ayuda Tags Webhook'.",
+      "Case 5 deliberately has no auth credential (tests 401)."
+    ],
+    "env_vars_pending": ["MESADEAYUDA_URL"],
+    "usage": "Manual trigger from n8n UI. Workflow stays active:false; only run manually."
+  },
+  "nodes": "Full node list available via mcp__claude_ai_n8n__get_workflow_details. Snapshot intentionally compact; rehidrátalo desde n8n cuando lo necesites."
+}
