@@ -12,6 +12,7 @@ use App\Model\Entity\User;
 use App\Service\Dto\SystemConfig;
 use App\Service\Traits\HtmlSanitizerTrait;
 use App\Service\Util\EmailHeaderParser;
+use App\Service\Util\LogMasker;
 use Cake\Event\EventManager;
 use Cake\Event\EventManagerInterface;
 use Cake\I18n\DateTime;
@@ -150,7 +151,7 @@ class TicketIngestionService
         Log::info('Created ticket from email', [
             'ticket_id' => $ticket->id,
             'ticket_number' => $ticket->ticket_number,
-            'from' => $fromEmail,
+            'from' => LogMasker::email($fromEmail),
         ]);
 
         return $ticket;
