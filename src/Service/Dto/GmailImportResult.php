@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Service\Dto;
 
+use App\Service\Gmail\HistoryMode;
+
 /**
  * Resultado inmutable de una corrida del import de Gmail.
  *
@@ -30,6 +32,8 @@ final readonly class GmailImportResult
         public int $markReadRetried = 0,
         public int $markReadDropped = 0,
         public int $markReadEnqueued = 0,
+        public string $historyMode = HistoryMode::BOOTSTRAP,
+        public int $historyFallbacks = 0,
     ) {
     }
 
@@ -54,6 +58,8 @@ final readonly class GmailImportResult
             'mark_read_retried' => $this->markReadRetried,
             'mark_read_dropped' => $this->markReadDropped,
             'mark_read_enqueued' => $this->markReadEnqueued,
+            'history_mode' => $this->historyMode,
+            'history_fallbacks' => $this->historyFallbacks,
         ];
     }
 }

@@ -326,6 +326,120 @@ final class GmailServiceTest extends TestCase
         }
     }
 
+    public function testGetProfileHistoryIdReturnsString(): void
+    {
+        $service = $this->buildService();
+        $this->stubHttp($service, [new Response(
+            200,
+            ['Content-Type' => 'application/json'],
+            json_encode(['emailAddress' => 'user@example.com', 'historyId' => '12345']),
+        )]);
+
+        $this->assertSame('12345', $service->getProfileHistoryId());
+    }
+
+    public function testGetProfileHistoryIdThrowsOnEmptyValue(): void
+    {
+        $service = $this->buildService();
+        $this->stubHttp($service, [new Response(
+            200,
+            ['Content-Type' => 'application/json'],
+            json_encode(['emailAddress' => 'user@example.com']),
+        )]);
+
+        try {
+            $service->getProfileHistoryId();
+            $this->fail('Expected GmailApiException');
+        } catch (GmailApiException $e) {
+            $this->assertSame(GmailErrorCategory::PERMANENT, $e->getCategory());
+        }
+    }
+
+    public function testGetHistoryDeltaReturnsMessageIdsAcrossPages(): void
+    {
+        $service = $this->buildService();
+
+        $page1 = json_encode([
+            'history' => [
+                ['messagesAdded' => [['message' => ['id' => 'm-1']]]],
+                ['messagesAdded' => [['message' => ['id' => 'm-2']]]],
+            ],
+            'nextPageToken' => 'tok-2',
+        ]);
+        $page2 = json_encode([
+            'history' => [
+                ['messagesAdded' => [['message' => ['id' => 'm-3']]]],
+            ],
+        ]);
+        $this->stubHttp($service, [
+            new Response(200, ['Content-Type' => 'application/json'], $page1),
+            new Response(200, ['Content-Type' => 'application/json'], $page2),
+        ]);
+
+        $this->assertSame(['m-1', 'm-2', 'm-3'], $service->getHistoryDelta('1000'));
+    }
+
+    public function testGetHistoryDeltaReturnsNullOn404(): void
+    {
+        $service = $this->buildService();
+        $this->stubHttp($service, [new Response(
+            404,
+            ['Content-Type' => 'application/json'],
+            json_encode(['error' => ['code' => 404, 'message' => 'not found']]),
+        )]);
+
+        $this->assertNull($service->getHistoryDelta('1000'));
+    }
+
+    public function testGetHistoryDeltaWrapsOtherErrorsAsGmailApiException(): void
+    {
+        $service = $this->buildService();
+        $this->stubHttp($service, [new Response(
+            401,
+            ['Content-Type' => 'application/json'],
+            json_encode(['error' => ['code' => 401, 'message' => 'unauth']]),
+        )]);
+
+        $this->expectException(GmailApiException::class);
+        $service->getHistoryDelta('1000');
+    }
+
+    public function testGetHistoryDeltaDedupsRepeatedIds(): void
+    {
+        $service = $this->buildService();
+        $payload = json_encode([
+            'history' => [
+                ['messagesAdded' => [['message' => ['id' => 'm-1']], ['message' => ['id' => 'm-1']]]],
+            ],
+        ]);
+        $this->stubHttp($service, [new Response(200, ['Content-Type' => 'application/json'], $payload)]);
+
+        $this->assertSame(['m-1'], $service->getHistoryDelta('1000'));
+    }
+
+    public function testParseMessageIncludesGmailHistoryId(): void
+    {
+        $service = $this->buildService();
+        $payload = json_encode([
+            'id' => 'gmail-id-1',
+            'threadId' => 'thread-1',
+            'historyId' => '54321',
+            'payload' => [
+                'headers' => [
+                    ['name' => 'From', 'value' => 'Alice <alice@example.com>'],
+                    ['name' => 'Subject', 'value' => 'Test'],
+                ],
+                'mimeType' => 'text/plain',
+                'body' => ['data' => rtrim(strtr(base64_encode('body'), '+/', '-_'), '='), 'size' => 4],
+            ],
+        ]);
+        $this->stubHttp($service, [new Response(200, ['Content-Type' => 'application/json'], $payload)]);
+
+        $data = $service->parseMessage('gmail-id-1');
+
+        $this->assertSame('54321', $data['gmail_history_id']);
+    }
+
     public function testParseMessageExtractsRfcThreadingHeaders(): void
     {
         $service = $this->buildService();

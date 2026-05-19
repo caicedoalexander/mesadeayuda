@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Test\TestCase\Service\Dto;
 
 use App\Service\Dto\GmailImportResult;
+use App\Service\Gmail\HistoryMode;
 use PHPUnit\Framework\TestCase;
 
 final class GmailImportResultTest extends TestCase
@@ -114,5 +115,39 @@ final class GmailImportResultTest extends TestCase
         $this->assertSame(0, $result->markReadRetried);
         $this->assertSame(0, $result->markReadDropped);
         $this->assertSame(0, $result->markReadEnqueued);
+    }
+
+    public function testToArrayIncludesHistoryModeAndFallbacks(): void
+    {
+        $result = new GmailImportResult(
+            fetched: 0,
+            created: 0,
+            comments: 0,
+            skipped: 0,
+            errors: 0,
+            durationSeconds: 0.0,
+            historyMode: HistoryMode::DELTA,
+            historyFallbacks: 0,
+        );
+
+        $array = $result->toArray();
+
+        $this->assertSame('delta', $array['history_mode']);
+        $this->assertSame(0, $array['history_fallbacks']);
+    }
+
+    public function testHistoryModeDefaultsToBootstrap(): void
+    {
+        $result = new GmailImportResult(
+            fetched: 0,
+            created: 0,
+            comments: 0,
+            skipped: 0,
+            errors: 0,
+            durationSeconds: 0.0,
+        );
+
+        $this->assertSame('bootstrap', $result->historyMode);
+        $this->assertSame(0, $result->historyFallbacks);
     }
 }

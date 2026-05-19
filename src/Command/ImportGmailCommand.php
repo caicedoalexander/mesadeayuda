@@ -29,7 +29,10 @@ class ImportGmailCommand extends Command
         $parser = parent::buildOptionParser($parser);
         $parser->setDescription('Import emails from Gmail and create tickets (debug CLI for GmailImportService)');
         $parser->addOption('max', ['short' => 'm', 'help' => 'Maximum messages', 'default' => 50]);
-        $parser->addOption('query', ['help' => 'Gmail search query', 'default' => 'is:unread']);
+        $parser->addOption('query', [
+            'help' => 'Gmail search query — overrides M-2 history.list checkpoint (MANUAL_OVERRIDE mode). '
+                   . 'Omit to use the checkpoint state machine.',
+        ]);
         $parser->addOption('delay', ['short' => 'd', 'help' => 'Delay between messages (ms)', 'default' => 1000]);
 
         return $parser;
@@ -43,14 +46,16 @@ class ImportGmailCommand extends Command
     public function execute(Arguments $args, ConsoleIo $io): ?int
     {
         $max = (int)$args->getOption('max');
-        $query = (string)$args->getOption('query');
+        $queryRaw = $args->getOption('query');
+        $queryOverride = is_string($queryRaw) && $queryRaw !== '' ? $queryRaw : null;
         $delay = (int)$args->getOption('delay');
 
-        $io->out("Gmail import — max={$max}, query='{$query}', delay={$delay}ms");
+        $queryDisplay = $queryOverride ?? '(checkpoint)';
+        $io->out("Gmail import — max={$max}, query='{$queryDisplay}', delay={$delay}ms");
         $io->hr();
 
         try {
-            $result = GmailImportService::fromSettings()->run($max, $query, $delay);
+            $result = GmailImportService::fromSettings()->run($max, $queryOverride, $delay);
         } catch (GmailNotConfiguredException $e) {
             $io->error($e->getMessage());
 

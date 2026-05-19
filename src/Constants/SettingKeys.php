@@ -17,6 +17,7 @@ final class SettingKeys
     public const GMAIL_CLIENT_SECRET_JSON = 'gmail_client_secret_json';
     public const GMAIL_CHECK_INTERVAL = 'gmail_check_interval';
     public const GMAIL_USER_EMAIL = 'gmail_user_email';
+    public const GMAIL_LAST_HISTORY_ID = 'gmail_last_history_id';
 
     public const WHATSAPP_ENABLED = 'whatsapp_enabled';
     public const WHATSAPP_API_URL = 'whatsapp_api_url';

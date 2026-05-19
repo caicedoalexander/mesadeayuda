@@ -67,12 +67,32 @@ class SettingsService
 
         if ($result) {
             $this->clearAllCaches();
-            if (in_array($key, [SettingKeys::GMAIL_CLIENT_SECRET_JSON, SettingKeys::GMAIL_REFRESH_TOKEN], true)) {
+            if (self::keyRequiresOAuthCachePurge($key)) {
                 $this->clearGmailOAuthCache();
             }
         }
 
         return $result;
+    }
+
+    /**
+     * Returns true when writing the given setting key must purge the Gmail
+     * OAuth PSR-6 cache (because the credentials those tokens were bound to
+     * have rotated). Pure predicate — no I/O, no state — exposed for testing
+     * and to keep the policy explicit.
+     *
+     * Notably excluded: GMAIL_LAST_HISTORY_ID (M-2 checkpoint, persisted every
+     * webhook run — purging the OAuth cache here would burn a token refresh
+     * every minute) and GMAIL_USER_EMAIL (B-4, auto-populated on OAuth
+     * callback — the existing token is still valid for the same mailbox).
+     */
+    public static function keyRequiresOAuthCachePurge(string $key): bool
+    {
+        return in_array(
+            $key,
+            [SettingKeys::GMAIL_CLIENT_SECRET_JSON, SettingKeys::GMAIL_REFRESH_TOKEN],
+            true,
+        );
     }
 
     /**

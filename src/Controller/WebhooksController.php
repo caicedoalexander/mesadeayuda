@@ -57,9 +57,13 @@ final class WebhooksController extends Controller
         try {
             $service = GmailImportService::fromSettings();
             $max = (int)($this->request->getData('max') ?? 50);
-            $query = (string)($this->request->getData('query') ?? 'is:unread');
+            // M-2: by default, let GmailImportService use the history.list
+            // checkpoint state machine. Explicit `query` POST data bypasses
+            // the checkpoint (MANUAL_OVERRIDE mode) for operator debugging.
+            $queryRaw = $this->request->getData('query');
+            $queryOverride = is_string($queryRaw) && $queryRaw !== '' ? $queryRaw : null;
 
-            $result = $service->run($max, $query, 0);
+            $result = $service->run($max, $queryOverride, 0);
 
             return $this->jsonOk($result->toArray());
         } catch (GmailNotConfiguredException $e) {

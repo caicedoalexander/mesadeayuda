@@ -3,11 +3,13 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Constants\SettingKeys;
 use App\Service\Dto\GmailImportResult;
 use App\Service\Dto\SystemConfig;
 use App\Service\Exception\GmailApiException;
 use App\Service\Exception\GmailNotConfiguredException;
 use App\Service\Gmail\GmailErrorCategory;
+use App\Service\Gmail\HistoryMode;
 use App\Service\Gmail\MarkReadQueueService;
 use App\Service\Traits\SettingsEncryptionTrait;
 use Cake\Log\Log;
@@ -73,10 +75,11 @@ final class GmailImportService
      * Ejecuta el import.
      *
      * @param int $max Máximo de mensajes a procesar (cap superior 200)
-     * @param string $query Query de búsqueda Gmail (e.g. 'is:unread')
+     * @param string|null $queryOverride Si se especifica, ignora el checkpoint y usa esta query
+     *                                   (modo MANUAL_OVERRIDE). null = state machine de checkpoint (M-2)
      * @param int $delayMs Delay entre mensajes en milisegundos (rate limit Gmail)
      */
-    public function run(int $max = 50, string $query = 'is:unread', int $delayMs = 0): GmailImportResult
+    public function run(int $max = 50, ?string $queryOverride = null, int $delayMs = 0): GmailImportResult
     {
         $startedAt = microtime(true);
         $max = max(1, min($max, 200));
@@ -86,7 +89,54 @@ final class GmailImportService
         // around the per-message markAsRead calls below).
         $markReadCounters = $this->markReadQueue->processPending($this->gmail);
 
-        $messageIds = $this->gmail->getMessages($query, $max);
+        // M-2: history.list checkpoint state machine. The checkpoint lives in
+        // system_settings.gmail_last_history_id and is advanced after each
+        // successful run. Operators can bypass it with $queryOverride (CLI).
+        $historyMode = HistoryMode::BOOTSTRAP;
+        $historyFallbacks = 0;
+        $touchCheckpoint = false;
+        $messageIds = [];
+
+        $lastHistoryId = $this->readHistoryCheckpoint();
+
+        if ($queryOverride !== null) {
+            $historyMode = HistoryMode::MANUAL_OVERRIDE;
+            $messageIds = $this->gmail->getMessages($queryOverride, $max);
+        } elseif ($lastHistoryId === null) {
+            $historyMode = HistoryMode::BOOTSTRAP;
+            try {
+                $bootstrapHistoryId = $this->gmail->getProfileHistoryId();
+                $this->writeHistoryCheckpoint($bootstrapHistoryId);
+            } catch (Throwable $e) {
+                Log::warning('Gmail bootstrap historyId unavailable; falling back to unread polling', [
+                    'error' => $e->getMessage(),
+                ]);
+            }
+            $messageIds = $this->gmail->getMessages('in:inbox newer_than:7d', $max);
+        } else {
+            $delta = $this->gmail->getHistoryDelta($lastHistoryId);
+            if ($delta === null) {
+                $historyMode = HistoryMode::FULL_SYNC_FALLBACK;
+                $historyFallbacks = 1;
+                Log::warning('Gmail history.list returned 404, falling back to full sync', [
+                    'checkpoint' => $lastHistoryId,
+                ]);
+                try {
+                    $freshHistoryId = $this->gmail->getProfileHistoryId();
+                    $this->writeHistoryCheckpoint($freshHistoryId);
+                } catch (Throwable $e) {
+                    Log::warning('Gmail history fallback could not refresh checkpoint', [
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+                $messageIds = $this->gmail->getMessages('in:inbox newer_than:7d', $max);
+            } else {
+                $historyMode = HistoryMode::DELTA;
+                $messageIds = array_slice($delta, 0, $max);
+                $touchCheckpoint = true;
+            }
+        }
+
         $fetched = count($messageIds);
 
         if ($fetched === 0) {
@@ -100,6 +150,8 @@ final class GmailImportService
                 markReadRetried: $markReadCounters['retried'],
                 markReadDropped: $markReadCounters['dropped'],
                 markReadEnqueued: 0,
+                historyMode: $historyMode,
+                historyFallbacks: $historyFallbacks,
             );
         }
 
@@ -124,9 +176,16 @@ final class GmailImportService
             GmailErrorCategory::UNKNOWN => 0,
         ];
 
+        $maxHistoryIdSeen = $lastHistoryId ?? '0';
+
         foreach ($messageIds as $messageId) {
             try {
                 $emailData = $this->gmail->parseMessage($messageId);
+
+                $thisHistoryId = (string)($emailData['gmail_history_id'] ?? '0');
+                if ($thisHistoryId !== '' && $this->compareHistoryIds($thisHistoryId, $maxHistoryIdSeen) > 0) {
+                    $maxHistoryIdSeen = $thisHistoryId;
+                }
 
                 if (!empty($emailData['is_auto_reply'])) {
                     $this->safeMarkAsRead($messageId, $markReadCounters);
@@ -183,6 +242,10 @@ final class GmailImportService
             }
         }
 
+        if ($touchCheckpoint && $maxHistoryIdSeen !== ($lastHistoryId ?? '0')) {
+            $this->writeHistoryCheckpoint($maxHistoryIdSeen);
+        }
+
         $result = new GmailImportResult(
             fetched: $fetched,
             created: $created,
@@ -199,11 +262,55 @@ final class GmailImportService
             markReadRetried: $markReadCounters['retried'],
             markReadDropped: $markReadCounters['dropped'],
             markReadEnqueued: $markReadCounters['enqueued'] ?? 0,
+            historyMode: $historyMode,
+            historyFallbacks: $historyFallbacks,
         );
 
         Log::info('Gmail import completed', $result->toArray());
 
         return $result;
+    }
+
+    /**
+     * Read the persisted Gmail historyId checkpoint, or null if unset.
+     */
+    private function readHistoryCheckpoint(): ?string
+    {
+        $row = $this->fetchTable('SystemSettings')->find()
+            ->where(['setting_key' => SettingKeys::GMAIL_LAST_HISTORY_ID])
+            ->first();
+        if ($row === null) {
+            return null;
+        }
+        $value = (string)($row->setting_value ?? '');
+
+        return $value === '' ? null : $value;
+    }
+
+    /**
+     * Persist the Gmail historyId checkpoint via SettingsService so the
+     * usual cache-invalidation path runs (but does NOT purge the OAuth
+     * cache — see SettingsService::keyRequiresOAuthCachePurge).
+     */
+    private function writeHistoryCheckpoint(string $historyId): void
+    {
+        (new SettingsService())->saveSetting(SettingKeys::GMAIL_LAST_HISTORY_ID, $historyId);
+    }
+
+    /**
+     * Compare two unsigned-integer-as-string historyIds. Returns -1/0/1.
+     * String compare with length-first ordering avoids 32-bit int overflow
+     * on the unsigned 64-bit historyId space Gmail uses.
+     */
+    private function compareHistoryIds(string $a, string $b): int
+    {
+        $a = ltrim($a, '0');
+        $b = ltrim($b, '0');
+        if (strlen($a) !== strlen($b)) {
+            return strlen($a) <=> strlen($b);
+        }
+
+        return strcmp($a, $b);
     }
 
     /**

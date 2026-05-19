@@ -330,6 +330,7 @@ class GmailService
             $data = [
                 'gmail_message_id' => $messageId,
                 'gmail_thread_id' => $message->getThreadId(),
+                'gmail_history_id' => (string)($message->getHistoryId() ?? ''),
                 'from' => $this->getHeader($headers, 'From'),
                 'to' => $this->getHeader($headers, 'To'),
                 'subject' => $this->getHeader($headers, 'Subject'),
@@ -669,6 +670,95 @@ class GmailService
 
             return '';
         }
+    }
+
+    /**
+     * Return the current historyId for the authenticated user's mailbox.
+     * Used to bootstrap a fresh history.list checkpoint (M-2) or to refresh
+     * one after a 404 fallback.
+     *
+     * @throws \App\Service\Exception\GmailApiException
+     */
+    public function getProfileHistoryId(): string
+    {
+        try {
+            $profile = $this->getService()->users->getProfile('me');
+        } catch (GoogleServiceException $e) {
+            $category = GmailErrorCategory::categorize($e);
+            Log::error('Gmail API error', [
+                'method' => __FUNCTION__,
+                'category' => $category,
+                'code' => $e->getCode(),
+                'message' => $e->getMessage(),
+            ]);
+
+            throw new GmailApiException($category, $e->getCode(), $e->getMessage(), previous: $e);
+        }
+
+        $historyId = (string)($profile->getHistoryId() ?? '');
+        if ($historyId === '') {
+            throw new GmailApiException(
+                GmailErrorCategory::PERMANENT,
+                0,
+                'getProfile returned empty historyId',
+            );
+        }
+
+        return $historyId;
+    }
+
+    /**
+     * List the messageIds added since $startHistoryId via users.history.list,
+     * paginating through nextPageToken. Returns null when Gmail responds 404
+     * (the checkpoint is older than Gmail's history window — caller must fall
+     * back to a full sync).
+     *
+     * @return list<string>|null
+     * @throws \App\Service\Exception\GmailApiException
+     */
+    public function getHistoryDelta(string $startHistoryId): ?array
+    {
+        $messageIds = [];
+        $pageToken = null;
+
+        do {
+            $params = [
+                'startHistoryId' => $startHistoryId,
+                'historyTypes' => ['messageAdded'],
+            ];
+            if ($pageToken !== null) {
+                $params['pageToken'] = $pageToken;
+            }
+
+            try {
+                $response = $this->getService()->users_history->listUsersHistory('me', $params);
+            } catch (GoogleServiceException $e) {
+                if ($e->getCode() === 404) {
+                    return null;
+                }
+                $category = GmailErrorCategory::categorize($e);
+                Log::error('Gmail API error', [
+                    'method' => __FUNCTION__,
+                    'category' => $category,
+                    'code' => $e->getCode(),
+                    'message' => $e->getMessage(),
+                ]);
+
+                throw new GmailApiException($category, $e->getCode(), $e->getMessage(), previous: $e);
+            }
+
+            foreach ($response->getHistory() ?? [] as $history) {
+                foreach ($history->getMessagesAdded() ?? [] as $added) {
+                    $msg = $added->getMessage();
+                    if ($msg !== null && $msg->getId() !== null) {
+                        $messageIds[] = $msg->getId();
+                    }
+                }
+            }
+            $pageToken = $response->getNextPageToken();
+        } while (is_string($pageToken) && $pageToken !== '');
+
+        return array_values(array_unique($messageIds));
     }
 
     /**
