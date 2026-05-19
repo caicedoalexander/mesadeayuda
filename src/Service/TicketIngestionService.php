@@ -10,6 +10,8 @@ use App\Model\Entity\Ticket;
 use App\Model\Entity\TicketComment;
 use App\Model\Entity\User;
 use App\Service\Dto\SystemConfig;
+use App\Service\Dto\WhatsappIngestPayload;
+use App\Service\Dto\WhatsappIngestPayloadAttachment;
 use App\Service\Traits\HtmlSanitizerTrait;
 use App\Service\Util\EmailHeaderParser;
 use App\Service\Util\LogMasker;
@@ -155,6 +157,85 @@ class TicketIngestionService
         ]);
 
         return $ticket;
+    }
+
+    /**
+     * Create ticket from a validated WhatsApp ingest payload.
+     *
+     * Idempotente por whatsapp_message_id: si el mensaje ya fue importado,
+     * retorna el ticket existente sin recrear.
+     *
+     * @param \App\Service\Dto\WhatsappIngestPayload $payload Validated payload
+     * @return array{ticket: \App\Model\Entity\Ticket|null, created: bool}
+     */
+    public function createFromWhatsapp(WhatsappIngestPayload $payload): array
+    {
+        $ticketsTable = $this->fetchTable('Tickets');
+
+        // Idempotency: dedupe by whatsapp_message_id (unique index in BD).
+        $existing = $ticketsTable->find()
+            ->where(['whatsapp_message_id' => $payload->messageId])
+            ->first();
+
+        if ($existing) {
+            Log::info('WhatsApp message already imported', [
+                'message_id' => $payload->messageId,
+                'ticket_id' => $existing->id,
+            ]);
+
+            return ['ticket' => $existing, 'created' => false];
+        }
+
+        $user = $this->findOrCreateUserByPhone($payload->phoneNumber, $payload->contactName);
+        if (!$user) {
+            Log::error('Failed to resolve user from WhatsApp phone', [
+                'phone' => $payload->phoneNumber,
+            ]);
+
+            return ['ticket' => null, 'created' => false];
+        }
+
+        // Sanitize description (treat as untrusted free text from user).
+        $description = $this->sanitizeHtml($payload->description);
+
+        $ticketNumber = $ticketsTable->generateTicketNumber();
+
+        $ticket = Ticket::fromWhatsappIngest(
+            ticketNumber: $ticketNumber,
+            requesterId: (int)$user->id,
+            subject: $payload->subject,
+            sanitizedDescription: $description,
+            sourcePhone: $payload->phoneNumber,
+            whatsappMessageId: $payload->messageId,
+        );
+
+        if (!$ticketsTable->save($ticket)) {
+            Log::error('Failed to save WhatsApp ticket', [
+                'errors' => $ticket->getErrors(),
+                'message_id' => $payload->messageId,
+            ]);
+
+            return ['ticket' => null, 'created' => false];
+        }
+
+        // Best-effort attachments: failures logged as warning, ticket still created.
+        foreach ($payload->attachments as $attachment) {
+            $this->downloadAndStoreWhatsappAttachment($ticket, $attachment, (int)$user->id);
+        }
+
+        $this->eventManager->dispatch(new TicketCreated(
+            ticketId: (int)$ticket->id,
+            requesterId: (int)$ticket->requester_id,
+            source: TicketConstants::CHANNEL_WHATSAPP,
+        ));
+
+        Log::info('Created ticket from WhatsApp', [
+            'ticket_id' => $ticket->id,
+            'ticket_number' => $ticket->ticket_number,
+            'phone' => $payload->phoneNumber,
+        ]);
+
+        return ['ticket' => $ticket, 'created' => true];
     }
 
     /**
@@ -416,6 +497,129 @@ class TicketIngestionService
         Log::error('Failed to create user', ['email' => $email, 'errors' => $user->getErrors()]);
 
         return null;
+    }
+
+    /**
+     * Find a user by phone number; create a placeholder requester if absent.
+     *
+     * Placeholder email follows the convention "<digits>@whatsapp.local" so
+     * the requirePresence('email') rule and unique-email constraint stay
+     * satisfied without changing UsersTable validation.
+     *
+     * @param string $phone E.164 phone number
+     * @param string|null $contactName Optional display name from WhatsApp
+     */
+    private function findOrCreateUserByPhone(string $phone, ?string $contactName): ?User
+    {
+        $usersTable = $this->fetchTable('Users');
+
+        $user = $usersTable->find()
+            ->where(['phone' => $phone])
+            ->first();
+        if ($user) {
+            return $user;
+        }
+
+        $placeholderEmail = ltrim($phone, '+') . '@whatsapp.local';
+
+        // Defensive: a previous WhatsApp ingest may have created the placeholder
+        // email under a different phone normalization. Reuse if it exists.
+        $byEmail = $usersTable->find()
+            ->where(['email' => $placeholderEmail])
+            ->first();
+        if ($byEmail) {
+            return $byEmail;
+        }
+
+        $name = $contactName !== null && $contactName !== '' ? $contactName : $phone;
+        $nameParts = explode(' ', $name, 2);
+        $firstName = $nameParts[0];
+        $lastName = $nameParts[1] ?? $firstName;
+
+        $user = $usersTable->newEntity([
+            'email' => $placeholderEmail,
+            'phone' => $phone,
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'role' => RoleConstants::ROLE_EXTERNAL,
+            'password' => null,
+            'is_active' => true,
+        ], ['accessibleFields' => ['role' => true, 'is_active' => true]]);
+        assert($user instanceof User);
+
+        if ($usersTable->save($user)) {
+            Log::info('Auto-created user from WhatsApp phone', [
+                'phone' => $phone,
+                'email' => $placeholderEmail,
+            ]);
+
+            return $user;
+        }
+
+        Log::error('Failed to create WhatsApp user', [
+            'phone' => $phone,
+            'errors' => $user->getErrors(),
+        ]);
+
+        return null;
+    }
+
+    /**
+     * Download a WhatsApp attachment via HTTPS and persist via the existing
+     * TicketAttachmentService binary path. On failure logs warning and
+     * continues — does NOT abort the ticket.
+     */
+    private function downloadAndStoreWhatsappAttachment(
+        Ticket $ticket,
+        WhatsappIngestPayloadAttachment $attachment,
+        int $userId,
+    ): void {
+        try {
+            // SecureHttpTrait exposes only secureCurlPost() today; for binary
+            // GET we use file_get_contents with a stream_context restricted to
+            // https. If SecureHttpTrait grows a secureCurlGet() helper later,
+            // swap to it.
+            $context = stream_context_create([
+                'http' => [
+                    'method' => 'GET',
+                    'timeout' => 15,
+                    'follow_location' => 0,
+                    'header' => "User-Agent: MesaDeAyuda-WhatsAppIngest/1.0\r\n",
+                ],
+                'ssl' => ['verify_peer' => true, 'verify_peer_name' => true],
+            ]);
+            $binary = @file_get_contents($attachment->url, false, $context);
+            if ($binary === false) {
+                Log::warning('WhatsApp attachment download failed', [
+                    'url' => $attachment->url,
+                    'ticket_id' => $ticket->id,
+                ]);
+
+                return;
+            }
+            if (strlen($binary) !== $attachment->size) {
+                Log::warning('WhatsApp attachment size mismatch', [
+                    'declared' => $attachment->size,
+                    'actual' => strlen($binary),
+                    'ticket_id' => $ticket->id,
+                ]);
+            }
+
+            $this->attachments->saveAttachmentFromBinary(
+                entity: $ticket,
+                filename: $attachment->filename,
+                binaryContent: $binary,
+                mimeType: $attachment->mime,
+                commentId: null,
+                userId: $userId,
+            );
+        } catch (Exception $e) {
+            Log::warning('WhatsApp attachment processing failed', [
+                'url' => $attachment->url,
+                'ticket_id' => $ticket->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
