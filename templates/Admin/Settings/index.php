@@ -399,6 +399,130 @@ $n8nEnabled        = ($settings['n8n_enabled'] ?? '0') === '1';
                 'class' => 'btn-brand-danger btn-brand-sm',
                 'escapeTitle' => false,
                 'confirm' => '¿Seguro? El token actual dejará de funcionar inmediatamente; deberás actualizarlo en n8n.',
+                'data' => ['setting_key' => 'webhook_gmail_import_token'],
+            ]
+        ) ?>
+    </div>
+</div>
+
+<!-- 6b. Webhook · Tickets tags (n8n Auto Tagging callback) -->
+<div class="app-card">
+    <div class="app-card-header">
+        <div class="app-card-header-icon orange"><i class="bi bi-tags"></i></div>
+        <div class="app-card-header-text">
+            <h3 class="app-card-header-title">Webhook · Tickets tags</h3>
+            <div class="app-card-header-subtitle">Endpoint que n8n llama para aplicar tags sugeridos por la IA</div>
+        </div>
+    </div>
+    <div class="app-card-body">
+        <div class="app-form-group">
+            <span class="app-form-label">URL del webhook</span>
+            <code class="mono" style="display: inline-block; padding: 8px 10px; background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: var(--radius-md); font-size: 12px; color: var(--gray-800); word-break: break-all;">
+                <?= h($webhookTicketsTagsUrl) ?>
+            </code>
+            <small>Reemplaza <code>{ticket_id}</code> con el ID real del ticket en cada llamada.</small>
+        </div>
+
+        <div class="app-form-group" style="margin-bottom: 0;">
+            <?= $this->Form->label('webhook-tags-token', 'Token (X-Webhook-Token)') ?>
+            <?php if ($webhookTicketsTagsToken === ''): ?>
+                <p class="mono" style="font-size: 12px; color: var(--danger-600);">
+                    — sin generar — Usa <strong>Regenerar token</strong> para crearlo.
+                </p>
+            <?php else: ?>
+                <div style="display: flex; gap: 6px; align-items: stretch; flex-wrap: wrap;">
+                    <input type="password"
+                           id="webhook-tags-token"
+                           value="<?= h($webhookTicketsTagsToken) ?>"
+                           readonly
+                           class="mono"
+                           style="flex: 1 1 40ch; min-width: 30ch;">
+                    <button type="button"
+                            class="btn-brand-secondary"
+                            onclick="var f=document.getElementById('webhook-tags-token');f.type=f.type==='password'?'text':'password';">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                    <button type="button"
+                            class="btn-brand-secondary"
+                            onclick="navigator.clipboard.writeText(document.getElementById('webhook-tags-token').value)">
+                        <i class="bi bi-clipboard"></i> Copiar
+                    </button>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+    <div class="app-card-footer start">
+        <?= $this->Form->postLink(
+            ($webhookTicketsTagsToken === ''
+                ? '<i class="bi bi-key"></i> Generar token'
+                : '<i class="bi bi-arrow-clockwise"></i> Regenerar token'),
+            ['action' => 'regenerateWebhookToken'],
+            [
+                'class' => 'btn-brand-danger btn-brand-sm',
+                'escapeTitle' => false,
+                'confirm' => '¿Seguro? El token actual (si existe) dejará de funcionar inmediatamente; deberás actualizarlo en la credencial Header Auth de n8n.',
+                'data' => ['setting_key' => 'webhook_tickets_tags_token'],
+            ]
+        ) ?>
+    </div>
+</div>
+
+<!-- 6c. Webhook · WhatsApp import -->
+<div class="app-card">
+    <div class="app-card-header">
+        <div class="app-card-header-icon"><i class="bi bi-whatsapp"></i></div>
+        <div class="app-card-header-text">
+            <h3 class="app-card-header-title">Webhook · WhatsApp import</h3>
+            <div class="app-card-header-subtitle">Endpoint que el bot de n8n llama para crear tickets desde WhatsApp</div>
+        </div>
+    </div>
+    <div class="app-card-body">
+        <div class="app-form-group">
+            <span class="app-form-label">URL del webhook</span>
+            <code class="mono" style="display: inline-block; padding: 8px 10px; background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: var(--radius-md); font-size: 12px; color: var(--gray-800); word-break: break-all;">
+                <?= h($webhookWhatsappImportUrl) ?>
+            </code>
+        </div>
+
+        <div class="app-form-group" style="margin-bottom: 0;">
+            <?= $this->Form->label('webhook-whatsapp-token', 'Token (X-Webhook-Token)') ?>
+            <?php if ($webhookWhatsappImportToken === ''): ?>
+                <p class="mono" style="font-size: 12px; color: var(--danger-600);">
+                    — sin generar — Usa <strong>Regenerar token</strong> para crearlo.
+                </p>
+            <?php else: ?>
+                <div style="display: flex; gap: 6px; align-items: stretch; flex-wrap: wrap;">
+                    <input type="password"
+                           id="webhook-whatsapp-token"
+                           value="<?= h($webhookWhatsappImportToken) ?>"
+                           readonly
+                           class="mono"
+                           style="flex: 1 1 40ch; min-width: 30ch;">
+                    <button type="button"
+                            class="btn-brand-secondary"
+                            onclick="var f=document.getElementById('webhook-whatsapp-token');f.type=f.type==='password'?'text':'password';">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                    <button type="button"
+                            class="btn-brand-secondary"
+                            onclick="navigator.clipboard.writeText(document.getElementById('webhook-whatsapp-token').value)">
+                        <i class="bi bi-clipboard"></i> Copiar
+                    </button>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+    <div class="app-card-footer start">
+        <?= $this->Form->postLink(
+            ($webhookWhatsappImportToken === ''
+                ? '<i class="bi bi-key"></i> Generar token'
+                : '<i class="bi bi-arrow-clockwise"></i> Regenerar token'),
+            ['action' => 'regenerateWebhookToken'],
+            [
+                'class' => 'btn-brand-danger btn-brand-sm',
+                'escapeTitle' => false,
+                'confirm' => '¿Seguro? El token actual (si existe) dejará de funcionar inmediatamente; deberás actualizarlo en la credencial Header Auth de n8n.',
+                'data' => ['setting_key' => 'webhook_whatsapp_import_token'],
             ]
         ) ?>
     </div>

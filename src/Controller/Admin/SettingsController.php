@@ -93,12 +93,46 @@ class SettingsController extends AppController
         $webhookUrl = Router::url(['_name' => 'webhook_gmail_import'], true);
         $lastWebhookRun = (int)(Cache::read('gmail_import_last_run', 'default') ?? 0);
 
+        // Tokens for the inbound n8n → backend webhooks. UI exposes each one
+        // with its dedicated "regenerate" button (see regenerateWebhookToken).
+        $webhookTicketsTagsToken = (string)($allSettings[SettingKeys::WEBHOOK_TICKETS_TAGS_TOKEN] ?? '');
+        $webhookWhatsappImportToken = (string)($allSettings[SettingKeys::WEBHOOK_WHATSAPP_IMPORT_TOKEN] ?? '');
+        $webhookTicketsTagsUrl = Router::url(
+            ['_name' => 'webhook_tickets_tags_add', 'id' => '{ticket_id}'],
+            true,
+        );
+        $webhookWhatsappImportUrl = Router::url(['_name' => 'webhook_whatsapp_import'], true);
+
         $this->set([
             'settings' => $allSettings,
             'webhookGmailToken' => $webhookToken,
             'webhookGmailUrl' => $webhookUrl,
             'webhookGmailLastRun' => $lastWebhookRun > 0 ? date('Y-m-d H:i:s', $lastWebhookRun) : null,
+            'webhookTicketsTagsToken' => $webhookTicketsTagsToken,
+            'webhookTicketsTagsUrl' => $webhookTicketsTagsUrl,
+            'webhookWhatsappImportToken' => $webhookWhatsappImportToken,
+            'webhookWhatsappImportUrl' => $webhookWhatsappImportUrl,
         ]);
+    }
+
+    /**
+     * Map of regenerable webhook tokens. Each entry pairs the persisted
+     * setting key with the cache slot used to keep the previous token alive
+     * during the rotation grace window.
+     *
+     * Centralizing this avoids accidental coupling between the controller
+     * and individual webhook flows, and gates which keys the rotate action
+     * is allowed to touch.
+     *
+     * @return array<string, string> setting-key => previous-token cache key
+     */
+    private function rotatableWebhookTokens(): array
+    {
+        return [
+            SettingKeys::WEBHOOK_GMAIL_IMPORT_TOKEN => CacheConstants::WEBHOOK_GMAIL_PREVIOUS_TOKEN,
+            SettingKeys::WEBHOOK_TICKETS_TAGS_TOKEN => CacheConstants::WEBHOOK_TICKETS_TAGS_PREVIOUS_TOKEN,
+            SettingKeys::WEBHOOK_WHATSAPP_IMPORT_TOKEN => CacheConstants::WEBHOOK_WHATSAPP_PREVIOUS_TOKEN,
+        ];
     }
 
     /**
@@ -578,28 +612,51 @@ class SettingsController extends AppController
     {
         $this->request->allowMethod(['POST']);
 
+        // Allow the form to pick which webhook to rotate. Defaulting to the
+        // Gmail token preserves the behavior of the original single-button UI.
+        $requestedKey = (string)$this->request->getData(
+            'setting_key',
+            SettingKeys::WEBHOOK_GMAIL_IMPORT_TOKEN,
+        );
+
+        $rotatable = $this->rotatableWebhookTokens();
+        if (!array_key_exists($requestedKey, $rotatable)) {
+            $this->Flash->error('Token de webhook desconocido; no se puede regenerar.');
+
+            return $this->redirect(['action' => 'index']);
+        }
+
+        $previousCacheKey = $rotatable[$requestedKey];
+
         // Capture the current token *before* rotation so it can stay valid
         // for a short grace window — avoids dropping in-flight n8n traffic.
-        $currentToken = $this->settingsService->loadAll()[SettingKeys::WEBHOOK_GMAIL_IMPORT_TOKEN] ?? null;
+        $currentToken = $this->settingsService->loadAll()[$requestedKey] ?? null;
 
         $token = bin2hex(random_bytes(32));
-        $saved = $this->settingsService->saveSetting(SettingKeys::WEBHOOK_GMAIL_IMPORT_TOKEN, $token);
+        $saved = $this->settingsService->saveSetting($requestedKey, $token);
 
         if ($saved) {
             if (is_string($currentToken) && $currentToken !== '') {
                 Cache::write(
-                    CacheConstants::WEBHOOK_GMAIL_PREVIOUS_TOKEN,
+                    $previousCacheKey,
                     [
                         'token' => $currentToken,
                         'expires_at' => time() + CacheConstants::WEBHOOK_TOKEN_OVERLAP_SECONDS,
                     ],
                     'default',
                 );
+                $this->Flash->success(sprintf(
+                    'Token regenerado. El anterior sigue aceptado por %d s mientras actualizas n8n.',
+                    CacheConstants::WEBHOOK_TOKEN_OVERLAP_SECONDS,
+                ));
+            } else {
+                // First-time generation: there was no previous token to grant a
+                // grace window, so the n8n credential must be updated before
+                // the next inbound call (otherwise the receiver returns 401).
+                $this->Flash->success(
+                    'Token generado. Actualiza la credencial en n8n antes del próximo disparo.',
+                );
             }
-            $this->Flash->success(sprintf(
-                'Token de webhook regenerado. El anterior sigue siendo aceptado por %d s mientras actualizas n8n.',
-                CacheConstants::WEBHOOK_TOKEN_OVERLAP_SECONDS,
-            ));
         } else {
             $this->Flash->error('No se pudo regenerar el token.');
         }
