@@ -5,9 +5,13 @@ namespace App\Controller;
 
 use App\Constants\CacheConstants;
 use App\Constants\SettingKeys;
+use App\Service\Dto\SystemConfig;
+use App\Service\Dto\WhatsappIngestPayload;
 use App\Service\Exception\GmailNotConfiguredException;
+use App\Service\Exception\InvalidWhatsappPayloadException;
 use App\Service\GmailImportService;
 use App\Service\SettingsService;
+use App\Service\TicketIngestionService;
 use Cake\Cache\Cache;
 use Cake\Controller\Controller;
 use Cake\Http\Response;
@@ -36,7 +40,12 @@ final class WebhooksController extends Controller
     {
         $this->request->allowMethod(['POST']);
 
-        if (!$this->verifyToken()) {
+        if (
+            !$this->verifyToken(
+                SettingKeys::WEBHOOK_GMAIL_IMPORT_TOKEN,
+                CacheConstants::WEBHOOK_GMAIL_PREVIOUS_TOKEN,
+            )
+        ) {
             return $this->jsonError(401, 'invalid_token');
         }
 
@@ -88,11 +97,80 @@ final class WebhooksController extends Controller
     }
 
     /**
+     * Crea un ticket a partir del payload del bot WhatsApp (n8n).
+     *
+     * Idempotente por `message_id`: dos POSTs con el mismo id retornan el
+     * mismo ticket (el segundo con created:false).
+     *
+     * @return \Cake\Http\Response
+     */
+    public function whatsappImport(): Response
+    {
+        $this->request->allowMethod(['POST']);
+
+        if (
+            !$this->verifyToken(
+                SettingKeys::WEBHOOK_WHATSAPP_IMPORT_TOKEN,
+                CacheConstants::WEBHOOK_WHATSAPP_PREVIOUS_TOKEN,
+            )
+        ) {
+            return $this->jsonError(401, 'invalid_token');
+        }
+
+        // Parse + validate body BEFORE locking — invalid requests don't consume locks.
+        try {
+            $payload = WhatsappIngestPayload::fromArray((array)$this->request->getData());
+        } catch (InvalidWhatsappPayloadException $e) {
+            return $this->jsonError(400, 'invalid_payload', ['detail' => $e->getMessage()]);
+        }
+
+        // Cross-request idempotency lock by message_id (60s window).
+        $lockKey = 'whatsapp_import:' . $payload->messageId;
+        if (Cache::read($lockKey, self::RATE_LIMIT_CACHE) !== null) {
+            return $this->jsonError(409, 'already_running');
+        }
+        Cache::write($lockKey, time(), self::RATE_LIMIT_CACHE);
+
+        @set_time_limit(self::REQUEST_TIME_LIMIT);
+        ignore_user_abort(true);
+
+        try {
+            $config = SystemConfig::fromSettingsArray((new SettingsService())->loadAll());
+            if (!$config->whatsapp->enabled) {
+                return $this->jsonError(503, 'not_configured');
+            }
+
+            $service = new TicketIngestionService($config);
+            $result = $service->createFromWhatsapp($payload);
+
+            if ($result['ticket'] === null) {
+                return $this->jsonError(500, 'ingest_failed');
+            }
+
+            return $this->jsonOk([
+                'ticket_id' => (int)$result['ticket']->id,
+                'ticket_number' => $result['ticket']->ticket_number,
+                'created' => $result['created'],
+            ]);
+        } catch (Throwable $e) {
+            Log::error('WhatsApp webhook import failed', [
+                'error' => $e->getMessage(),
+                'class' => $e::class,
+                'message_id' => $payload->messageId,
+            ]);
+
+            return $this->jsonError(500, 'ingest_failed');
+        } finally {
+            Cache::delete($lockKey, self::RATE_LIMIT_CACHE);
+        }
+    }
+
+    /**
      * Compara el header X-Webhook-Token contra el setting cifrado, aceptando
      * también el token anterior si todavía está dentro de la ventana de gracia
      * tras una rotación.
      */
-    private function verifyToken(): bool
+    private function verifyToken(string $settingKey, string $previousTokenCacheKey): bool
     {
         $provided = (string)$this->request->getHeaderLine('X-Webhook-Token');
         if ($provided === '') {
@@ -100,21 +178,21 @@ final class WebhooksController extends Controller
         }
 
         $settings = (new SettingsService())->loadAll();
-        $expected = $settings[SettingKeys::WEBHOOK_GMAIL_IMPORT_TOKEN] ?? null;
+        $expected = $settings[$settingKey] ?? null;
 
         if (is_string($expected) && $expected !== '' && hash_equals($expected, $provided)) {
             return true;
         }
 
-        return $this->matchesPreviousToken($provided);
+        return $this->matchesPreviousToken($provided, $previousTokenCacheKey);
     }
 
     /**
      * Acepta el token anterior durante la ventana de gracia tras una rotación.
      */
-    private function matchesPreviousToken(string $provided): bool
+    private function matchesPreviousToken(string $provided, string $cacheKey): bool
     {
-        $previous = Cache::read(CacheConstants::WEBHOOK_GMAIL_PREVIOUS_TOKEN, 'default');
+        $previous = Cache::read($cacheKey, 'default');
         if (!is_array($previous)) {
             return false;
         }
@@ -123,7 +201,7 @@ final class WebhooksController extends Controller
         $expiresAt = (int)($previous['expires_at'] ?? 0);
 
         if (!is_string($token) || $token === '' || $expiresAt <= time()) {
-            Cache::delete(CacheConstants::WEBHOOK_GMAIL_PREVIOUS_TOKEN, 'default');
+            Cache::delete($cacheKey, 'default');
 
             return false;
         }

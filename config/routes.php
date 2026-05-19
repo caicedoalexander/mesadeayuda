@@ -89,6 +89,11 @@ return function (RouteBuilder $routes): void {
             ['controller' => 'Webhooks', 'action' => 'gmailImport'],
             'webhook_gmail_import'
         );
+        $builder->post(
+            '/whatsapp/import',
+            ['controller' => 'Webhooks', 'action' => 'whatsappImport'],
+            'webhook_whatsapp_import'
+        );
     });
 
     /*
