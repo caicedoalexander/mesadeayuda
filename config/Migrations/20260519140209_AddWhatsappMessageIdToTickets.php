@@ -15,6 +15,13 @@ final class AddWhatsappMessageIdToTickets extends BaseMigration
                 'after' => 'gmail_thread_id',
                 'comment' => 'WhatsApp message ID (wamid) for idempotent ingest from n8n bot',
             ])
+            ->addColumn('source_phone', 'string', [
+                'limit' => 32,
+                'null' => true,
+                'default' => null,
+                'after' => 'source_email',
+                'comment' => 'E.164 phone number for tickets ingested from WhatsApp',
+            ])
             ->addIndex(['whatsapp_message_id'], [
                 'name' => 'idx_tickets_whatsapp_message_id',
                 'unique' => true,
