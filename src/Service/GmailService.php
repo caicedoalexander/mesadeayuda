@@ -319,6 +319,14 @@ class GmailService
             $toHeader = $this->getHeader($headers, 'To');
             $ccHeader = $this->getHeader($headers, 'Cc');
 
+            // M-4: RFC 5322 threading headers used by TicketIngestionService
+            // to reattach replies to the existing ticket when Gmail's threadId
+            // is missing or wrong (e.g. external mailer rewriting threads).
+            $rfcMessageId = EmailHeaderParser::extractMessageId($this->getHeader($headers, 'Message-ID'));
+            $inReplyTo = EmailHeaderParser::extractMessageId($this->getHeader($headers, 'In-Reply-To'));
+            $referencesRaw = $this->getHeader($headers, 'References');
+            $referencesHeader = trim($referencesRaw) !== '' ? trim($referencesRaw) : null;
+
             $data = [
                 'gmail_message_id' => $messageId,
                 'gmail_thread_id' => $message->getThreadId(),
@@ -328,6 +336,9 @@ class GmailService
                 'date' => $this->getHeader($headers, 'Date'),
                 'email_to' => EmailHeaderParser::parseRecipients($toHeader),
                 'email_cc' => EmailHeaderParser::parseRecipients($ccHeader),
+                'rfc_message_id' => $rfcMessageId,
+                'in_reply_to' => $inReplyTo,
+                'references_header' => $referencesHeader,
                 'body_html' => '',
                 'body_text' => '',
                 'attachments' => [],

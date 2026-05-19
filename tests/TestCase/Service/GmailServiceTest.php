@@ -320,6 +320,36 @@ final class GmailServiceTest extends TestCase
         }
     }
 
+    public function testParseMessageExtractsRfcThreadingHeaders(): void
+    {
+        $service = $this->buildService();
+
+        $payload = json_encode([
+            'id' => 'gmail-id-1',
+            'threadId' => 'thread-1',
+            'historyId' => '999',
+            'payload' => [
+                'headers' => [
+                    ['name' => 'Message-ID', 'value' => '<root@example.com>'],
+                    ['name' => 'In-Reply-To', 'value' => '<previous@example.com>'],
+                    ['name' => 'References', 'value' => '<a@x.com> <b@x.com> <previous@example.com>'],
+                    ['name' => 'From', 'value' => 'Alice <alice@example.com>'],
+                    ['name' => 'Subject', 'value' => 'Test thread'],
+                ],
+                'mimeType' => 'text/plain',
+                'body' => ['data' => rtrim(strtr(base64_encode('hello'), '+/', '-_'), '='), 'size' => 5],
+            ],
+        ]);
+
+        $this->stubHttp($service, [new Response(200, ['Content-Type' => 'application/json'], $payload)]);
+
+        $data = $service->parseMessage('gmail-id-1');
+
+        $this->assertSame('root@example.com', $data['rfc_message_id']);
+        $this->assertSame('previous@example.com', $data['in_reply_to']);
+        $this->assertSame('<a@x.com> <b@x.com> <previous@example.com>', $data['references_header']);
+    }
+
     public function testGetUserEmailWrapsGoogleServiceException(): void
     {
         $service = $this->buildService();

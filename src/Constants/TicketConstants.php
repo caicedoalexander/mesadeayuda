@@ -97,4 +97,12 @@ final class TicketConstants
         self::CHANNEL_WEB,
         self::CHANNEL_API,
     ];
+
+    /**
+     * Window in days during which an incoming reply with a matching RFC 5322
+     * In-Reply-To / References header reattaches to an existing ticket. Outside
+     * this window, the reply creates a new ticket — preventing resurrection of
+     * ancient closed threads. Configurable later via SettingKeys if needed.
+     */
+    public const THREAD_REATTACH_WINDOW_DAYS = 90;
 }

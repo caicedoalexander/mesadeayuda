@@ -14,6 +14,7 @@ use App\Service\Traits\HtmlSanitizerTrait;
 use App\Service\Util\EmailHeaderParser;
 use Cake\Event\EventManager;
 use Cake\Event\EventManagerInterface;
+use Cake\I18n\DateTime;
 use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
 use Exception;
@@ -115,6 +116,9 @@ class TicketIngestionService
             gmailThreadId: $emailData['gmail_thread_id'] ?? null,
             emailTo: !empty($emailData['email_to']) ? $emailData['email_to'] : null,
             emailCc: !empty($emailData['email_cc']) ? $emailData['email_cc'] : null,
+            rfcMessageId: $emailData['rfc_message_id'] ?? null,
+            inReplyTo: $emailData['in_reply_to'] ?? null,
+            referencesHeader: $emailData['references_header'] ?? null,
         );
 
         if (!$ticketsTable->save($ticket)) {
@@ -215,8 +219,17 @@ class TicketIngestionService
             'sent_as_email' => false,
             'email_to' => !empty($emailData['email_to']) ? json_encode($emailData['email_to']) : null,
             'email_cc' => !empty($emailData['email_cc']) ? json_encode($emailData['email_cc']) : null,
+            'rfc_message_id' => $emailData['rfc_message_id'] ?? null,
+            'in_reply_to' => $emailData['in_reply_to'] ?? null,
+            'references_header' => $emailData['references_header'] ?? null,
         ], ['accessibleFields' => [
-            'user_id' => true, 'is_system_comment' => true, 'gmail_message_id' => true, 'sent_as_email' => true,
+            'user_id' => true,
+            'is_system_comment' => true,
+            'gmail_message_id' => true,
+            'sent_as_email' => true,
+            'rfc_message_id' => true,
+            'in_reply_to' => true,
+            'references_header' => true,
         ]]);
         assert($comment instanceof TicketComment);
 
@@ -246,6 +259,111 @@ class TicketIngestionService
         ]);
 
         return $comment;
+    }
+
+    /**
+     * Resolve the existing ticket an incoming email should reattach to, using
+     * (in order): RFC 5322 In-Reply-To, References (newest-first), and finally
+     * Gmail's threadId as a last-resort hint. Returns null when the message
+     * should create a new ticket.
+     *
+     * Recency is enforced via TicketConstants::THREAD_REATTACH_WINDOW_DAYS:
+     * matches outside the window are ignored to prevent ancient closed
+     * threads from being resurrected by stale clients quoting old headers.
+     *
+     * @param array<string, mixed> $emailData Parsed email payload from GmailService::parseMessage
+     */
+    public function findExistingTicketByThreading(array $emailData): ?Ticket
+    {
+        $inReplyTo = $emailData['in_reply_to'] ?? null;
+        if (is_string($inReplyTo) && $inReplyTo !== '') {
+            $ticket = $this->lookupTicketByRfc($inReplyTo);
+            if ($ticket !== null && $this->withinReattachWindow($ticket)) {
+                return $ticket;
+            }
+        }
+
+        $references = $emailData['references_header'] ?? null;
+        if (is_string($references) && $references !== '') {
+            foreach (array_reverse($this->parseReferences($references)) as $candidate) {
+                $ticket = $this->lookupTicketByRfc($candidate);
+                if ($ticket !== null && $this->withinReattachWindow($ticket)) {
+                    return $ticket;
+                }
+            }
+        }
+
+        $threadId = $emailData['gmail_thread_id'] ?? null;
+        if (is_string($threadId) && $threadId !== '') {
+            return $this->fetchTable('Tickets')->find()
+                ->where(['gmail_thread_id' => $threadId])
+                ->first();
+        }
+
+        return null;
+    }
+
+    /**
+     * Split a raw References: header into a list of message-id values
+     * (angle brackets stripped, empty entries removed).
+     *
+     * @return list<string>
+     */
+    private function parseReferences(string $raw): array
+    {
+        $tokens = preg_split('/\s+/', trim($raw)) ?: [];
+        $result = [];
+        foreach ($tokens as $token) {
+            $id = EmailHeaderParser::extractMessageId($token);
+            if ($id !== null) {
+                $result[] = $id;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * True when the ticket has been touched (created or modified) within
+     * TicketConstants::THREAD_REATTACH_WINDOW_DAYS. Closed tickets are
+     * additionally required to be inside the window; otherwise a stale reply
+     * would resurrect them.
+     */
+    private function withinReattachWindow(Ticket $ticket): bool
+    {
+        $modified = $ticket->modified ?? $ticket->created;
+        if ($modified === null) {
+            return false;
+        }
+        $cutoff = DateTime::now()->subDays(TicketConstants::THREAD_REATTACH_WINDOW_DAYS);
+        if ($ticket->isResolved() && $modified->lessThan($cutoff)) {
+            return false;
+        }
+
+        return $modified->greaterThanOrEquals($cutoff);
+    }
+
+    /**
+     * Resolve an RFC 5322 message-id to a ticket. Searches ticket_comments
+     * first (most reattachments target the latest thread participant), then
+     * tickets as a fallback for replies to the very first message in a thread.
+     */
+    private function lookupTicketByRfc(string $rfcId): ?Ticket
+    {
+        // Most reattachments target a comment (latest thread participant).
+        $comment = $this->fetchTable('TicketComments')->find()
+            ->where(['rfc_message_id' => $rfcId])
+            ->order(['id' => 'DESC'])
+            ->first();
+        if ($comment !== null) {
+            return $this->fetchTable('Tickets')->find()
+                ->where(['id' => $comment->ticket_id])
+                ->first();
+        }
+
+        return $this->fetchTable('Tickets')->find()
+            ->where(['rfc_message_id' => $rfcId])
+            ->first();
     }
 
     /**

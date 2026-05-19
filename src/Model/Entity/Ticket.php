@@ -16,6 +16,9 @@ use Cake\ORM\Entity;
  * @property string|null $gmail_thread_id
  * @property string|null $email_to
  * @property string|null $email_cc
+ * @property string|null $rfc_message_id
+ * @property string|null $in_reply_to
+ * @property string|null $references_header
  * @property string $subject
  * @property string|null $description
  * @property string $status
@@ -54,6 +57,9 @@ class Ticket extends Entity
         'gmail_thread_id' => false,
         'email_to' => true,
         'email_cc' => true,
+        'rfc_message_id' => false,
+        'in_reply_to' => false,
+        'references_header' => false,
         'subject' => true,
         'description' => true,
         'status' => false,
@@ -274,6 +280,9 @@ class Ticket extends Entity
      * @param string|null $gmailThreadId Gmail thread id si vino por Gmail API
      * @param mixed $emailTo Recipients array (To); se persiste tal cual
      * @param mixed $emailCc Recipients array (Cc); se persiste tal cual
+     * @param string|null $rfcMessageId Header Message-ID normalizado (M-4)
+     * @param string|null $inReplyTo Header In-Reply-To normalizado (M-4)
+     * @param string|null $referencesHeader Header References crudo (M-4)
      */
     public static function fromEmailIngest(
         string $ticketNumber,
@@ -286,6 +295,9 @@ class Ticket extends Entity
         ?string $gmailThreadId = null,
         mixed $emailTo = null,
         mixed $emailCc = null,
+        ?string $rfcMessageId = null,
+        ?string $inReplyTo = null,
+        ?string $referencesHeader = null,
     ): self {
         $ticket = new self();
         $ticket->ticket_number = $ticketNumber;
@@ -300,6 +312,9 @@ class Ticket extends Entity
         $ticket->source_email = $sourceEmail;
         $ticket->email_to = $emailTo;
         $ticket->email_cc = $emailCc;
+        $ticket->rfc_message_id = $rfcMessageId;
+        $ticket->in_reply_to = $inReplyTo;
+        $ticket->references_header = $referencesHeader;
 
         return $ticket;
     }

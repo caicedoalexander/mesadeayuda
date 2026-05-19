@@ -129,12 +129,7 @@ final class GmailImportService
                     continue;
                 }
 
-                $existingTicket = null;
-                if (!empty($emailData['gmail_thread_id'])) {
-                    $existingTicket = $ticketsTable->find()
-                        ->where(['gmail_thread_id' => $emailData['gmail_thread_id']])
-                        ->first();
-                }
+                $existingTicket = $this->tickets->findExistingTicketByThreading($emailData);
 
                 if ($existingTicket) {
                     $comment = $this->tickets->createCommentFromEmail($existingTicket, $emailData);
