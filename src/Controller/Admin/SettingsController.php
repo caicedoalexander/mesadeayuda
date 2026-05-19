@@ -389,14 +389,19 @@ class SettingsController extends AppController
             unset($data['confirm_password']);
             unset($data['profile_image_upload']);
 
-            $user = $usersTable->patchEntity($user, $data);
+            $user = $usersTable->patchEntity($user, $data, [
+                'accessibleFields' => [
+                    'role' => true,
+                    'is_active' => true,
+                ],
+            ]);
 
             if ($usersTable->save($user)) {
                 $this->Flash->success('Usuario actualizado exitosamente.');
 
                 return $this->redirect(['action' => 'users']);
             } else {
-                $this->Flash->error('Error al actualizar el usuario.');
+                $this->Flash->error($this->formatValidationErrors($user, 'Error al actualizar el usuario.'));
             }
         }
 
@@ -443,19 +448,54 @@ class SettingsController extends AppController
                 // Remove confirm_password from data
                 unset($data['confirm_password']);
 
-                $user = $usersTable->patchEntity($user, $data);
+                // role and is_active are not mass-assignable by default
+                // (User::_accessible). Admin actions need to set them, so
+                // explicitly opt-in here without weakening the entity-wide
+                // default.
+                $user = $usersTable->patchEntity($user, $data, [
+                    'accessibleFields' => [
+                        'role' => true,
+                        'is_active' => true,
+                    ],
+                ]);
 
                 if ($usersTable->save($user)) {
                     $this->Flash->success('Usuario creado exitosamente.');
 
                     return $this->redirect(['action' => 'users']);
                 } else {
-                    $this->Flash->error('Error al crear el usuario.');
+                    $this->Flash->error($this->formatValidationErrors($user, 'Error al crear el usuario.'));
                 }
             }
         }
 
         $this->set(compact('user'));
+    }
+
+    /**
+     * Renders entity validation errors into a flash-friendly string so the
+     * UI exposes the actual reason a save failed (mass-assignment block,
+     * validation rule, etc.) instead of a generic message.
+     *
+     * @param \Cake\Datasource\EntityInterface $entity Entity that failed to save
+     * @param string $fallback Default message when no validation errors are present
+     * @return string Composite error string ready for Flash->error()
+     */
+    private function formatValidationErrors($entity, string $fallback): string
+    {
+        $errors = $entity->getErrors();
+        if (empty($errors)) {
+            return $fallback;
+        }
+
+        $messages = [];
+        foreach ($errors as $field => $fieldErrors) {
+            foreach ((array)$fieldErrors as $rule => $message) {
+                $messages[] = sprintf('%s: %s', $field, (string)$message);
+            }
+        }
+
+        return $fallback . ' ' . implode(' · ', $messages);
     }
 
     /**
