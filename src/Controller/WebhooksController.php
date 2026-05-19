@@ -124,12 +124,18 @@ final class WebhooksController extends Controller
             return $this->jsonError(400, 'invalid_payload', ['detail' => $e->getMessage()]);
         }
 
-        // Cross-request idempotency lock by message_id (60s window).
+        // Cross-request idempotency lock by message_id.
+        //
+        // Cache::add is atomic create-if-absent: only one of N concurrent
+        // requests for the same message_id wins the lock; the rest get 409.
+        // The lock is released in the finally block on every code path;
+        // if the FPM worker dies hard between here and the finally, the
+        // lock entry will linger until the cache profile's TTL expires
+        // (the 'default' profile's duration — see config/app.php).
         $lockKey = 'whatsapp_import:' . $payload->messageId;
-        if (Cache::read($lockKey, self::RATE_LIMIT_CACHE) !== null) {
+        if (!Cache::add($lockKey, time(), self::RATE_LIMIT_CACHE)) {
             return $this->jsonError(409, 'already_running');
         }
-        Cache::write($lockKey, time(), self::RATE_LIMIT_CACHE);
 
         @set_time_limit(self::REQUEST_TIME_LIMIT);
         ignore_user_abort(true);
