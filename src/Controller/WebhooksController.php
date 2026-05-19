@@ -251,7 +251,7 @@ final class WebhooksController extends Controller
             $result = $pipeline->addTag($ticketId, $tagId);
             if ($result['success']) {
                 $added[] = $tagId;
-            } elseif (str_contains($result['message'], 'ya está agregada')) {
+            } elseif ($result['message'] === TicketPipelineService::MESSAGE_TAG_ALREADY_ADDED) {
                 $skippedExisting[] = $tagId;
             } else {
                 Log::error('Tags webhook addTag failed', [
