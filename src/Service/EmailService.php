@@ -8,6 +8,7 @@ use App\Constants\SettingKeys;
 use App\Notification\Channel\NotificationMessage;
 use App\Service\Dto\SystemConfig;
 use App\Service\Traits\GenericAttachmentTrait;
+use App\Service\Util\LogMasker;
 use App\Service\Util\NotificationStamp;
 use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
@@ -123,13 +124,16 @@ class EmailService
             $result = $this->getGmailService()->sendEmail($toRecipients, $subject, $body, $attachmentPaths, $options);
 
             if ($result) {
-                Log::info('Email sent successfully via Gmail API', ['to' => $to, 'subject' => $subject]);
+                Log::info('Email sent successfully via Gmail API', [
+                    'to' => LogMasker::email($to),
+                    'subject' => $subject,
+                ]);
             }
 
             return $result;
         } catch (Exception $e) {
             Log::error('Failed to send email via Gmail API', [
-                'to' => $to,
+                'to' => LogMasker::email($to),
                 'subject' => $subject,
                 'error' => $e->getMessage(),
             ]);

@@ -13,6 +13,7 @@ use App\Service\Gmail\RetryHandler;
 use App\Service\Traits\HtmlSanitizerTrait;
 use App\Service\Traits\SettingsEncryptionTrait;
 use App\Service\Util\EmailHeaderParser;
+use App\Service\Util\LogMasker;
 use App\Service\Util\NotificationStamp;
 use Cake\Cache\Cache;
 use Cake\Log\Log;
@@ -914,7 +915,7 @@ class GmailService
                 'method' => __FUNCTION__,
                 'category' => $category,
                 'code' => $e->getCode(),
-                'to' => is_array($to) ? implode(', ', array_keys($to)) : $to,
+                'to' => LogMasker::email(is_array($to) ? implode(', ', array_keys($to)) : $to),
                 'subject' => $subject,
                 'message' => $e->getMessage(),
             ]);
@@ -924,7 +925,7 @@ class GmailService
             Log::error('Gmail API error', [
                 'method' => __FUNCTION__,
                 'category' => GmailErrorCategory::UNKNOWN,
-                'to' => is_array($to) ? implode(', ', array_keys($to)) : $to,
+                'to' => LogMasker::email(is_array($to) ? implode(', ', array_keys($to)) : $to),
                 'subject' => $subject,
                 'message' => $e->getMessage(),
                 'class' => $e::class,
