@@ -164,6 +164,8 @@ En un import HTTP típico (`/webhooks/gmail/import`) se construyen al menos 2 in
 
 ### M-2 — Polling de `is:unread` sin checkpoint
 
+> **Cerrado 2026-05-18 — commit `e45a98b`.** `GmailImportService::run()` ahora ejecuta una state machine de checkpoint: bootstrap (sin checkpoint → `getProfileHistoryId()` + full sync `in:inbox newer_than:7d`), delta (`users.history.list`), fallback (`history.list` 404 → refresh + full sync) y manual_override (CLI `--query` o webhook `query=`). El checkpoint se persiste en `system_settings.gmail_last_history_id` (nueva `SettingKeys::GMAIL_LAST_HISTORY_ID`) y avanza al `max(gmail_history_id)` observado en el loop. Nuevas API en `GmailService`: `getProfileHistoryId()` y `getHistoryDelta(startHistoryId)`. `GmailImportResult` añade `history_mode` y `history_fallbacks`. `SettingsService::keyRequiresOAuthCachePurge()` (pure predicate) excluye `GMAIL_LAST_HISTORY_ID` para que las escrituras por minuto no purguen el OAuth cache. Tests: `HistoryModeTest` (2), `GmailServiceTest` (5 nuevos: profile + delta paginado/404/error/dedup + parseMessage history_id), `GmailImportResultTest` (2), `SettingsServiceTest` (5 pure predicate).
+
 **Archivo:** `src/Service/GmailImportService.php:75`
 
 El query default es `is:unread` con cap 200. Esto:
@@ -199,6 +201,8 @@ Hoy todo se trata igual y la única señal es la línea de log.
 
 ### M-4 — Ausencia de `Message-ID` (RFC 5322) y headers de threading
 
+> **Cerrado 2026-05-18 — commit `7575072`.** Migración `AddRfcThreadingToTickets` agrega `rfc_message_id` (255 + índice), `in_reply_to` (255) y `references_header` (TEXT) tanto a `tickets` como a `ticket_comments`. `GmailService::parseMessage` extrae los tres headers vía nuevo `EmailHeaderParser::extractMessageId()` (normaliza angle-brackets / whitespace). `Ticket::fromEmailIngest()` y `TicketIngestionService::createCommentFromEmail` los persisten. Nueva `TicketIngestionService::findExistingTicketByThreading($emailData)` resuelve hilos en orden: `In-Reply-To` → `References` (newest-first) → fallback a `gmail_thread_id`. Recencia gateada por `TicketConstants::THREAD_REATTACH_WINDOW_DAYS = 90` para evitar resurrección de tickets cerrados antiguos. `GmailImportService` reemplaza la búsqueda inline por una sola llamada. Tests: `EmailHeaderParserTest` (5 nuevos para `extractMessageId`), `GmailServiceTest::testParseMessageExtractsRfcThreadingHeaders` (1).
+
 **Archivos:** `GmailService::parseMessage` (extracción), schema (`tickets.gmail_message_id`).
 
 Solo se persiste `gmail_message_id` (ID interno Gmail) y `gmail_thread_id`. No se captura el `Message-ID:` real ni `In-Reply-To:` / `References:`. Consecuencias:
@@ -210,6 +214,8 @@ Solo se persiste `gmail_message_id` (ID interno Gmail) y `gmail_thread_id`. No s
 **Recomendación:** agregar columnas `rfc_message_id`, `in_reply_to`, `references` (TEXT) a `tickets` y `ticket_comments`. Antes de crear comentario/ticket, buscar match por `In-Reply-To` contra el `rfc_message_id` de comentarios existentes — fallback más robusto que solo `gmail_thread_id`.
 
 ### M-5 — `mark as read` happens-after-save, sin idempotencia transaccional
+
+> **Cerrado 2026-05-18 — commit `c231dac`.** Nueva tabla `gmail_mark_read_pending` (`gmail_message_id` único + `attempts` + `last_error` + `last_category`) backed por `GmailMarkReadPendingTable`. Nuevo `MarkReadQueueService` con `enqueue(messageId, error, category)` y `processPending(GmailService, batch=20)`: éxito → delete, categoría `PERMANENT` (e.g. 404) → drop inmediato, transitoria → incremento de `attempts` hasta `MAX_ATTEMPTS=3` y entonces drop con log. `GmailService::markAsRead()` ahora lanza `GmailApiException` (antes retornaba `false`) para que el wrapper `safeMarkAsRead()` en `GmailImportService` enqueue el messageId. `GmailImportService::run()` drena la cola al inicio. `GmailImportResult` añade `mark_read_retried`, `mark_read_dropped`, `mark_read_enqueued`. Tests: `MarkReadQueueServiceTest` (7 con anonymous Table double + Entity rows), `GmailImportResultTest` (2 nuevos), `GmailServiceTest::testMarkAsReadThrowsGmailApiExceptionOnAuthError` (reescrito).
 
 **Archivo:** `src/Service/GmailImportService.php:138, 143`
 
@@ -300,11 +306,11 @@ No es PII grave pero sí dato personal bajo LOPD/GDPR equivalentes. Considerar e
 5. **M-3** Tipar excepciones (`Google\Service\Exception` con `getCode()`) y enriquecer `GmailImportResult`. — **Completado** (commit `78b9487`).
 6. **B-4** `users.getProfile('me')` tras OAuth callback para persistir `gmail_user_email` automáticamente. — **Completado** (commit `0204c18`).
 
-### P2 (mediano plazo)
+### P2 (mediano plazo) — **Completado 2026-05-18**
 
-7. **M-2** Migrar polling a `history.list` + checkpoint persistido.
-8. **M-4** Persistir `Message-ID` / `In-Reply-To` / `References`. Nueva migración + lectura en `parseMessage`.
-9. **M-5** Cola de retry para `markAsRead`.
+7. **M-4** Persistir `Message-ID` / `In-Reply-To` / `References` + reattach lookup. — **Completado** (commit `7575072`).
+8. **M-5** Cola de retry para `markAsRead`. — **Completado** (commit `c231dac`).
+9. **M-2** Migrar polling a `history.list` + checkpoint persistido. — **Completado** (commit `e45a98b`).
 
 ### P3 (evaluar valor)
 
@@ -446,6 +452,43 @@ No es PII grave pero sí dato personal bajo LOPD/GDPR equivalentes. Considerar e
 1. Monitorear logs `Gmail API retry` durante 24h post-deploy para dimensionar la tasa real de 429/5xx que la instalación absorbe; si la tasa es alta y consistente, considerar pre-empujar M-2 (history.list) en la próxima iteración.
 2. Re-OAuth en `/admin/settings/gmailAuth` con la cuenta actual; confirmar que el setting `GMAIL_USER_EMAIL` queda alineado y que el log `Gmail user email persisted` aparece (email enmascarado).
 3. Opcional: re-OAuth con una cuenta distinta para validar el log `Gmail user email changed via OAuth` con `old`/`new` ambos enmascarados.
+
+### 2026-05-18 — P2 cerrado (M-4 + M-5 + M-2)
+
+**Hallazgos cubiertos:** los tres ítems P2 del §8. Implementados como tres commits secuenciales en `main` siguiendo el plan en `docs/superpowers/plans/2026-05-18-gmail-audit-p2.md` y la spec `docs/superpowers/specs/2026-05-18-gmail-audit-p2-design.md`.
+
+**Commits:**
+
+| Commit | Hallazgo | Resumen |
+|---|---|---|
+| `7575072` | M-4 | Tres columnas RFC 5322 (`rfc_message_id`, `in_reply_to`, `references_header`) en `tickets` y `ticket_comments` con índice por `rfc_message_id`. `EmailHeaderParser::extractMessageId()` normaliza angle-brackets. `GmailService::parseMessage` extrae los tres headers; `Ticket::fromEmailIngest` los persiste. `TicketIngestionService::findExistingTicketByThreading()` resuelve hilos por In-Reply-To → References → gmail_thread_id, gateado por `TicketConstants::THREAD_REATTACH_WINDOW_DAYS=90` para no resucitar tickets cerrados antiguos. |
+| `c231dac` | M-5 | Nueva tabla `gmail_mark_read_pending` + `MarkReadQueueService` (enqueue + processPending con drop tras `MAX_ATTEMPTS=3` o categoría PERMANENT). `GmailService::markAsRead()` ahora lanza `GmailApiException` (antes: retornaba `false`) para alimentar la cola. `GmailImportService::run()` drena la cola al inicio y enqueue las fallas via `safeMarkAsRead()`. Tres contadores nuevos en `GmailImportResult`. |
+| `e45a98b` | M-2 | State machine de checkpoint en `GmailImportService::run()`: bootstrap → delta → fallback (404) → manual_override. Nuevo `SettingKeys::GMAIL_LAST_HISTORY_ID`, nuevo `HistoryMode` enum-like, nuevos `GmailService::getProfileHistoryId()` y `getHistoryDelta()`. `parseMessage` retorna `gmail_history_id` para avanzar el checkpoint al máximo observado. `SettingsService::keyRequiresOAuthCachePurge()` (pure predicate) excluye `GMAIL_LAST_HISTORY_ID` para no purgar el OAuth cache cada minuto. CLI y webhook pasan `queryOverride=null` por defecto. |
+
+**Desviaciones del plan original (documentadas en commit bodies):**
+
+1. **`GmailApiException` ctor signature:** el plan mostraba `new GmailApiException('msg', GmailErrorCategory::PERMANENT)` (orden `(message, category)`), pero la firma real es `(category, code, message, previous)`. Se corrigió en todos los tests M-5/M-2 y en las nuevas llamadas dentro de `getProfileHistoryId`/`getHistoryDelta`.
+2. **`markAsRead` change of contract:** el plan asumía que `markAsRead` ya lanzaba `GmailApiException`, pero el método retornaba `false` en error. Se cambió a lanzar (necesario para que tanto el wrapper `safeMarkAsRead` como `MarkReadQueueService::processPending` puedan distinguir categorías). El test existente `testMarkAsReadReturnsFalseOnAuthError` se reescribió como `testMarkAsReadThrowsGmailApiExceptionOnAuthError`.
+3. **Anonymous Table double — LSP:** el seam del plan usaba `\stdClass` rows con override `(object $entity, array $options): object`, pero PHP 8.5 + LSP requieren la firma exacta del padre (`EntityInterface $entity, array $options): EntityInterface`). Se reemplazó `\stdClass` por `Cake\ORM\Entity` (implementa `EntityInterface`, soporta `$row->foo` magic) en `MarkReadQueueServiceTest` y en la rama test de `MarkReadQueueService::enqueue()`.
+4. **Migration base class:** el plan extendía `Migrations\AbstractMigration`, pero esta versión del paquete (`cakephp/migrations` reciente) sólo acepta `Migrations\BaseMigration`. Ambas migraciones (`20260518120000_AddRfcThreadingToTickets`, `20260518120100_CreateGmailMarkReadPending`) se corrigieron.
+5. **`references_header` rename:** el plan habla indistintamente de `references` y `references_header`; se usó `references_header` consistentemente (la palabra `references` es reservada en SQL).
+6. **WebhooksController también pasa a checkpoint:** además del CLI, se actualizó `WebhooksController::gmailImport` para que el `query` POST data (cuando ausente o vacío) deje correr la state machine. El n8n cron no necesita pasar `query` para beneficiarse de M-2.
+7. **`SettingsService::saveSetting` lookup key:** la fila de `system_settings` se busca por `setting_key`/`setting_value`, no `key`/`value`. `readHistoryCheckpoint()` en `GmailImportService` usa la columna correcta.
+
+**Verificación ejecutada:**
+
+- `composer cs-check` sobre archivos tocados: sin nuevos errores/warnings versus la línea base pre-existente. Un único error de `Missing doc comment` en el constructor privado de `HistoryMode` se corrigió en flight.
+- `vendor/bin/phpstan analyse src`: 38 errores de línea base (los mismos archivos de P0/P1: `UserHelper.php`, `AppController.php`, `TicketActionsTrait.php`, `TicketBulkTrait.php`, `N8nService.php`, `TicketPipelineService.php`); sin nuevos errores en archivos tocados por P2.
+- `composer test`: 261 tests (31 nuevos en P2: 5 EmailHeaderParser + 1 GmailService threading + 2 HistoryMode + 7 MarkReadQueueService + 2+2 GmailImportResult + 7 GmailService history + 5 SettingsService), 7 fallos idénticos a la línea base pre-trabajo (rendering de templates, sanitización Windows, shape de circuit breaker — todos no relacionados con Gmail). 14 PHPUnit Notices (3 nuevos del tipo "No expectations were configured" en `MarkReadQueueServiceTest` — benignos).
+- `bin/cake migrations migrate`: ambas migraciones aplicadas localmente sin error; columnas y tabla creadas según schema esperado.
+
+**Pendiente operativo post-deploy:**
+
+1. Tras el primer `bin/cake import_gmail --max 1` post-deploy, verificar que aparezca log `Gmail import completed` con `history_mode=bootstrap` y que `system_settings.gmail_last_history_id` tenga valor. Runs posteriores deben reportar `history_mode=delta`.
+2. Enviar un correo de prueba a la cuenta Gmail configurada, esperar el siguiente run del webhook. Esperado: un ticket creado, `history_mode=delta`, sin filas en `gmail_mark_read_pending`.
+3. Responder al ticket desde una cuenta externa (no Gmail). Esperado: comentario añadido al ticket existente (no ticket duplicado), `rfc_message_id` / `in_reply_to` poblados en `ticket_comments`.
+4. Smoke de la cola de retry: insertar manualmente `INSERT INTO gmail_mark_read_pending (gmail_message_id, attempts, created, modified) VALUES ('nonexistent-id', 0, NOW(), NOW());`. Tras el siguiente webhook, la fila debe desaparecer (Gmail responde 404 → categoría PERMANENT → drop inmediato).
+5. Monitorear el tamaño de `gmail_mark_read_pending` durante 24h. Filas con `attempts >= 2` indican un patrón de fallas recurrentes — investigar.
 
 ---
 
