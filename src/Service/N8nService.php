@@ -186,7 +186,7 @@ class N8nService
         if (!empty($config[SettingKeys::N8N_SEND_TAGS_LIST]) && $config[SettingKeys::N8N_SEND_TAGS_LIST] === '1') {
             $tagsTable = $this->fetchTable('Tags');
             $tags = $tagsTable->find()
-                ->select(['id', 'name', 'color'])
+                ->select(['id', 'name', 'color', 'description'])
                 ->where(['is_active' => true])
                 ->orderBy(['name' => 'ASC'])
                 ->toArray();
@@ -197,6 +197,7 @@ class N8nService
                     'id' => $tag->id,
                     'name' => $tag->name,
                     'color' => $tag->color ?? '#999999',
+                    'description' => $tag->description ?? '',
                 ];
             }
         }
