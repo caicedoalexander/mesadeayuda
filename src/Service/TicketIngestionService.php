@@ -189,7 +189,7 @@ class TicketIngestionService
         $user = $this->findOrCreateUserByPhone($payload->phoneNumber, $payload->contactName);
         if (!$user) {
             Log::error('Failed to resolve user from WhatsApp phone', [
-                'phone' => $payload->phoneNumber,
+                'phone' => LogMasker::phone($payload->phoneNumber),
             ]);
 
             return ['ticket' => null, 'created' => false];
@@ -210,6 +210,23 @@ class TicketIngestionService
         );
 
         if (!$ticketsTable->save($ticket)) {
+            // Race fallback: a concurrent retry may have inserted the row
+            // between our initial dedupe SELECT and this save attempt. The
+            // unique index on whatsapp_message_id ensures only one wins; the
+            // loser surfaces the duplicate-key as a save failure. Re-query
+            // and treat as the "already imported" branch instead of 5xx.
+            $racingExisting = $ticketsTable->find()
+                ->where(['whatsapp_message_id' => $payload->messageId])
+                ->first();
+            if ($racingExisting !== null) {
+                Log::info('WhatsApp ticket already imported (race winner)', [
+                    'message_id' => $payload->messageId,
+                    'ticket_id' => $racingExisting->id,
+                ]);
+
+                return ['ticket' => $racingExisting, 'created' => false];
+            }
+
             Log::error('Failed to save WhatsApp ticket', [
                 'errors' => $ticket->getErrors(),
                 'message_id' => $payload->messageId,
@@ -232,7 +249,7 @@ class TicketIngestionService
         Log::info('Created ticket from WhatsApp', [
             'ticket_id' => $ticket->id,
             'ticket_number' => $ticket->ticket_number,
-            'phone' => $payload->phoneNumber,
+            'phone' => LogMasker::phone($payload->phoneNumber),
         ]);
 
         return ['ticket' => $ticket, 'created' => true];
@@ -513,8 +530,14 @@ class TicketIngestionService
     {
         $usersTable = $this->fetchTable('Users');
 
+        // Restrict to external requesters: ingesting a WhatsApp message must
+        // never silently impersonate an internal employee whose profile
+        // happens to carry the same phone number.
         $user = $usersTable->find()
-            ->where(['phone' => $phone])
+            ->where([
+                'phone' => $phone,
+                'role' => RoleConstants::ROLE_EXTERNAL,
+            ])
             ->first();
         if ($user) {
             return $user;
@@ -525,7 +548,10 @@ class TicketIngestionService
         // Defensive: a previous WhatsApp ingest may have created the placeholder
         // email under a different phone normalization. Reuse if it exists.
         $byEmail = $usersTable->find()
-            ->where(['email' => $placeholderEmail])
+            ->where([
+                'email' => $placeholderEmail,
+                'role' => RoleConstants::ROLE_EXTERNAL,
+            ])
             ->first();
         if ($byEmail) {
             return $byEmail;
@@ -549,15 +575,15 @@ class TicketIngestionService
 
         if ($usersTable->save($user)) {
             Log::info('Auto-created user from WhatsApp phone', [
-                'phone' => $phone,
-                'email' => $placeholderEmail,
+                'phone' => LogMasker::phone($phone),
+                'email' => LogMasker::email($placeholderEmail),
             ]);
 
             return $user;
         }
 
         Log::error('Failed to create WhatsApp user', [
-            'phone' => $phone,
+            'phone' => LogMasker::phone($phone),
             'errors' => $user->getErrors(),
         ]);
 

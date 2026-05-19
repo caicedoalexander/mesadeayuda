@@ -40,4 +40,19 @@ final class LogMaskerTest extends TestCase
     {
         $this->assertSame('@example.com', LogMasker::email('@example.com'));
     }
+
+    public function testMasksE164PhoneToCountryAndLast4(): void
+    {
+        $this->assertSame('+57***4567', LogMasker::phone('+573001234567'));
+    }
+
+    public function testReturnsTripleStarForTooShortInput(): void
+    {
+        $this->assertSame('***', LogMasker::phone('+57'));
+    }
+
+    public function testReturnsEmptyForEmptyInput(): void
+    {
+        $this->assertSame('', LogMasker::phone(''));
+    }
 }

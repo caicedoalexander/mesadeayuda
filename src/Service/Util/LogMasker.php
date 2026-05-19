@@ -54,4 +54,34 @@ final class LogMasker
 
         return $local[0] . '***' . $domain;
     }
+
+    /**
+     * Mask an E.164 phone number to its country code prefix + last 4 digits.
+     *
+     * Example: +573001234567 → +57***4567
+     *
+     * Designed for log lines so operators can distinguish users without
+     * exposing the full PII. For phones with fewer than 4 digits, returns
+     * a fully-masked placeholder.
+     *
+     * @param string $value Phone number (E.164 expected, plain digits tolerated)
+     */
+    public static function phone(string $value): string
+    {
+        if ($value === '') {
+            return '';
+        }
+
+        $hasPlus = str_starts_with($value, '+');
+        $digits = $hasPlus ? substr($value, 1) : $value;
+
+        if (!ctype_digit($digits) || strlen($digits) < 6) {
+            return '***';
+        }
+
+        $prefix = ($hasPlus ? '+' : '') . substr($digits, 0, 2);
+        $last4 = substr($digits, -4);
+
+        return $prefix . '***' . $last4;
+    }
 }
