@@ -45,6 +45,7 @@ final class WhatsappIngestPayloadAttachment
             || str_contains($filename, '..')
             || str_contains($filename, '/')
             || str_contains($filename, '\\')
+            || str_contains($filename, "\0")
         ) {
             throw new InvalidWhatsappPayloadException($field('filename') . ': path traversal not allowed');
         }

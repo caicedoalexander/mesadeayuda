@@ -141,6 +141,21 @@ final class WhatsappIngestPayloadTest extends TestCase
         WhatsappIngestPayload::fromArray($raw);
     }
 
+    public function testRejectsAttachmentWithNullByteInFilename(): void
+    {
+        $this->expectException(InvalidWhatsappPayloadException::class);
+
+        $raw = $this->validRaw();
+        $raw['attachments'] = [[
+            'url' => 'https://example.com/x',
+            'filename' => "foto.jpg\0../etc/passwd",
+            'mime' => 'image/jpeg',
+            'size' => 1,
+        ]];
+
+        WhatsappIngestPayload::fromArray($raw);
+    }
+
     public function testRejectsAttachmentOver10Items(): void
     {
         $this->expectException(InvalidWhatsappPayloadException::class);
