@@ -10,6 +10,8 @@ use App\Service\GmailService;
 use App\Service\Util\NotificationStamp;
 use Cake\Core\Configure;
 use Google\Client as GoogleClient;
+use Google\Service\Gmail\MessagePart;
+use Google\Service\Gmail\MessagePartBody;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
@@ -90,7 +92,7 @@ final class GmailServiceTest extends TestCase
      * spec. Body data must already be base64-url-encoded — the production
      * code calls base64_decode + strtr internally.
      *
-     * @param list<\Google\Service\Gmail\MessagePart> $parts
+     * @param list<MessagePart> $parts
      * @param list<object> $headers
      */
     private function part(
@@ -100,8 +102,8 @@ final class GmailServiceTest extends TestCase
         string $filename = '',
         ?string $attachmentId = null,
         array $headers = [],
-    ): \Google\Service\Gmail\MessagePart {
-        $body = new \Google\Service\Gmail\MessagePartBody();
+    ): MessagePart {
+        $body = new MessagePartBody();
         if ($bodyData !== null) {
             $body->setData($bodyData);
             $body->setSize(strlen($bodyData));
@@ -112,7 +114,7 @@ final class GmailServiceTest extends TestCase
             $body->setAttachmentId($attachmentId);
         }
 
-        $part = new \Google\Service\Gmail\MessagePart();
+        $part = new MessagePart();
         $part->setMimeType($mimeType);
         $part->setBody($body);
         $part->setFilename($filename);
@@ -136,7 +138,7 @@ final class GmailServiceTest extends TestCase
      * Invoke the private extractMessageParts on a freshly-built GmailService,
      * returning the data array it populated.
      */
-    private function callExtractParts(\Google\Service\Gmail\MessagePart $payload): array
+    private function callExtractParts(MessagePart $payload): array
     {
         $service = $this->buildService();
         $ref = new ReflectionClass($service);
@@ -669,5 +671,58 @@ final class GmailServiceTest extends TestCase
             $this->assertSame(GmailErrorCategory::AUTH, $e->getCategory());
             $this->assertSame(401, $e->getCode());
         }
+    }
+
+    public function testIsAutoReplyDetectsListUnsubscribe(): void
+    {
+        $service = $this->buildService();
+        $headers = [
+            $this->header('From', 'newsletter@example.com'),
+            $this->header('List-Unsubscribe', '<mailto:unsub@example.com>, <https://example.com/u/123>'),
+        ];
+
+        $this->assertTrue($service->isAutoReply($headers));
+    }
+
+    public function testIsAutoReplyDetectsFeedbackId(): void
+    {
+        $service = $this->buildService();
+        $headers = [
+            $this->header('From', 'mailer@example.com'),
+            $this->header('Feedback-ID', 'campaign-42:acct:newsletter:mailer'),
+        ];
+
+        $this->assertTrue($service->isAutoReply($headers));
+    }
+
+    public function testIsAutoReplyDetectsAutoSubmittedAutoNotified(): void
+    {
+        $service = $this->buildService();
+        $headers = [
+            $this->header('Auto-Submitted', 'auto-notified; owner-email="x@y.tld"'),
+        ];
+
+        $this->assertTrue($service->isAutoReply($headers));
+    }
+
+    public function testIsAutoReplyIgnoresAutoSubmittedNo(): void
+    {
+        $service = $this->buildService();
+        $headers = [
+            $this->header('From', 'human@example.com'),
+            $this->header('Auto-Submitted', 'no'),
+        ];
+
+        $this->assertFalse($service->isAutoReply($headers));
+    }
+
+    public function testIsAutoReplyIgnoresEmptyHeaders(): void
+    {
+        $service = $this->buildService();
+        $headers = [
+            $this->header('From', 'human@example.com'),
+        ];
+
+        $this->assertFalse($service->isAutoReply($headers));
     }
 }

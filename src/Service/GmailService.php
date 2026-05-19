@@ -609,27 +609,33 @@ class GmailService
      */
     public function isAutoReply(array $headers): bool
     {
-        // Check Auto-Submitted header
-        $autoSubmitted = $this->getHeader($headers, 'Auto-Submitted');
-        if (stripos($autoSubmitted, 'auto-replied') !== false || stripos($autoSubmitted, 'auto-generated') !== false) {
+        // RFC 3834 §5: any non-"no" value of Auto-Submitted indicates automation.
+        $autoSubmitted = strtolower(trim($this->getHeader($headers, 'Auto-Submitted')));
+        if ($autoSubmitted !== '' && $autoSubmitted !== 'no' && !str_starts_with($autoSubmitted, 'no;')) {
             return true;
         }
 
-        // Check X-Autoreply header
-        $xAutoreply = $this->getHeader($headers, 'X-Autoreply');
-        if (stripos($xAutoreply, 'yes') !== false) {
+        // Legacy vendor headers.
+        if (stripos($this->getHeader($headers, 'X-Autoreply'), 'yes') !== false) {
+            return true;
+        }
+        if (stripos($this->getHeader($headers, 'X-Autorespond'), 'yes') !== false) {
             return true;
         }
 
-        // Check X-Autorespond header
-        $xAutorespond = $this->getHeader($headers, 'X-Autorespond');
-        if (stripos($xAutorespond, 'yes') !== false) {
+        // RFC 2076: Precedence: bulk, list, junk.
+        $precedence = strtolower(trim($this->getHeader($headers, 'Precedence')));
+        if (in_array($precedence, ['bulk', 'list', 'junk'], true)) {
             return true;
         }
 
-        // Check Precedence header
-        $precedence = $this->getHeader($headers, 'Precedence');
-        if (stripos($precedence, 'bulk') !== false || stripos($precedence, 'list') !== false || stripos($precedence, 'junk') !== false) {
+        // RFC 2369 / 8058: any bulk/list mail carries List-Unsubscribe.
+        if (trim($this->getHeader($headers, 'List-Unsubscribe')) !== '') {
+            return true;
+        }
+
+        // Google/Yahoo bulk-sender requirement, 2024+.
+        if (trim($this->getHeader($headers, 'Feedback-ID')) !== '') {
             return true;
         }
 
