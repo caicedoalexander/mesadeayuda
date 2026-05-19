@@ -12,6 +12,7 @@ use App\Service\Exception\InvalidWhatsappPayloadException;
 use App\Service\GmailImportService;
 use App\Service\SettingsService;
 use App\Service\TicketIngestionService;
+use App\Service\TicketPipelineService;
 use Cake\Cache\Cache;
 use Cake\Controller\Controller;
 use Cake\Http\Response;
@@ -169,6 +170,118 @@ final class WebhooksController extends Controller
         } finally {
             Cache::delete($lockKey, self::RATE_LIMIT_CACHE);
         }
+    }
+
+    /**
+     * Asigna tags a un ticket (idempotente, sin SQL crudo). Diseñado para
+     * el sub-flujo de Auto Tagging del workflow n8n.
+     *
+     * @param string $id Ticket id from the route (validated as \d+)
+     * @return \Cake\Http\Response
+     */
+    public function ticketTagsAdd(string $id): Response
+    {
+        $this->request->allowMethod(['POST']);
+
+        if (
+            !$this->verifyToken(
+                SettingKeys::WEBHOOK_TICKETS_TAGS_TOKEN,
+                CacheConstants::WEBHOOK_TICKETS_TAGS_PREVIOUS_TOKEN,
+            )
+        ) {
+            return $this->jsonError(401, 'invalid_token');
+        }
+
+        $ticketId = (int)$id;
+        if ($ticketId <= 0) {
+            return $this->jsonError(400, 'invalid_payload', ['detail' => 'ticket id must be positive']);
+        }
+
+        $body = (array)$this->request->getData();
+        $tagIdsRaw = $body['tag_ids'] ?? null;
+        if (!is_array($tagIdsRaw) || $tagIdsRaw === []) {
+            return $this->jsonError(400, 'invalid_payload', [
+                'detail' => "field 'tag_ids': non-empty array required",
+            ]);
+        }
+        if (count($tagIdsRaw) > 20) {
+            return $this->jsonError(400, 'invalid_payload', [
+                'detail' => "field 'tag_ids': exceeds 20 items",
+            ]);
+        }
+        $tagIds = [];
+        foreach ($tagIdsRaw as $candidate) {
+            if (!is_int($candidate) || $candidate <= 0) {
+                return $this->jsonError(400, 'invalid_payload', [
+                    'detail' => "field 'tag_ids': each item must be a positive int",
+                ]);
+            }
+            $tagIds[] = $candidate;
+        }
+        $tagIds = array_values(array_unique($tagIds));
+
+        $source = $body['source'] ?? 'auto';
+        if (!in_array($source, ['auto', 'manual'], true)) {
+            return $this->jsonError(400, 'invalid_payload', [
+                'detail' => "field 'source': must be 'auto' or 'manual'",
+            ]);
+        }
+
+        $ticketsTable = $this->fetchTable('Tickets');
+        $ticket = $ticketsTable->find()->where(['id' => $ticketId])->first();
+        if ($ticket === null) {
+            return $this->jsonError(404, 'ticket_not_found');
+        }
+
+        $tagsTable = $this->fetchTable('Tags');
+        $knownIds = $tagsTable->find()
+            ->where(['id IN' => $tagIds])
+            ->all()
+            ->extract('id')
+            ->toList();
+        $knownIds = array_map('intval', $knownIds);
+
+        $unknown = array_values(array_diff($tagIds, $knownIds));
+
+        $pipeline = new TicketPipelineService();
+        $added = [];
+        $skippedExisting = [];
+
+        foreach ($knownIds as $tagId) {
+            $result = $pipeline->addTag($ticketId, $tagId);
+            if ($result['success']) {
+                $added[] = $tagId;
+            } elseif (str_contains($result['message'], 'ya está agregada')) {
+                $skippedExisting[] = $tagId;
+            } else {
+                Log::error('Tags webhook addTag failed', [
+                    'ticket_id' => $ticketId,
+                    'tag_id' => $tagId,
+                    'message' => $result['message'],
+                ]);
+            }
+        }
+
+        if ($unknown !== []) {
+            Log::warning('Tags webhook unknown tag_ids (LLM hallucination?)', [
+                'ticket_id' => $ticketId,
+                'unknown' => $unknown,
+                'source' => $source,
+            ]);
+        } else {
+            Log::info('Tags webhook applied', [
+                'ticket_id' => $ticketId,
+                'added' => $added,
+                'skipped_existing' => $skippedExisting,
+                'source' => $source,
+            ]);
+        }
+
+        return $this->jsonOk([
+            'added' => $added,
+            'skipped_existing' => $skippedExisting,
+            'skipped_unknown' => $unknown,
+        ]);
     }
 
     /**
