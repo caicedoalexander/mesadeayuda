@@ -27,6 +27,9 @@ final readonly class GmailImportResult
         public int $transientErrors = 0,
         public int $permanentErrors = 0,
         public int $unknownErrors = 0,
+        public int $markReadRetried = 0,
+        public int $markReadDropped = 0,
+        public int $markReadEnqueued = 0,
     ) {
     }
 
@@ -48,6 +51,9 @@ final readonly class GmailImportResult
             'transient_errors' => $this->transientErrors,
             'permanent_errors' => $this->permanentErrors,
             'unknown_errors' => $this->unknownErrors,
+            'mark_read_retried' => $this->markReadRetried,
+            'mark_read_dropped' => $this->markReadDropped,
+            'mark_read_enqueued' => $this->markReadEnqueued,
         ];
     }
 }

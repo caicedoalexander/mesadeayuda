@@ -5,11 +5,14 @@ namespace App\Service;
 
 use App\Service\Dto\GmailImportResult;
 use App\Service\Dto\SystemConfig;
+use App\Service\Exception\GmailApiException;
 use App\Service\Exception\GmailNotConfiguredException;
 use App\Service\Gmail\GmailErrorCategory;
+use App\Service\Gmail\MarkReadQueueService;
 use App\Service\Traits\SettingsEncryptionTrait;
 use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
+use Cake\ORM\Locator\TableLocator;
 use Throwable;
 
 /**
@@ -26,10 +29,12 @@ final class GmailImportService
     /**
      * @param \App\Service\GmailService $gmail Cliente Gmail ya configurado
      * @param \App\Service\TicketIngestionService $tickets Servicio de tickets con settings cargados
+     * @param \App\Service\Gmail\MarkReadQueueService $markReadQueue Cola de reintentos para markAsRead (M-5)
      */
     public function __construct(
         private readonly GmailService $gmail,
         private readonly TicketIngestionService $tickets,
+        private readonly MarkReadQueueService $markReadQueue,
     ) {
     }
 
@@ -45,9 +50,12 @@ final class GmailImportService
             throw GmailNotConfiguredException::missingRefreshToken();
         }
 
+        $locator = new TableLocator();
+
         return new self(
             new GmailService($config),
             new TicketIngestionService(SystemConfig::fromSettingsArray(self::loadSystemSettings())),
+            new MarkReadQueueService($locator->get('GmailMarkReadPending')),
         );
     }
 
@@ -73,6 +81,11 @@ final class GmailImportService
         $startedAt = microtime(true);
         $max = max(1, min($max, 200));
 
+        // M-5: drain prior failed markAsRead attempts BEFORE this run's new
+        // ingestion. Failures during this run will be enqueued (see wrappers
+        // around the per-message markAsRead calls below).
+        $markReadCounters = $this->markReadQueue->processPending($this->gmail);
+
         $messageIds = $this->gmail->getMessages($query, $max);
         $fetched = count($messageIds);
 
@@ -84,6 +97,9 @@ final class GmailImportService
                 skipped: 0,
                 errors: 0,
                 durationSeconds: microtime(true) - $startedAt,
+                markReadRetried: $markReadCounters['retried'],
+                markReadDropped: $markReadCounters['dropped'],
+                markReadEnqueued: 0,
             );
         }
 
@@ -113,13 +129,13 @@ final class GmailImportService
                 $emailData = $this->gmail->parseMessage($messageId);
 
                 if (!empty($emailData['is_auto_reply'])) {
-                    $this->gmail->markAsRead($messageId);
+                    $this->safeMarkAsRead($messageId, $markReadCounters);
                     $skipped++;
                     continue;
                 }
 
                 if (!empty($emailData['is_system_notification'])) {
-                    $this->gmail->markAsRead($messageId);
+                    $this->safeMarkAsRead($messageId, $markReadCounters);
                     $skipped++;
                     continue;
                 }
@@ -138,12 +154,12 @@ final class GmailImportService
                     } else {
                         $skipped++;
                     }
-                    $this->gmail->markAsRead($messageId);
+                    $this->safeMarkAsRead($messageId, $markReadCounters);
                 } else {
                     $ticket = $this->tickets->createFromEmail($emailData);
                     if ($ticket) {
                         $created++;
-                        $this->gmail->markAsRead($messageId);
+                        $this->safeMarkAsRead($messageId, $markReadCounters);
                     } else {
                         $errors++;
                         $errorMessages[] = "Failed to create ticket from {$messageId}";
@@ -180,10 +196,30 @@ final class GmailImportService
             transientErrors: $categoryCounters[GmailErrorCategory::TRANSIENT],
             permanentErrors: $categoryCounters[GmailErrorCategory::PERMANENT],
             unknownErrors: $categoryCounters[GmailErrorCategory::UNKNOWN],
+            markReadRetried: $markReadCounters['retried'],
+            markReadDropped: $markReadCounters['dropped'],
+            markReadEnqueued: $markReadCounters['enqueued'] ?? 0,
         );
 
         Log::info('Gmail import completed', $result->toArray());
 
         return $result;
+    }
+
+    /**
+     * Wrap a markAsRead call so a GmailApiException enqueues the message ID
+     * for a future drain instead of leaking out of the per-message loop and
+     * counting as a ticket-level error.
+     *
+     * @param array{processed:int, retried:int, failed:int, dropped:int, enqueued?:int} $markReadCounters
+     */
+    private function safeMarkAsRead(string $messageId, array &$markReadCounters): void
+    {
+        try {
+            $this->gmail->markAsRead($messageId);
+        } catch (GmailApiException $e) {
+            $this->markReadQueue->enqueue($messageId, $e->getMessage(), $e->getCategory());
+            $markReadCounters['enqueued'] = ($markReadCounters['enqueued'] ?? 0) + 1;
+        }
     }
 }

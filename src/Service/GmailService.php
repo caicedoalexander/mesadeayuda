@@ -488,10 +488,16 @@ class GmailService
     }
 
     /**
-     * Mark message as read
+     * Mark message as read.
+     *
+     * M-5: now throws GmailApiException instead of returning false on failure,
+     * so callers (GmailImportService, MarkReadQueueService) can enqueue the
+     * messageId for retry based on the error category. Returns true only on
+     * success — the bool return is preserved for backward-compatible call
+     * sites that only check truthiness.
      *
      * @param string $messageId Gmail message ID
-     * @return bool Success status
+     * @throws \App\Service\Exception\GmailApiException
      */
     public function markAsRead(string $messageId): bool
     {
@@ -512,7 +518,7 @@ class GmailService
                 'message' => $e->getMessage(),
             ]);
 
-            return false;
+            throw new GmailApiException($category, $e->getCode(), $e->getMessage(), previous: $e);
         } catch (Exception $e) {
             Log::error('Gmail API error', [
                 'method' => __FUNCTION__,
@@ -521,7 +527,7 @@ class GmailService
                 'class' => $e::class,
             ]);
 
-            return false;
+            throw new GmailApiException(GmailErrorCategory::UNKNOWN, 0, $e->getMessage(), previous: $e);
         }
     }
 

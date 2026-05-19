@@ -228,7 +228,7 @@ final class GmailServiceTest extends TestCase
         }
     }
 
-    public function testMarkAsReadReturnsFalseOnAuthError(): void
+    public function testMarkAsReadThrowsGmailApiExceptionOnAuthError(): void
     {
         $service = $this->buildService();
         $this->stubHttp($service, [new Response(
@@ -237,7 +237,13 @@ final class GmailServiceTest extends TestCase
             '{"error":{"code":401,"message":"unauth"}}',
         )]);
 
-        $this->assertFalse($service->markAsRead('msg-id'));
+        try {
+            $service->markAsRead('msg-id');
+            $this->fail('Expected GmailApiException');
+        } catch (GmailApiException $e) {
+            $this->assertSame(GmailErrorCategory::AUTH, $e->getCategory());
+            $this->assertSame(401, $e->getCode());
+        }
     }
 
     public function testGetMessagesReturnsEmptyOnTransient5xx(): void

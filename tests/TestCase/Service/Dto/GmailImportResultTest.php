@@ -78,4 +78,41 @@ final class GmailImportResultTest extends TestCase
         $this->assertSame(0, $result->permanentErrors);
         $this->assertSame(0, $result->unknownErrors);
     }
+
+    public function testToArrayIncludesMarkReadCounters(): void
+    {
+        $result = new GmailImportResult(
+            fetched: 1,
+            created: 1,
+            comments: 0,
+            skipped: 0,
+            errors: 0,
+            durationSeconds: 0.1,
+            markReadRetried: 2,
+            markReadDropped: 1,
+            markReadEnqueued: 3,
+        );
+
+        $array = $result->toArray();
+
+        $this->assertSame(2, $array['mark_read_retried']);
+        $this->assertSame(1, $array['mark_read_dropped']);
+        $this->assertSame(3, $array['mark_read_enqueued']);
+    }
+
+    public function testMarkReadCountersDefaultToZero(): void
+    {
+        $result = new GmailImportResult(
+            fetched: 0,
+            created: 0,
+            comments: 0,
+            skipped: 0,
+            errors: 0,
+            durationSeconds: 0.0,
+        );
+
+        $this->assertSame(0, $result->markReadRetried);
+        $this->assertSame(0, $result->markReadDropped);
+        $this->assertSame(0, $result->markReadEnqueued);
+    }
 }
