@@ -97,10 +97,10 @@ class SettingsController extends AppController
         // with its dedicated "regenerate" button (see regenerateWebhookToken).
         $webhookTicketsTagsToken = (string)($allSettings[SettingKeys::WEBHOOK_TICKETS_TAGS_TOKEN] ?? '');
         $webhookWhatsappImportToken = (string)($allSettings[SettingKeys::WEBHOOK_WHATSAPP_IMPORT_TOKEN] ?? '');
-        $webhookTicketsTagsUrl = Router::url(
-            ['_name' => 'webhook_tickets_tags_add', 'id' => '{ticket_id}'],
-            true,
-        );
+        // The named route enforces id=\d+, so it cannot render with a literal
+        // placeholder. Build the absolute URL by hand and leave {ticket_id}
+        // for the operator/n8n to interpolate at call time.
+        $webhookTicketsTagsUrl = Router::url('/webhooks/tickets/{ticket_id}/tags', true);
         $webhookWhatsappImportUrl = Router::url(['_name' => 'webhook_whatsapp_import'], true);
 
         $this->set([
