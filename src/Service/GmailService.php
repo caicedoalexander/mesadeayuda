@@ -391,6 +391,19 @@ class GmailService
     private function extractMessageParts(MessagePart $payload, array &$data): void
     {
         $mimeType = $payload->getMimeType();
+
+        // B-2: multipart/alternative carries equivalent renderings of one body.
+        // Pick the richest branch and skip the others — visiting every child
+        // duplicates body_html when forwards are nested (RFC 2046 §5.1.4).
+        if ($mimeType === 'multipart/alternative') {
+            $chosen = $this->pickAlternativeBranch($payload->getParts() ?? []);
+            if ($chosen !== null) {
+                $this->extractMessageParts($chosen, $data);
+            }
+
+            return;
+        }
+
         $parts = $payload->getParts();
         $body = $payload->getBody();
 
@@ -446,6 +459,56 @@ class GmailService
                 $this->extractMessageParts($part, $data);
             }
         }
+    }
+
+    /**
+     * B-2: pick the richest alternative for a multipart/alternative node.
+     * Prefers a direct text/html child, then a multipart/* descendant that
+     * contains text/html (e.g. multipart/related with inline images),
+     * finally falling back to text/plain. Returns null when none match.
+     *
+     * @param array<int, \Google\Service\Gmail\MessagePart> $parts
+     */
+    private function pickAlternativeBranch(array $parts): ?MessagePart
+    {
+        $html = null;
+        $multipartHtml = null;
+        $plain = null;
+
+        foreach ($parts as $part) {
+            $mt = (string)$part->getMimeType();
+            if ($mt === 'text/html' && $html === null) {
+                $html = $part;
+                continue;
+            }
+            if ($mt === 'text/plain' && $plain === null) {
+                $plain = $part;
+                continue;
+            }
+            if (str_starts_with($mt, 'multipart/') && $multipartHtml === null && $this->containsHtml($part)) {
+                $multipartHtml = $part;
+            }
+        }
+
+        return $html ?? $multipartHtml ?? $plain;
+    }
+
+    /**
+     * Recursive check used by pickAlternativeBranch: true iff the subtree
+     * rooted at $part contains a text/html node at any depth.
+     */
+    private function containsHtml(MessagePart $part): bool
+    {
+        if ((string)$part->getMimeType() === 'text/html') {
+            return true;
+        }
+        foreach ($part->getParts() ?? [] as $child) {
+            if ($this->containsHtml($child)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

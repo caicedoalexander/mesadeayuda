@@ -86,6 +86,186 @@ final class GmailServiceTest extends TestCase
     }
 
     /**
+     * Build a real Google\Service\Gmail\MessagePart populated from a small
+     * spec. Body data must already be base64-url-encoded — the production
+     * code calls base64_decode + strtr internally.
+     *
+     * @param list<\Google\Service\Gmail\MessagePart> $parts
+     * @param list<object> $headers
+     */
+    private function part(
+        string $mimeType,
+        ?string $bodyData = null,
+        array $parts = [],
+        string $filename = '',
+        ?string $attachmentId = null,
+        array $headers = [],
+    ): \Google\Service\Gmail\MessagePart {
+        $body = new \Google\Service\Gmail\MessagePartBody();
+        if ($bodyData !== null) {
+            $body->setData($bodyData);
+            $body->setSize(strlen($bodyData));
+        } else {
+            $body->setSize(0);
+        }
+        if ($attachmentId !== null) {
+            $body->setAttachmentId($attachmentId);
+        }
+
+        $part = new \Google\Service\Gmail\MessagePart();
+        $part->setMimeType($mimeType);
+        $part->setBody($body);
+        $part->setFilename($filename);
+        if ($parts !== []) {
+            $part->setParts($parts);
+        }
+        if ($headers !== []) {
+            $part->setHeaders($headers);
+        }
+
+        return $part;
+    }
+
+    /** Encode a raw string the way Gmail does for part body data. */
+    private function b64url(string $raw): string
+    {
+        return rtrim(strtr(base64_encode($raw), '+/', '-_'), '=');
+    }
+
+    /**
+     * Invoke the private extractMessageParts on a freshly-built GmailService,
+     * returning the data array it populated.
+     */
+    private function callExtractParts(\Google\Service\Gmail\MessagePart $payload): array
+    {
+        $service = $this->buildService();
+        $ref = new ReflectionClass($service);
+        $method = $ref->getMethod('extractMessageParts');
+
+        $data = [
+            'body_html' => '',
+            'body_text' => '',
+            'attachments' => [],
+            'inline_images' => [],
+        ];
+        $method->invokeArgs($service, [$payload, &$data]);
+
+        return $data;
+    }
+
+    public function testMultipartAlternativePicksHtmlBranch(): void
+    {
+        $payload = $this->part('multipart/alternative', parts: [
+            $this->part('text/plain', $this->b64url('plain version')),
+            $this->part('text/html', $this->b64url('<p>html version</p>')),
+        ]);
+
+        $data = $this->callExtractParts($payload);
+
+        $this->assertSame('<p>html version</p>', $data['body_html']);
+        $this->assertSame('', $data['body_text'], 'plain branch must be skipped when html is available');
+    }
+
+    public function testMultipartAlternativeFallsBackToPlainWhenNoHtml(): void
+    {
+        $payload = $this->part('multipart/alternative', parts: [
+            $this->part('text/plain', $this->b64url('plain only')),
+        ]);
+
+        $data = $this->callExtractParts($payload);
+
+        $this->assertSame('', $data['body_html']);
+        $this->assertSame('plain only', $data['body_text']);
+    }
+
+    public function testMultipartAlternativeWithRelatedHtmlBranch(): void
+    {
+        $imagePart = $this->part(
+            'image/png',
+            $this->b64url('fake-png-bytes'),
+            filename: 'inline.png',
+            attachmentId: 'att-1',
+            headers: [
+                $this->header('Content-ID', '<cid-1>'),
+                $this->header('Content-Disposition', 'inline'),
+            ],
+        );
+        $related = $this->part('multipart/related', parts: [
+            $this->part('text/html', $this->b64url('<p>rich body</p>')),
+            $imagePart,
+        ]);
+        $payload = $this->part('multipart/alternative', parts: [
+            $this->part('text/plain', $this->b64url('plain fallback')),
+            $related,
+        ]);
+
+        $data = $this->callExtractParts($payload);
+
+        $this->assertSame('<p>rich body</p>', $data['body_html']);
+        $this->assertSame('', $data['body_text'], 'plain alternative must be skipped');
+        $this->assertCount(1, $data['inline_images']);
+        $this->assertSame('cid-1', $data['inline_images'][0]['content_id']);
+    }
+
+    public function testNestedForwardDoesNotDuplicateHtml(): void
+    {
+        $mixed = $this->part('multipart/mixed', parts: [
+            $this->part('multipart/alternative', parts: [
+                $this->part('text/plain', $this->b64url('plain A')),
+                $this->part('text/html', $this->b64url('<p>A</p>')),
+            ]),
+            $this->part('multipart/alternative', parts: [
+                $this->part('text/plain', $this->b64url('plain B')),
+                $this->part('text/html', $this->b64url('<p>B</p>')),
+            ]),
+        ]);
+
+        $data = $this->callExtractParts($mixed);
+
+        // Each alternative resolves to ONE html branch; the two distinct htmls
+        // are still concatenated by the outer multipart/mixed (correct: they
+        // are different logical parts of one message).
+        $this->assertSame("<p>A</p>\n<p>B</p>", $data['body_html']);
+        $this->assertSame('', $data['body_text']);
+    }
+
+    public function testAttachmentInsideMixedSurvivesAlternativeFilter(): void
+    {
+        $pdf = $this->part(
+            'application/pdf',
+            $this->b64url('%PDF-1.4 fake'),
+            filename: 'invoice.pdf',
+            attachmentId: 'pdf-1',
+            headers: [$this->header('Content-Disposition', 'attachment; filename="invoice.pdf"')],
+        );
+        $payload = $this->part('multipart/mixed', parts: [
+            $this->part('multipart/alternative', parts: [
+                $this->part('text/plain', $this->b64url('plain')),
+                $this->part('text/html', $this->b64url('<p>html</p>')),
+            ]),
+            $pdf,
+        ]);
+
+        $data = $this->callExtractParts($payload);
+
+        $this->assertSame('<p>html</p>', $data['body_html']);
+        $this->assertCount(1, $data['attachments']);
+        $this->assertSame('invoice.pdf', $data['attachments'][0]['filename']);
+        $this->assertSame('pdf-1', $data['attachments'][0]['attachment_id']);
+    }
+
+    public function testMultipartAlternativeReturnsNullBranchWhenEmpty(): void
+    {
+        $payload = $this->part('multipart/alternative', parts: []);
+
+        $data = $this->callExtractParts($payload);
+
+        $this->assertSame('', $data['body_html']);
+        $this->assertSame('', $data['body_text']);
+        $this->assertSame([], $data['attachments']);
+    }
+
+    /**
      * GmailService::getSystemEmail() honors $this->config['user_email'] (added
      * for testability), so injecting via the constructor is enough.
      */
