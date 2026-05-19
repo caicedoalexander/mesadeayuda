@@ -66,7 +66,11 @@ class UsersTable extends Table
             ->email('email', false, 'Debe ser un correo electrónico válido')  // false = less strict, allows localhost
             ->requirePresence('email', 'create')
             ->notEmptyString('email')
-            ->add('email', 'unique', ['rule' => 'validateUnique', 'provider' => 'table']);
+            ->add('email', 'unique', [
+                'rule' => 'validateUnique',
+                'provider' => 'table',
+                'message' => 'Ya existe un usuario con este correo electrónico.',
+            ]);
 
         $validator
             ->scalar('password')
@@ -130,7 +134,10 @@ class UsersTable extends Table
      */
     public function buildRules(RulesChecker $rules): RulesChecker
     {
-        $rules->add($rules->isUnique(['email']), ['errorField' => 'email']);
+        $rules->add($rules->isUnique(['email']), [
+            'errorField' => 'email',
+            'message' => 'Ya existe un usuario con este correo electrónico.',
+        ]);
 
         return $rules;
     }
