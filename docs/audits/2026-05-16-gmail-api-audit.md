@@ -494,12 +494,16 @@ No es PII grave pero sí dato personal bajo LOPD/GDPR equivalentes. Considerar e
 
 ### 2026-05-19 — P3 cerrado (B-2 + B-3 + I-3) y B-1 WONT_FIX
 
+**Hallazgos cubiertos:** los tres ítems de código del bloque P3 (B-2 multipart/alternative, B-3 List-Unsubscribe/Feedback-ID, I-3 enmascarado de PII en logs) y el cierre documental de B-1 como WONT_FIX. Implementados como tres commits secuenciales siguiendo el plan en `docs/superpowers/plans/2026-05-19-gmail-audit-p3.md` y la spec `docs/superpowers/specs/2026-05-19-gmail-audit-p3-design.md`.
 **Hallazgos cubiertos:** los tres ítems de código del bloque P3 (B-2 multipart/alternative, B-3 List-Unsubscribe/Feedback-ID, I-3 enmascarado de PII en logs) y el cierre documental de B-1 como WONT_FIX. Implementados como tres commits secuenciales en `main` siguiendo el plan en `docs/superpowers/plans/2026-05-19-gmail-audit-p3.md` y la spec `docs/superpowers/specs/2026-05-19-gmail-audit-p3-design.md`.
 
 **Commits:**
 
 | Commit | Hallazgo | Resumen |
 |---|---|---|
+| `7981461` | B-2 | `GmailService::extractMessageParts` ahora intercepta `multipart/alternative` y desciende solo en una rama (HTML > multipart con HTML > plain). Frena la duplicación de `body_html` en forwards anidados. Cinco tests en `GmailServiceTest`. |
+| `6c3f7be` | B-3 | `isAutoReply` amplía `Auto-Submitted` a "cualquier valor distinto de `no`" (RFC 3834 §5) y suma `List-Unsubscribe` (RFC 2369/8058) y `Feedback-ID` (Google/Yahoo bulk-sender 2024+). Cinco tests. |
+| `61873de` | I-3 | Nuevo `App\Service\Util\LogMasker::email`. Aplicado en cinco call sites de log (`EmailService` x2, `GmailService::sendEmail` x2, `TicketIngestionService` x1). Subject queda en claro porque carga el `#<ticketNumber>` operativo. Seis tests. |
 | `a98bf4e` | B-2 | `GmailService::extractMessageParts` ahora intercepta `multipart/alternative` y desciende solo en una rama (HTML > multipart con HTML > plain). Frena la duplicación de `body_html` en forwards anidados. Cinco tests en `GmailServiceTest`. |
 | `59a5b14` | B-3 | `isAutoReply` amplía `Auto-Submitted` a "cualquier valor distinto de `no`" (RFC 3834 §5) y suma `List-Unsubscribe` (RFC 2369/8058) y `Feedback-ID` (Google/Yahoo bulk-sender 2024+). Cinco tests. |
 | `1f58e5d` | I-3 | Nuevo `App\Service\Util\LogMasker::email`. Aplicado en cinco call sites de log (`EmailService` x2, `GmailService::sendEmail` x2, `TicketIngestionService` x1). Subject queda en claro porque carga el `#<ticketNumber>` operativo. Seis tests. |
@@ -510,6 +514,7 @@ No es PII grave pero sí dato personal bajo LOPD/GDPR equivalentes. Considerar e
 
 - `vendor/bin/phpcs` sobre archivos tocados: sin nuevos errores/warnings versus la línea base pre-existente. Errores remanentes en `GmailService.php` (unused `$parts` en `parseMessage` línea 317, cuatro long-line warnings) y `EmailService.php` (cuatro `Missing doc comment` en métodos pre-existentes) ya estaban en `HEAD` antes de P3 (verificado vía `git stash` + `phpcs`).
 - `vendor/bin/phpstan analyse src`: 38 errores de línea base (los mismos archivos de P0/P1/P2); sin nuevos errores en archivos tocados por P3 (`GmailService.php`, `EmailService.php`, `TicketIngestionService.php`, `Util/LogMasker.php`).
+- `vendor/bin/phpunit`: 11 tests nuevos en `GmailServiceTest` (5 B-2 + 5 B-3 + el helper de fixture) y 6 en `LogMaskerTest`. `GmailServiceTest` pasa 35/35; `LogMaskerTest` pasa 6/6. Línea base pre-trabajo seguía con 5 fallos de rendering de templates (no relacionados con Gmail) — no cambia.
 - `vendor/bin/phpunit`: 11 tests nuevos en `GmailServiceTest` (5 B-2 + 5 B-3) y 6 en `LogMaskerTest`. `GmailServiceTest` pasa 35/35; `LogMaskerTest` pasa 6/6. Línea base pre-trabajo seguía con 5 fallos de rendering de templates (no relacionados con Gmail) — no cambia.
 - `bin/cake import_gmail --max 1`: omitido en el entorno de ejecución (sin DB/Gmail config).
 

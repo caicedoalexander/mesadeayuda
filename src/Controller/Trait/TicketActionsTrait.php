@@ -5,6 +5,7 @@ namespace App\Controller\Trait;
 
 use App\Service\Exception\InvalidStatusTransitionException;
 use App\Service\Exception\UnauthorizedAssignmentException;
+use App\Service\TicketPipelineService;
 use Cake\Http\Exception\NotFoundException;
 use Cake\Http\Response;
 use LogicException;
@@ -59,7 +60,7 @@ trait TicketActionsTrait
         $tagId = (int)$this->request->getData('tag_id');
         $result = $this->ticketPipeline->addTag((int)$id, $tagId);
 
-        $this->Flash->{$result['success'] ? 'success' : ($result['message'] === 'Esta etiqueta ya está agregada.' ? 'warning' : 'error')}($result['message']);
+        $this->Flash->{$result['success'] ? 'success' : ($result['message'] === TicketPipelineService::MESSAGE_TAG_ALREADY_ADDED ? 'warning' : 'error')}($result['message']);
 
         return $this->redirect(['action' => 'view', $id]);
     }

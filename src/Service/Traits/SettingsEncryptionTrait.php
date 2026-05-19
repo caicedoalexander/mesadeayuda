@@ -36,6 +36,8 @@ trait SettingsEncryptionTrait
         SettingKeys::WHATSAPP_API_KEY,
         SettingKeys::N8N_API_KEY,
         SettingKeys::WEBHOOK_GMAIL_IMPORT_TOKEN,
+        SettingKeys::WEBHOOK_WHATSAPP_IMPORT_TOKEN,
+        SettingKeys::WEBHOOK_TICKETS_TAGS_TOKEN,
     ];
 
     /**

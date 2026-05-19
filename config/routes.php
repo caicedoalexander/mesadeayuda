@@ -89,6 +89,18 @@ return function (RouteBuilder $routes): void {
             ['controller' => 'Webhooks', 'action' => 'gmailImport'],
             'webhook_gmail_import'
         );
+        $builder->post(
+            '/whatsapp/import',
+            ['controller' => 'Webhooks', 'action' => 'whatsappImport'],
+            'webhook_whatsapp_import'
+        );
+        $builder->post(
+            '/tickets/{id}/tags',
+            ['controller' => 'Webhooks', 'action' => 'ticketTagsAdd'],
+            'webhook_tickets_tags_add'
+        )
+            ->setPatterns(['id' => '\d+'])
+            ->setPass(['id']);
     });
 
     /*

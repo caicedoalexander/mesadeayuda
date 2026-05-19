@@ -32,6 +32,13 @@ class TicketPipelineService
     use LocatorAwareTrait;
     use TicketHistoryLoggerTrait;
 
+    /**
+     * UX string returned by addTag() when the (ticket_id, tag_id) pair
+     * already exists. Public so callers (e.g., WebhooksController,
+     * TicketActionsTrait) can compare against it without locale coupling.
+     */
+    public const MESSAGE_TAG_ALREADY_ADDED = 'Esta etiqueta ya está agregada.';
+
     private TicketCommentService $comments;
     private TicketAttachmentService $attachments;
     private AuthorizationService $authService;
@@ -476,7 +483,7 @@ class TicketPipelineService
             ->count();
 
         if ($exists) {
-            return ['success' => false, 'message' => 'Esta etiqueta ya está agregada.'];
+            return ['success' => false, 'message' => self::MESSAGE_TAG_ALREADY_ADDED];
         }
 
         $ticketTag = $ticketTagsTable->newEntity([
@@ -486,6 +493,16 @@ class TicketPipelineService
 
         if ($ticketTagsTable->save($ticketTag)) {
             return ['success' => true, 'message' => 'Etiqueta agregada.'];
+        }
+
+        // Race fallback: a concurrent request may have inserted the same
+        // (ticket_id, tag_id) pair between our existence check and this save.
+        // The isUnique rule on TicketTagsTable surfaces it as a validation
+        // error; treat as the same "already added" outcome rather than a
+        // real failure.
+        $errors = $ticketTag->getErrors();
+        if (isset($errors['ticket_id']['_isUnique']) || isset($errors['tag_id']['_isUnique'])) {
+            return ['success' => false, 'message' => self::MESSAGE_TAG_ALREADY_ADDED];
         }
 
         return ['success' => false, 'message' => 'Error al agregar la etiqueta.'];

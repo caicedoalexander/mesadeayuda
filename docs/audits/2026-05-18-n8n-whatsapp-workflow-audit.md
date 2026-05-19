@@ -4,6 +4,7 @@
 - **Workflow ID**: `YrY1cuaU5YobAUGu`
 - **Estado**: `active: false` (no en producción)
 - **Versión auditada**: `f2d7cf52-0fc4-4608-95fe-9aa59ca4a174`
+- **Estado de resolución**: #2, #3, #9 — **resueltos en Fase 1** (ver `docs/superpowers/plans/2026-05-19-n8n-whatsapp-audit-fase-1.md`). #1, #4, #5, #6, #7, #8, #10 pendientes (Fase 2/3).
 
 El workflow mezcla dos funciones independientes con triggers distintos y cero estado compartido.
 
@@ -143,14 +144,14 @@ Es funcionalmente correcto pero tiene huecos:
 | # | Acción | Esfuerzo | Impacto |
 |---|---|---|---|
 | 1 | Separar en dos workflows independientes | XS | Alto (mantenibilidad y rendimiento) |
-| 2 | Sustituir email→Gmail Import por endpoint `POST /webhooks/whatsapp/import` que use el Table layer | M | **Crítico** (auditoría + canal correcto) |
-| 3 | Sustituir INSERT directo a `tickets_tags` por endpoint `POST /webhooks/tickets/{id}/tags` que pase por `TicketsTable` | S | **Crítico** (viola AuditBehavior) |
+| 2 | ✅ Sustituir email→Gmail Import por endpoint `POST /webhooks/whatsapp/import` que use el Table layer | M | **Crítico** (auditoría + canal correcto) |
+| 3 | ✅ Sustituir INSERT directo a `tickets_tags` por endpoint `POST /webhooks/tickets/{id}/tags` que pase por `TicketsTable` | S | **Crítico** (viola AuditBehavior) |
 | 4 | Validar tag_ids contra `available_tags` antes de INSERT; retry con backoff en Groq | XS | Medio |
 | 5 | Lock Redis (`SET NX EX`) por phoneNumber para evitar race conditions | S | Medio |
 | 6 | Idempotencia por `messageId` de WhatsApp | S | Medio |
 | 7 | Consolidar los 11 Code de la FSM en uno parametrizado (o migrar a Agent) | M / L | Alto (mantenibilidad) |
 | 8 | Eliminar nodos deshabilitados (`OpenAI`, `Asignación de Agente`) | XS | Bajo (limpieza) |
-| 9 | Decidir Evolution API vs WhatsApp Cloud API y alinear con CLAUDE.md | XS | Alto (consistencia) |
+| 9 | ✅ Decidir Evolution API vs WhatsApp Cloud API y alinear con CLAUDE.md | XS | Alto (consistencia) |
 | 10 | Manejo de errores end-to-end con notificación al usuario ("ups, reintenta") | S | Alto (UX) |
 
 Los puntos **2, 3 y 9** son los más críticos porque cruzan la línea entre n8n y el dominio de negocio.

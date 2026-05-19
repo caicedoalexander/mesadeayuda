@@ -19,6 +19,8 @@ final class CacheConstants
      * grace window. Stored payload: ['token' => string, 'expires_at' => int].
      */
     public const WEBHOOK_GMAIL_PREVIOUS_TOKEN = 'webhook_gmail_previous_token';
+    public const WEBHOOK_WHATSAPP_PREVIOUS_TOKEN = 'webhook_whatsapp_previous_token';
+    public const WEBHOOK_TICKETS_TAGS_PREVIOUS_TOKEN = 'webhook_tickets_tags_previous_token';
 
     /**
      * Seconds the previous webhook token remains valid after rotation,
