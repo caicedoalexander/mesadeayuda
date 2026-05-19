@@ -11,6 +11,7 @@ use Cake\ORM\Entity;
  * @property int $id
  * @property string $name
  * @property string $color
+ * @property string|null $description
  * @property \Cake\I18n\DateTime $created
  *
  * @property \App\Model\Entity\TicketTag[] $ticket_tags
@@ -29,6 +30,7 @@ class Tag extends Entity
     protected array $_accessible = [
         'name' => true,
         'color' => true,
+        'description' => true,
         'created' => true,
         'ticket_tags' => true,
     ];

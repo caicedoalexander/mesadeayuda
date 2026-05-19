@@ -69,6 +69,11 @@ class TagsTable extends Table
             ->maxLength('color', 7)
             ->notEmptyString('color');
 
+        $validator
+            ->scalar('description')
+            ->maxLength('description', 500)
+            ->allowEmptyString('description');
+
         return $validator;
     }
 
