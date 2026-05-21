@@ -159,17 +159,20 @@ class WhatsappService
 
                 return true;
             } else {
-                Log::error('WhatsApp API error', [
-                    'http_code' => $result['http_code'],
-                    'error' => $result['error'],
-                    'number' => $number,
-                ]);
+                Log::error(
+                    'WhatsApp API error: HTTP {http_code} calling {url} (number {number}) — response: {response}',
+                    [
+                        'http_code' => $result['http_code'],
+                        'url' => $url,
+                        'number' => $number,
+                        'response' => $result['response'] ?? $result['error'] ?? '(sin cuerpo)',
+                    ],
+                );
 
                 return false;
             }
         } catch (Exception $e) {
-            Log::error('Failed to send WhatsApp message', [
-                'error' => $e->getMessage(),
+            Log::error('Failed to send WhatsApp message to {number}: ' . $e->getMessage(), [
                 'number' => $number,
             ]);
 
