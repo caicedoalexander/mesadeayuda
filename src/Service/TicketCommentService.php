@@ -86,4 +86,38 @@ class TicketCommentService
 
         return $comment;
     }
+
+    /**
+     * Persist the RFC Message-ID assigned by Gmail to an outbound notification
+     * onto the originating ticket_comment, so a future client reply with
+     * In-Reply-To: <that-id> reattaches via lookupTicketByRfc(). Also stores
+     * the References chain we sent for completeness (used to extend on
+     * subsequent sends).
+     *
+     * Idempotent: re-running with the same args is a no-op safe overwrite.
+     * Errors are logged but not propagated — the email already went out and
+     * threading-by-RFC degrades gracefully to gmail_thread_id matching.
+     *
+     * @param int $commentId Target ticket_comments.id
+     * @param string $rfcMessageId The Message-ID Gmail assigned to the outbound
+     *   (already stripped of angle brackets by EmailHeaderParser::extractMessageId)
+     * @param string|null $referencesHeader The References: header we sent, or null
+     */
+    public function attachOutboundMessageId(int $commentId, string $rfcMessageId, ?string $referencesHeader): void
+    {
+        $table = $this->fetchTable('TicketComments');
+        $comment = $table->get($commentId);
+        $comment->set('rfc_message_id', $rfcMessageId, ['guard' => false]);
+        if ($referencesHeader !== null && $referencesHeader !== '') {
+            $comment->set('references_header', $referencesHeader, ['guard' => false]);
+        }
+
+        if (!$table->save($comment)) {
+            Log::error('Failed to persist outbound Message-ID on comment', [
+                'comment_id' => $commentId,
+                'rfc_message_id' => $rfcMessageId,
+                'errors' => $comment->getErrors(),
+            ]);
+        }
+    }
 }

@@ -182,8 +182,9 @@ class TicketPipelineService
         $emitTicketResponded = $hasPublicComment && $hasStatusChange;
 
         if ($hasStatusChange) {
+            $tx2Ok = false;
             try {
-                $connection->transactional(function () use (
+                $tx2Ok = $connection->transactional(function () use (
                     $entity,
                     $newStatus,
                     $oldStatus,
@@ -230,6 +231,39 @@ class TicketPipelineService
                         'Comentario guardado, pero no se pudo cambiar el estado: %s',
                         $e->getMessage(),
                     ),
+                    'entity' => $entity,
+                ];
+            }
+
+            // Non-exception rollback path: the callback returned false (e.g.,
+            // $table->save() returned false inside changeStatus()), so
+            // transactional() rolled back silently without throwing. The
+            // InvalidStatusTransitionException catch above does not cover this
+            // path. Without this guard, $pendingEvents may still hold the
+            // status-change event (appended before the early `return false`
+            // could not have run, but defensive clear is cheap) and the final
+            // buildResponseResult() would report success for a state change
+            // that never committed. Surface a partial-success message so the
+            // user knows TX1 (comment) committed but TX2 (status) did not.
+            //
+            // Note: TicketCommentAdded is intentionally NOT emitted here even
+            // when there's a public comment. Emitting an email to the customer
+            // while the agent's intended status transition silently failed
+            // would leave the conversation in an inconsistent state from the
+            // agent's perspective. The comment is persisted (TX1 committed)
+            // and the agent can retry the status change.
+            if ($tx2Ok !== true) {
+                Log::warning('Response committed but status save returned false', [
+                    'ticket_id' => $entityId,
+                    'from' => $oldStatus,
+                    'to' => $newStatus,
+                ]);
+
+                $pendingEvents = [];
+
+                return [
+                    'success' => false,
+                    'message' => 'Comentario guardado, pero no se pudo cambiar el estado.',
                     'entity' => $entity,
                 ];
             }

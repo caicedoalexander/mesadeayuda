@@ -31,10 +31,23 @@ final class NotificationMessage
         public readonly array $additionalCc,
         public readonly array $attachments,
         public readonly array $metadata,
+        public readonly ?string $inReplyTo = null,
+        public readonly ?string $referencesHeader = null,
+        public readonly ?int $commentId = null,
     ) {
     }
 
     /**
+     * Factory for an email notification.
+     *
+     * Threading params ($inReplyTo, $referencesHeader, $commentId) are optional and
+     * only meaningful for the email channel; they implement RFC 5322 threading on
+     * outbound notifications (CRIT-2 / J1+J2+J7):
+     *   - $inReplyTo: most recent persisted RFC Message-ID we anchor against.
+     *   - $referencesHeader: full chain `<id1> <id2>` (newest LAST per RFC 5322).
+     *   - $commentId: ticket_comments.id whose rfc_message_id the transport must
+     *     populate with the Message-ID Gmail returns after sending.
+     *
      * @param array<int, array{email: string, name?: string}> $additionalTo
      * @param array<int, array{email: string, name?: string}> $additionalCc
      * @param array<int, mixed> $attachments
@@ -48,6 +61,9 @@ final class NotificationMessage
         array $additionalCc = [],
         array $attachments = [],
         array $metadata = [],
+        ?string $inReplyTo = null,
+        ?string $referencesHeader = null,
+        ?int $commentId = null,
     ): self {
         if ($recipient === '') {
             throw new InvalidArgumentException('Email recipient cannot be empty');
@@ -63,6 +79,9 @@ final class NotificationMessage
             additionalCc: $additionalCc,
             attachments: $attachments,
             metadata: $metadata,
+            inReplyTo: $inReplyTo,
+            referencesHeader: $referencesHeader,
+            commentId: $commentId,
         );
     }
 

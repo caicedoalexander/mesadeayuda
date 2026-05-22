@@ -130,6 +130,24 @@ class TicketIngestionService
             return null;
         }
 
+        // Inline images: download, persist with is_inline=true/content_id, then
+        // rewrite cid: references in the body and re-save the ticket description.
+        // Must run AFTER the initial ticket save so we have ticket.id and ticket_number
+        // (the latter is used to compute the local upload URL). See audit CRIT-4 (F1+F2+G1).
+        if (!empty($emailData['inline_images'])) {
+            $cidMap = $this->attachments->processInlineImages($ticket, $emailData['inline_images'], (int)$user->id);
+            if ($cidMap !== []) {
+                $rewritten = $this->rewriteCidReferences($rawBody, $cidMap);
+                $ticket->description = $this->sanitizeHtml($rewritten);
+                if (!$ticketsTable->save($ticket)) {
+                    Log::warning('Inline images persisted but description rewrite failed to save', [
+                        'ticket_id' => $ticket->id,
+                        'errors' => $ticket->getErrors(),
+                    ]);
+                }
+            }
+        }
+
         // Process attachments
         if (!empty($emailData['attachments'])) {
             $this->attachments->processEmailAttachments($ticket, $emailData['attachments'], $user->id);
@@ -342,6 +360,28 @@ class TicketIngestionService
             return null;
         }
 
+        // Inline images for this comment (associated via $comment->id). Same
+        // ordering rationale as createFromEmail: persist first, then rewrite
+        // cid: references against local URLs, then re-sanitize and re-save.
+        // See audit CRIT-4 (F1+F2+G1).
+        if (!empty($emailData['inline_images'])) {
+            $cidMap = $this->attachments->processInlineImages($ticket, $emailData['inline_images'], (int)$user->id, (int)$comment->id);
+            if ($cidMap !== []) {
+                $rewritten = $this->rewriteCidReferences($rawBody, $cidMap);
+                $rewrittenSanitized = $this->sanitizeHtml($rewritten);
+                if (strlen($rewrittenSanitized) > $maxLength) {
+                    $rewrittenSanitized = $this->truncateSanitizedHtml($rewrittenSanitized, $maxLength);
+                }
+                $comment->body = $rewrittenSanitized;
+                if (!$ticketCommentsTable->save($comment)) {
+                    Log::warning('Inline images persisted but comment body rewrite failed to save', [
+                        'comment_id' => $comment->id,
+                        'errors' => $comment->getErrors(),
+                    ]);
+                }
+            }
+        }
+
         // Process attachments if present using processEmailAttachments()
         if (!empty($emailData['attachments'])) {
             $this->attachments->processEmailAttachments($ticket, $emailData['attachments'], $user->id, $comment->id);
@@ -358,6 +398,32 @@ class TicketIngestionService
         ]);
 
         return $comment;
+    }
+
+    /**
+     * Replace cid:<id> references in <img src=...> with persisted local URLs.
+     * Must run on RAW (pre-sanitize) HTML — HTMLPurifier strips cid: schemes
+     * because they are not in URI.AllowedSchemes, leaving <img> orphaned without
+     * a src attribute. See audit CRIT-4 (F1+F2+G1).
+     *
+     * @param string $html Raw HTML body extracted from the email
+     * @param array<string, string> $cidMap content_id => local URL
+     */
+    private function rewriteCidReferences(string $html, array $cidMap): string
+    {
+        if ($cidMap === [] || $html === '') {
+            return $html;
+        }
+
+        return preg_replace_callback(
+            '/(<img\b[^>]*\bsrc\s*=\s*["\'])cid:([^"\']+)(["\'])/i',
+            function (array $m) use ($cidMap): string {
+                $cid = trim($m[2]);
+
+                return isset($cidMap[$cid]) ? $m[1] . $cidMap[$cid] . $m[3] : $m[0];
+            },
+            $html,
+        ) ?? $html;
     }
 
     /**
@@ -434,10 +500,16 @@ class TicketIngestionService
         if ($modified === null) {
             return false;
         }
-        $cutoff = DateTime::now()->subDays(TicketConstants::THREAD_REATTACH_WINDOW_DAYS);
-        if ($ticket->isResolved() && $modified->lessThan($cutoff)) {
-            return false;
+
+        // Open tickets remain reattachable indefinitely — fragmenting a long-running
+        // open conversation after 90 days is worse than re-opening a stale thread.
+        if (!$ticket->isResolved()) {
+            return true;
         }
+
+        // Resolved tickets only reattach if a reply arrives within the window. Beyond
+        // it, the customer should open a fresh ticket rather than resurrect a closed one.
+        $cutoff = DateTime::now()->subDays(TicketConstants::THREAD_REATTACH_WINDOW_DAYS);
 
         return $modified->greaterThanOrEquals($cutoff);
     }
@@ -699,42 +771,82 @@ class TicketIngestionService
      */
     private function isEmailInTicketRecipients(Ticket $ticket, string $email): bool
     {
-        // Normalize email for case-insensitive comparison
-        $normalizedEmail = strtolower(trim($email));
+        $normalized = strtolower(trim($email));
+        if ($normalized === '') {
+            return false;
+        }
 
-        // Check email_to array
-        $emailTo = $ticket->email_to_array;
-        if (!empty($emailTo)) {
-            foreach ($emailTo as $recipient) {
-                if (isset($recipient['email']) && strtolower(trim($recipient['email'])) === $normalizedEmail) {
-                    return true;
+        $authorized = $this->getAuthorizedEmailSet($ticket);
+
+        return isset($authorized[$normalized]);
+    }
+
+    /**
+     * Build the set of email addresses authorized to post comments on this ticket.
+     *
+     * Union of:
+     *  - Ticket-level recipients (email_to, email_cc) captured at ingestion.
+     *  - Requester email.
+     *  - Recipients added by agents on any prior public comment
+     *    (ticket_comments.email_to / email_cc). Without this branch, a CC added by
+     *    an agent (e.g., escalation to an external expert) cannot reply: the agent's
+     *    notification reaches them, but their reply is rejected as "unauthorized" and
+     *    silently dropped — see audit CRIT-3 (K3+K4+K5).
+     *
+     * @param \App\Model\Entity\Ticket $ticket The ticket entity
+     * @return array<string, true> Lowercased email => true (set-as-map)
+     */
+    private function getAuthorizedEmailSet(Ticket $ticket): array
+    {
+        $set = [];
+
+        foreach (['email_to_array', 'email_cc_array'] as $field) {
+            foreach ((array)($ticket->{$field} ?? []) as $recipient) {
+                if (!empty($recipient['email'])) {
+                    $set[strtolower(trim((string)$recipient['email']))] = true;
                 }
             }
         }
 
-        // Check email_cc array
-        $emailCc = $ticket->email_cc_array;
-        if (!empty($emailCc)) {
-            foreach ($emailCc as $recipient) {
-                if (isset($recipient['email']) && strtolower(trim($recipient['email'])) === $normalizedEmail) {
-                    return true;
-                }
-            }
-        }
-
-        // Check if email is the original requester's email
-        // Load ticket with Requesters association if not already loaded
         if (!isset($ticket->requester)) {
             $ticketsTable = $this->fetchTable('Tickets');
-            $ticket = $ticketsTable->get($ticket->id, [
-                'contain' => ['Requesters'],
-            ]);
+            $ticket = $ticketsTable->get($ticket->id, ['contain' => ['Requesters']]);
+        }
+        if (!empty($ticket->requester->email)) {
+            $set[strtolower(trim((string)$ticket->requester->email))] = true;
         }
 
-        if (isset($ticket->requester->email) && strtolower(trim($ticket->requester->email)) === $normalizedEmail) {
-            return true;
+        // Expand with recipients added by agents on prior public comments. Only
+        // public comments (comment_type != 'internal') publish to external parties;
+        // internal notes' email_to/email_cc are by convention NULL but we filter
+        // defensively to skip system comments anyway.
+        $comments = $this->fetchTable('TicketComments')->find()
+            ->select(['email_to', 'email_cc'])
+            ->where([
+                'ticket_id' => $ticket->id,
+                'is_system_comment' => false,
+                'comment_type' => TicketConstants::COMMENT_PUBLIC,
+            ])
+            ->all();
+
+        foreach ($comments as $comment) {
+            foreach (['email_to', 'email_cc'] as $field) {
+                $raw = $comment->{$field} ?? null;
+                if (empty($raw)) {
+                    continue;
+                }
+                $decoded = is_string($raw) ? json_decode($raw, true) : $raw;
+                if (!is_array($decoded)) {
+                    continue;
+                }
+                foreach ($decoded as $r) {
+                    if (!empty($r['email'])) {
+                        $set[strtolower(trim((string)$r['email']))] = true;
+                    }
+                }
+            }
         }
 
-        return false;
+        return $set;
     }
 }

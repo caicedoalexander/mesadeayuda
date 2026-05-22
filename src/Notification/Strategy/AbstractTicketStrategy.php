@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Notification\Strategy;
 
 use App\Constants\SettingKeys;
+use App\Model\Entity\Ticket;
 use App\Notification\Email\TemplateRegistry;
 use App\Service\Dto\SystemConfig;
 use App\Service\Renderer\NotificationRenderer;
@@ -83,6 +84,54 @@ abstract class AbstractTicketStrategy implements TicketNotificationStrategy
         $settings = $this->config?->toSettingsArray() ?? [];
 
         return strtolower((string)($settings[SettingKeys::GMAIL_USER_EMAIL] ?? ''));
+    }
+
+    /**
+     * Resolve the RFC 5322 threading anchors (In-Reply-To + References chain)
+     * for an outbound notification on this ticket (CRIT-2 / J2).
+     *
+     * inReplyTo:
+     *   - Last persisted RFC anchor we can reach — the most recent comment with
+     *     a non-null rfc_message_id (inbound from client, OR previous outbound
+     *     whose Message-ID we already persisted via attachOutboundMessageId).
+     *   - Falls back to ticket.rfc_message_id (the customer's original email)
+     *     when no comment has an RFC id yet.
+     *
+     * references:
+     *   - Newest LAST per RFC 5322 §3.6.4. Includes the ticket's original RFC id
+     *     (if any) followed by each comment's id in id-ASC order.
+     *   - Each id is wrapped in angle brackets `<id>` and separated by spaces.
+     *   - null when no RFC ids exist anywhere in the thread.
+     *
+     * @return array{inReplyTo: ?string, references: ?string}
+     */
+    protected function resolveThreading(Ticket $ticket): array
+    {
+        $ticketComments = $this->fetchTable('TicketComments')->find()
+            ->select(['id', 'rfc_message_id'])
+            ->where(['ticket_id' => $ticket->id, 'rfc_message_id IS NOT' => null])
+            ->order(['id' => 'ASC'])
+            ->all();
+
+        $chain = [];
+        if (!empty($ticket->rfc_message_id)) {
+            $chain[] = '<' . $ticket->rfc_message_id . '>';
+        }
+        foreach ($ticketComments as $tc) {
+            $chain[] = '<' . $tc->rfc_message_id . '>';
+        }
+
+        $inReplyTo = null;
+        if ($ticketComments->count() > 0) {
+            $last = $ticketComments->last();
+            $inReplyTo = $last->rfc_message_id;
+        } elseif (!empty($ticket->rfc_message_id)) {
+            $inReplyTo = $ticket->rfc_message_id;
+        }
+
+        $referencesHeader = empty($chain) ? null : implode(' ', $chain);
+
+        return ['inReplyTo' => $inReplyTo, 'references' => $referencesHeader];
     }
 
     /**

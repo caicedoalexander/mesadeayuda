@@ -8,6 +8,7 @@ use App\Notification\Email\Component\Greeting;
 use App\Notification\Email\EmailTemplate;
 use App\Notification\Email\EmailTheme;
 use App\Notification\Email\RenderedEmail;
+use App\Notification\Email\SubjectFormatter;
 use App\Notification\Email\TemplateContext;
 use App\Notification\Email\Ticket\Component\CommentBlock;
 use App\Notification\Email\Ticket\Component\StatusTransition;
@@ -35,7 +36,9 @@ final class TicketUpdatedTemplate implements EmailTemplate
         $theme = EmailTheme::actualizacion();
         $agentName = $this->resolveAgentName($ctx);
 
-        $subject = $agentName . ' actualizó tu ticket #' . $ctx->ticket->ticket_number;
+        $subject = SubjectFormatter::reply(
+            $agentName . ' actualizó tu ticket #' . $ctx->ticket->ticket_number,
+        );
 
         $inner =
             Greeting::render(

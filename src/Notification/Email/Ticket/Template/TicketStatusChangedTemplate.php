@@ -9,6 +9,7 @@ use App\Notification\Email\Component\Greeting;
 use App\Notification\Email\EmailTemplate;
 use App\Notification\Email\EmailTheme;
 use App\Notification\Email\RenderedEmail;
+use App\Notification\Email\SubjectFormatter;
 use App\Notification\Email\TemplateContext;
 use App\Notification\Email\Ticket\Component\StatusTransition;
 use App\Notification\Email\Ticket\Component\TicketCard;
@@ -39,8 +40,10 @@ final class TicketStatusChangedTemplate implements EmailTemplate
 
         $renderer = new NotificationRenderer();
         $newLabel = $renderer->getStatusLabel($newStatus);
-        $subject = 'El estado de tu ticket #' . $ctx->ticket->ticket_number
-            . ' cambió a ' . $newLabel;
+        $subject = SubjectFormatter::reply(
+            'El estado de tu ticket #' . $ctx->ticket->ticket_number
+            . ' cambió a ' . $newLabel,
+        );
 
         $inner =
             Greeting::render(

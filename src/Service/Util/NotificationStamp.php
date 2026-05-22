@@ -34,7 +34,13 @@ final class NotificationStamp
      */
     public static function append(string $subject, string $ticketNumber): string
     {
-        return rtrim($subject) . ' [#' . $ticketNumber . '·s=' . self::compute($ticketNumber) . ']';
+        // Strip any previously-attached stamps so repeated round-trips don't bloat
+        // the subject. Customer's quoted subject may already carry our stamp; we
+        // re-stamp with the same ticket_number anyway (deterministic given the
+        // salt) so removing first is safe and idempotent.
+        $clean = preg_replace(self::STAMP_RE, '', $subject) ?? $subject;
+
+        return rtrim($clean) . ' [#' . $ticketNumber . '·s=' . self::compute($ticketNumber) . ']';
     }
 
     /**

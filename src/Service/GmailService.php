@@ -14,7 +14,6 @@ use App\Service\Traits\HtmlSanitizerTrait;
 use App\Service\Traits\SettingsEncryptionTrait;
 use App\Service\Util\EmailHeaderParser;
 use App\Service\Util\LogMasker;
-use App\Service\Util\NotificationStamp;
 use Cake\Cache\Cache;
 use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
@@ -29,6 +28,7 @@ use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
+use Throwable;
 
 /**
  * Gmail Service
@@ -352,13 +352,10 @@ class GmailService
             // Extract body and attachments
             $this->extractMessageParts($message->getPayload(), $data);
 
-            // Defense in depth: sanitize at the trust boundary so any consumer
-            // (ingestion, future indexers, debug dumps) gets safe HTML even if
-            // they forget to call HtmlSanitizerTrait themselves.
-            if ($data['body_html'] !== '') {
-                $data['body_html'] = $this->sanitizeHtml($data['body_html']);
-            }
-
+            // Body sanitization deliberately deferred to the ingestion layer
+            // (TicketIngestionService) so that cid: references in <img src=...> are
+            // still rewritable to local URLs before HTMLPurifier strips them.
+            // See audit CRIT-4 (F1+F2+G1).
             return $data;
         } catch (GoogleServiceException $e) {
             $category = GmailErrorCategory::categorize($e);
@@ -612,11 +609,14 @@ class GmailService
     {
         // RFC 3834 §5: any non-"no" value of Auto-Submitted indicates automation.
         $autoSubmitted = strtolower(trim($this->getHeader($headers, 'Auto-Submitted')));
-        if ($autoSubmitted !== '' && $autoSubmitted !== 'no' && !str_starts_with($autoSubmitted, 'no;')) {
+        $autoSubmittedIsAuto = $autoSubmitted !== ''
+            && $autoSubmitted !== 'no'
+            && !str_starts_with($autoSubmitted, 'no;');
+        if ($autoSubmittedIsAuto) {
             return true;
         }
 
-        // Legacy vendor headers.
+        // Legacy vendor headers (signal solo, suficiente).
         if (stripos($this->getHeader($headers, 'X-Autoreply'), 'yes') !== false) {
             return true;
         }
@@ -624,19 +624,20 @@ class GmailService
             return true;
         }
 
-        // RFC 2076: Precedence: bulk, list, junk.
+        // RFC 2076: Precedence bulk/list/junk (signal solo, suficiente).
         $precedence = strtolower(trim($this->getHeader($headers, 'Precedence')));
-        if (in_array($precedence, ['bulk', 'list', 'junk'], true)) {
+        $precedenceBulk = in_array($precedence, ['bulk', 'list', 'junk'], true);
+        if ($precedenceBulk) {
             return true;
         }
 
-        // RFC 2369 / 8058: any bulk/list mail carries List-Unsubscribe.
-        if (trim($this->getHeader($headers, 'List-Unsubscribe')) !== '') {
-            return true;
-        }
-
-        // Google/Yahoo bulk-sender requirement, 2024+.
-        if (trim($this->getHeader($headers, 'Feedback-ID')) !== '') {
+        // RFC 2369 / 8058 + Google/Yahoo bulk-sender (2024+) requieren List-Unsubscribe
+        // y Feedback-ID en MUCHOS transaccionales legítimos. Por sí solos NO son
+        // suficientes — exigir además Precedence bulk/list/junk o Auto-Submitted!=no
+        // para evitar descartar boletines/transaccionales forwardeados al soporte.
+        $hasListUnsubscribe = trim($this->getHeader($headers, 'List-Unsubscribe')) !== '';
+        $hasFeedbackId = trim($this->getHeader($headers, 'Feedback-ID')) !== '';
+        if (($hasListUnsubscribe || $hasFeedbackId) && ($precedenceBulk || $autoSubmittedIsAuto)) {
             return true;
         }
 
@@ -646,73 +647,44 @@ class GmailService
     /**
      * Detect if email is a response to a system notification.
      *
-     * Three inclusive checks (any one is enough to skip ingest):
-     *  1. HMAC stamp embedded by our own EmailService — see {@see NotificationStamp}.
-     *  2. Legacy X-Mesa-Ayuda-Notification header, trusted ONLY when
-     *     Authentication-Results reports dkim=pass for our own domain. This
-     *     branch is a 30-day compatibility grace; remove after rollout.
-     *  3. From header equals the configured system email.
+     * A single inclusive check: From header equals the configured system email.
+     * This is the only signal that reliably indicates a self-ingestion loop
+     * (our own outbound mail being re-fetched by the importer).
      *
-     * Prevents infinite loops where a customer replies to an automated
-     * notification and the reply gets ingested as a brand-new ticket.
+     * Historical note: previous versions also treated an HMAC subject stamp
+     * (NotificationStamp) and a legacy X-Mesa-Ayuda-Notification header as
+     * sufficient by themselves. Both were unsafe: MUAs preserve the Subject
+     * line when customers reply, so any client reply to a stamped notification
+     * was misclassified as our own notification and silently discarded by the
+     * importer. See docs/audits/2026-05-22-gmail-thread-recipients-inline-audit.md
+     * (CRIT-1).
+     *
+     * Prevents infinite loops where our own outbound mail is re-ingested as a
+     * brand-new ticket — without dropping legitimate customer replies.
      *
      * @param array $headers Array of header objects from Gmail API
-     * @return bool True if system notification reply detected, false otherwise
+     * @return bool True if system notification (self-loop) detected, false otherwise
      */
     public function isSystemNotification(array $headers): bool
     {
-        $subject = $this->getHeader($headers, 'Subject');
-
-        // 1) Canonical: HMAC stamp embedded by our own EmailService (H-3).
-        if (NotificationStamp::verifiedTicketNumber($subject) !== null) {
-            return true;
-        }
-
-        // 2) Legacy header — trusted ONLY when Gmail-verified DKIM passes for
-        //    our own domain. Grace window during the H-3 rollout; remove after
-        //    ~30 days post-deploy (see docs/superpowers/specs/2026-05-16-gmail-audit-p0-design.md §5.2.6).
-        $legacy = $this->getHeader($headers, 'X-Mesa-Ayuda-Notification');
-        if ($legacy === 'true' && $this->dkimPassesForOwnDomain($headers)) {
-            return true;
-        }
-
-        // 3) From == system email. DMARC-spoof-mitigated but not perfect; unchanged.
         $from = $this->getHeader($headers, 'From');
         $fromEmail = EmailHeaderParser::extractEmailAddress($from);
         $systemEmail = $this->getSystemEmail();
-        if ($systemEmail !== '' && strtolower($fromEmail) === strtolower($systemEmail)) {
+        $fromIsSystem = $systemEmail !== '' && strtolower($fromEmail) === strtolower($systemEmail);
+
+        // El stamp (HMAC en Subject) y el legacy header X-Mesa-Ayuda-Notification
+        // SOLO serían señales válidas de notificación propia si además el From
+        // fuese nuestro system_email. Sin esa verificación, cualquier reply del
+        // cliente que cite un subject sellado (caso normal: los MUAs preservan
+        // el Subject en réplicas) sería catalogada como notificación nuestra y
+        // descartada por el importer. Por seguridad colapsamos a la única
+        // señal independiente: From == system_email es suficiente por sí solo
+        // (defensa contra cualquier loop real de auto-ingestión).
+        if ($fromIsSystem) {
             return true;
         }
 
-        // Removed (dead code): subject-prefix "Re: [Ticket #" / "Re: Tu Solicitud" check.
-        // Templates produce "Tu ticket #N fue creado", never "[Ticket #N]", so the
-        // branch never matched in production.
         return false;
-    }
-
-    /**
-     * True iff the Authentication-Results header (added by Gmail itself on
-     * inbound mail) reports dkim=pass for our own domain. Used by the H-3
-     * grace-window branch to authenticate the legacy X-Mesa-Ayuda-Notification
-     * header.
-     *
-     * @param array $headers Array of header objects from Gmail API
-     * @return bool
-     */
-    private function dkimPassesForOwnDomain(array $headers): bool
-    {
-        $authResults = $this->getHeader($headers, 'Authentication-Results');
-        $systemEmail = $this->getSystemEmail();
-        $atPos = strrpos($systemEmail, '@');
-        if ($authResults === '' || $atPos === false) {
-            return false;
-        }
-        $ownDomain = substr($systemEmail, $atPos + 1);
-
-        return (bool)preg_match(
-            '/dkim=pass[^;]*?header\.d=' . preg_quote($ownDomain, '/') . '\b/i',
-            $authResults,
-        );
     }
 
     /**
@@ -870,26 +842,22 @@ class GmailService
     }
 
     /**
-     * Send email via Gmail
+     * Send email via Gmail API.
      *
-     * @param string $to Recipient email address
-     * @param string $subject Email subject
-     * @param string $htmlBody HTML body content
-     * @param array $attachments Array of attachment file paths
-     * @return bool Success status
-     */
-
-    /**
-     * Send email via Gmail API
+     * Returns the RFC 5322 Message-ID assigned by Gmail to the outbound message
+     * (without surrounding angle brackets) so the transport can persist it onto
+     * the originating ticket_comment, enabling client replies to be reattached
+     * via In-Reply-To lookups (CRIT-2 / J1). Returns null on send failure OR
+     * when the Message-ID header could not be read back from the sent message.
      *
      * @param array|string $to Recipient email or array of recipients ['email' => 'name', ...]
      * @param string $subject Subject
      * @param string $htmlBody HTML body
      * @param array $attachments Array of file paths
-     * @param array $options Additional options: 'from', 'cc', 'bcc', 'replyTo'
-     * @return bool Success status
+     * @param array $options Additional options: 'from', 'cc', 'bcc', 'replyTo', 'headers'
+     * @return string|null RFC Message-ID assigned by Gmail on success, null on failure
      */
-    public function sendEmail(string|array $to, string $subject, string $htmlBody, array $attachments = [], array $options = []): bool
+    public function sendEmail(string|array $to, string $subject, string $htmlBody, array $attachments = [], array $options = []): ?string
     {
         try {
             $service = $this->getService();
@@ -906,9 +874,35 @@ class GmailService
             $message = new Message();
             $message->setRaw($encodedMessage);
 
-            $service->users_messages->send('me', $message);
+            /** @var \Google\Service\Gmail\Message $sent */
+            $sent = $service->users_messages->send('me', $message);
+            $sentId = $sent->getId();
 
-            return true;
+            if ($sentId !== null) {
+                // J1: read back the RFC Message-ID Gmail assigned so the transport
+                // can persist it onto the originating comment. Failure to read it
+                // is logged but does not invalidate the send — we return null in
+                // that case so the caller skips persistence and threading falls
+                // back to gmail_thread_id (existing behavior).
+                try {
+                    $full = $service->users_messages->get('me', $sentId, [
+                        'format' => 'metadata',
+                        'metadataHeaders' => ['Message-ID'],
+                    ]);
+                    foreach ($full->getPayload()?->getHeaders() ?? [] as $h) {
+                        if (strtolower($h->getName()) === 'message-id') {
+                            return EmailHeaderParser::extractMessageId($h->getValue());
+                        }
+                    }
+                } catch (Throwable $e) {
+                    Log::warning('Gmail sent OK but could not read back Message-ID', [
+                        'message_id' => $sentId,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            return null;
         } catch (GoogleServiceException $e) {
             $category = GmailErrorCategory::categorize($e);
             Log::error('Gmail API error', [
@@ -920,7 +914,7 @@ class GmailService
                 'message' => $e->getMessage(),
             ]);
 
-            return false;
+            return null;
         } catch (Exception $e) {
             Log::error('Gmail API error', [
                 'method' => __FUNCTION__,
@@ -931,7 +925,7 @@ class GmailService
                 'class' => $e::class,
             ]);
 
-            return false;
+            return null;
         }
     }
 

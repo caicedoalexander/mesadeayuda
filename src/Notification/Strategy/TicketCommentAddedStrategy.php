@@ -71,6 +71,8 @@ final class TicketCommentAddedStrategy extends AbstractTicketStrategy
         );
         $rendered = $this->templates()->get('ticket_comment_added')->render($ctx);
 
+        $threading = $this->resolveThreading($ticket);
+
         yield NotificationMessage::email(
             recipient: (string)$ticket->requester->email,
             subject: $rendered->subject,
@@ -79,6 +81,9 @@ final class TicketCommentAddedStrategy extends AbstractTicketStrategy
             additionalCc: $emailCc,
             attachments: $commentAttachments,
             metadata: ['ticket_id' => $ticket->id, 'comment_id' => $comment->id, 'event' => $event->getName()],
+            inReplyTo: $threading['inReplyTo'],
+            referencesHeader: $threading['references'],
+            commentId: $comment->id,
         );
     }
 }

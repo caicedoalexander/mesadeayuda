@@ -8,6 +8,7 @@ use App\Notification\Email\Component\Greeting;
 use App\Notification\Email\EmailTemplate;
 use App\Notification\Email\EmailTheme;
 use App\Notification\Email\RenderedEmail;
+use App\Notification\Email\SubjectFormatter;
 use App\Notification\Email\TemplateContext;
 use App\Notification\Email\Ticket\Component\CommentBlock;
 use App\Notification\Email\Ticket\Component\TicketCard;
@@ -39,7 +40,9 @@ final class TicketCommentAddedTemplate implements EmailTemplate
         $agentRole = (string)($ctx->actor->role ?? '');
         $body = (string)($ctx->comment?->body ?? '');
 
-        $subject = $agentName . ' te respondió en el ticket #' . $ctx->ticket->ticket_number;
+        $subject = SubjectFormatter::reply(
+            $agentName . ' te respondió en el ticket #' . $ctx->ticket->ticket_number,
+        );
 
         $timestamp = '';
         $created = $ctx->comment?->get('created');

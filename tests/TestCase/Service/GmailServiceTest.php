@@ -289,13 +289,23 @@ final class GmailServiceTest extends TestCase
         ]);
     }
 
-    public function testIsSystemNotificationAcceptsStampedSubject(): void
+    /**
+     * Audit 2026-05-22 (CRIT-1 / L2): los clientes citan el subject estampado
+     * al responder; este test garantiza que NO descartemos sus réplicas. El
+     * branch "stamp HMAC válido ⇒ system notification" fue eliminado porque
+     * producía falsos positivos catastróficos (réplica del cliente perdida).
+     * Solo `From == system_email` puede marcar como system notification.
+     */
+    public function testIsSystemNotificationDoesNotDiscardStampedReplyFromExternalSender(): void
     {
         $service = $this->buildService();
         $stamped = NotificationStamp::append('Tu ticket #42 fue creado', '42');
-        $headers = [$this->header('Subject', $stamped)];
+        $headers = [
+            $this->header('Subject', 'Re: ' . $stamped),
+            $this->header('From', 'cliente@externo.tld'),
+        ];
 
-        $this->assertTrue($service->isSystemNotification($headers));
+        $this->assertFalse($service->isSystemNotification($headers));
     }
 
     public function testIsSystemNotificationRejectsUnstampedReplyWithoutLegacyHeader(): void
@@ -309,49 +319,23 @@ final class GmailServiceTest extends TestCase
         $this->assertFalse($service->isSystemNotification($headers));
     }
 
-    public function testIsSystemNotificationRejectsLegacyHeaderWithoutDkimPass(): void
+    /**
+     * Audit 2026-05-22 (CRIT-1 / L2): el branch legacy
+     * `X-Mesa-Ayuda-Notification + DKIM pass own domain` fue eliminado. Un
+     * email externo con ese header (spoofeable o legítimamente añadido por
+     * algún relay) ya no marca como system notification. La única señal
+     * válida es `From == system_email`.
+     */
+    public function testIsSystemNotificationIgnoresLegacyHeaderWhenFromIsExternal(): void
     {
         $service = $this->buildService();
         $headers = [
             $this->header('Subject', 'Re: Tu ticket #42 fue creado'),
             $this->header('From', 'cliente@externo.tld'),
             $this->header('X-Mesa-Ayuda-Notification', 'true'),
-            // No Authentication-Results header at all.
         ];
 
         $this->assertFalse($service->isSystemNotification($headers));
-    }
-
-    public function testIsSystemNotificationRejectsLegacyHeaderWithDkimPassForAttackerDomain(): void
-    {
-        $service = $this->buildServiceWithSystemEmail('soporte@mesa.test');
-        $headers = [
-            $this->header('Subject', 'Re: Tu ticket #42 fue creado'),
-            $this->header('From', 'cliente@externo.tld'),
-            $this->header('X-Mesa-Ayuda-Notification', 'true'),
-            $this->header(
-                'Authentication-Results',
-                'mx.google.com; dkim=pass header.i=@attacker.tld header.d=attacker.tld',
-            ),
-        ];
-
-        $this->assertFalse($service->isSystemNotification($headers));
-    }
-
-    public function testIsSystemNotificationAcceptsLegacyHeaderWithDkimPassForOwnDomain(): void
-    {
-        $service = $this->buildServiceWithSystemEmail('soporte@mesa.test');
-        $headers = [
-            $this->header('Subject', 'Re: Tu ticket #42 fue creado'),
-            $this->header('From', 'cliente@externo.tld'),
-            $this->header('X-Mesa-Ayuda-Notification', 'true'),
-            $this->header(
-                'Authentication-Results',
-                'mx.google.com; spf=pass; dkim=pass header.i=@mesa.test header.d=mesa.test; dmarc=pass',
-            ),
-        ];
-
-        $this->assertTrue($service->isSystemNotification($headers));
     }
 
     public function testIsSystemNotificationAcceptsWhenFromMatchesSystemEmail(): void
@@ -673,7 +657,15 @@ final class GmailServiceTest extends TestCase
         }
     }
 
-    public function testIsAutoReplyDetectsListUnsubscribe(): void
+    /**
+     * Audit 2026-05-22 (ALT-1 / L3): las Google/Yahoo bulk-sender rules
+     * (2024+) requieren `List-Unsubscribe` en transaccionales legítimos
+     * (Stripe, GitHub, Shopify, newsletters forwardeadas a soporte). El
+     * header por sí solo NO implica bulk; debe combinarse con
+     * `Precedence: bulk|list|junk` o `Auto-Submitted != no` para marcar
+     * como auto-reply.
+     */
+    public function testIsAutoReplyIgnoresListUnsubscribeWithoutBulkSignal(): void
     {
         $service = $this->buildService();
         $headers = [
@@ -681,15 +673,44 @@ final class GmailServiceTest extends TestCase
             $this->header('List-Unsubscribe', '<mailto:unsub@example.com>, <https://example.com/u/123>'),
         ];
 
+        $this->assertFalse($service->isAutoReply($headers));
+    }
+
+    public function testIsAutoReplyDetectsListUnsubscribeWithPrecedenceBulk(): void
+    {
+        $service = $this->buildService();
+        $headers = [
+            $this->header('From', 'newsletter@example.com'),
+            $this->header('List-Unsubscribe', '<mailto:unsub@example.com>, <https://example.com/u/123>'),
+            $this->header('Precedence', 'bulk'),
+        ];
+
         $this->assertTrue($service->isAutoReply($headers));
     }
 
-    public function testIsAutoReplyDetectsFeedbackId(): void
+    /**
+     * Audit 2026-05-22 (ALT-1 / L3): igual que `List-Unsubscribe`,
+     * `Feedback-ID` solo no implica bulk — debe combinarse con
+     * `Precedence: bulk|list|junk` o `Auto-Submitted != no`.
+     */
+    public function testIsAutoReplyIgnoresFeedbackIdWithoutBulkSignal(): void
     {
         $service = $this->buildService();
         $headers = [
             $this->header('From', 'mailer@example.com'),
             $this->header('Feedback-ID', 'campaign-42:acct:newsletter:mailer'),
+        ];
+
+        $this->assertFalse($service->isAutoReply($headers));
+    }
+
+    public function testIsAutoReplyDetectsFeedbackIdWithAutoSubmitted(): void
+    {
+        $service = $this->buildService();
+        $headers = [
+            $this->header('From', 'mailer@example.com'),
+            $this->header('Feedback-ID', 'campaign-42:acct:newsletter:mailer'),
+            $this->header('Auto-Submitted', 'auto-replied'),
         ];
 
         $this->assertTrue($service->isAutoReply($headers));

@@ -48,6 +48,8 @@ final class TicketStatusChangedStrategy extends AbstractTicketStrategy
         );
         $rendered = $this->templates()->get('ticket_status_changed')->render($ctx);
 
+        $threading = $this->resolveThreading($ticket);
+
         yield NotificationMessage::email(
             recipient: (string)$ticket->requester->email,
             subject: $rendered->subject,
@@ -58,6 +60,9 @@ final class TicketStatusChangedStrategy extends AbstractTicketStrategy
                 'old_status' => $event->oldStatus,
                 'new_status' => $event->newStatus,
             ],
+            inReplyTo: $threading['inReplyTo'],
+            referencesHeader: $threading['references'],
+            commentId: null,
         );
     }
 }

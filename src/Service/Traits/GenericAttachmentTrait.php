@@ -208,6 +208,12 @@ trait GenericAttachmentTrait
     /**
      * Build attachment data array.
      *
+     * Defaults for $isInline (false) and $contentId (null) preserve callers
+     * that don't deal with inline-image semantics — form uploads, regular
+     * email attachments, and the WhatsApp ingest path. Only the Gmail
+     * inline-image branch (TicketAttachmentService::processInlineImages)
+     * overrides them. See audit CRIT-4 (F1+F2+G1).
+     *
      * @param int $entityId Ticket ID
      * @param int|null $commentId Comment ID
      * @param int|null $userId User ID
@@ -216,6 +222,8 @@ trait GenericAttachmentTrait
      * @param string $mimeType MIME type
      * @param int $size File size
      * @param string $filePath Stored relative path
+     * @param bool $isInline Whether this attachment is referenced inline in the body
+     * @param string|null $contentId RFC 2392 Content-ID (no angle brackets) for inline images
      * @return array
      */
     private function buildAttachmentData(
@@ -227,12 +235,15 @@ trait GenericAttachmentTrait
         string $mimeType,
         int $size,
         string $filePath,
+        bool $isInline = false,
+        ?string $contentId = null,
     ): array {
         return [
             'ticket_id' => $entityId,
             'comment_id' => $commentId,
             'uploaded_by' => $userId,
-            'is_inline' => false,
+            'is_inline' => $isInline,
+            'content_id' => $contentId,
             'original_filename' => $originalFilename,
             'filename' => $filename,
             'file_path' => $filePath,
@@ -244,12 +255,19 @@ trait GenericAttachmentTrait
     /**
      * Save attachment from binary content (for email attachments).
      *
+     * $isInline / $contentId default to the regular-attachment values so
+     * existing callers (regular email attachments, WhatsApp ingest) keep
+     * working unchanged. The Gmail inline-image path overrides them. See
+     * audit CRIT-4 (F1+F2+G1).
+     *
      * @param \Cake\Datasource\EntityInterface $entity Owning entity (ticket)
      * @param string $filename Original filename
      * @param string $binaryContent Binary content
      * @param string $mimeType MIME type
      * @param int|null $commentId Optional comment ID
      * @param int $userId Uploader user ID
+     * @param bool $isInline Whether the attachment is referenced inline in the body
+     * @param string|null $contentId RFC 2392 Content-ID (no angle brackets) for inline images
      * @return \Cake\Datasource\EntityInterface|null Saved attachment or null on failure
      */
     public function saveAttachmentFromBinary(
@@ -259,6 +277,8 @@ trait GenericAttachmentTrait
         string $mimeType,
         ?int $commentId,
         int $userId,
+        bool $isInline = false,
+        ?string $contentId = null,
     ): ?EntityInterface {
         $filename = $this->sanitizeFilename($filename);
         $size = strlen($binaryContent);
@@ -313,6 +333,8 @@ trait GenericAttachmentTrait
             $mimeType,
             $size,
             $filePath,
+            $isInline,
+            $contentId,
         );
 
         $attachmentsTable = $this->fetchTable(self::ATTACHMENTS_TABLE);

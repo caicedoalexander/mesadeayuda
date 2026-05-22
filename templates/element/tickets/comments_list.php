@@ -39,6 +39,13 @@ $priorityGlyphs = [
     TicketConstants::PRIORITY_URGENTE => '↑',
 ];
 
+// Hide inline images from the attachment-cards strip only when the body
+// already references their local URL (rewriteCidReferences resolved
+// cid:<id> → /uploads/.../$a->filename in TicketIngestionService). Before
+// the CRIT-4 fix the comparison was against $a->content_id, which became
+// stale post-rewrite — the cid: token no longer appears anywhere in the
+// body. If the URL is missing, treat the image as an orphan inline and
+// surface it as a card. See audit CRIT-4 (F1+F2+G1).
 $entityAttachments = array_filter($attachments, function ($a) use ($description) {
     if ($a->comment_id !== null) {
         return false;
@@ -46,7 +53,7 @@ $entityAttachments = array_filter($attachments, function ($a) use ($description)
     if (!$a->is_inline) {
         return true;
     }
-    return $a->content_id && strpos($description, $a->content_id) === false;
+    return $a->filename && strpos($description, $a->filename) === false;
 });
 ?>
 
@@ -137,10 +144,13 @@ $entityAttachments = array_filter($attachments, function ($a) use ($description)
                     <?= $this->Sanitize->html($comment->body) ?>
                 </div>
             <?php else:
+                // Same rationale as $entityAttachments above: compare against
+                // the local filename (post-rewrite the body no longer contains
+                // cid: tokens). See audit CRIT-4 (F1+F2+G1).
                 $commentAttachments = array_filter($attachments, function ($a) use ($comment) {
                     if ($a->comment_id !== $comment->id) return false;
                     if (!$a->is_inline) return true;
-                    return $a->content_id && strpos($comment->body, $a->content_id) === false;
+                    return $a->filename && strpos($comment->body, $a->filename) === false;
                 });
                 $cTo = !empty($comment->email_to) ? json_decode($comment->email_to, true) : [];
                 $cCc = !empty($comment->email_cc) ? json_decode($comment->email_cc, true) : [];

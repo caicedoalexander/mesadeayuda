@@ -84,6 +84,72 @@ class TicketAttachmentService
     }
 
     /**
+     * Download inline images referenced by cid: in the email body, persist each
+     * with is_inline=true / content_id=<cid>, and return a [content_id => local URL]
+     * map so the caller can rewrite the body BEFORE sanitization.
+     *
+     * Kept separate from processEmailAttachments because the return contract
+     * differs (map vs void) and only inline images need this round-trip. See
+     * audit CRIT-4 (F1+F2+G1).
+     *
+     * @param \Cake\Datasource\EntityInterface $ticket Ticket entity (must have gmail_message_id and ticket_number)
+     * @param array<int, array{filename: string, mime_type: string, attachment_id: string, content_id: string, size: int}> $inlineImages
+     * @param int $userId Uploader user ID (typically the requester)
+     * @param int|null $commentId Optional comment to associate inline images with (null for ticket-level)
+     * @return array<string, string> Map content_id => '/uploads/attachments/{n}/{uuid}.ext'
+     */
+    public function processInlineImages(EntityInterface $ticket, array $inlineImages, int $userId, ?int $commentId = null): array
+    {
+        assert($ticket instanceof Ticket);
+        if ($inlineImages === []) {
+            return [];
+        }
+
+        $gmailService = $this->getGmailService();
+        $map = [];
+
+        foreach ($inlineImages as $img) {
+            $cid = (string)($img['content_id'] ?? '');
+            if ($cid === '') {
+                continue;
+            }
+            try {
+                $content = $gmailService->downloadAttachment(
+                    $ticket->gmail_message_id,
+                    $img['attachment_id'],
+                );
+
+                $attachment = $this->saveAttachmentFromBinary(
+                    $ticket,
+                    $img['filename'],
+                    $content,
+                    $img['mime_type'],
+                    $commentId,
+                    $userId,
+                    isInline: true,
+                    contentId: $cid,
+                );
+
+                if ($attachment !== null) {
+                    $url = $this->getWebUrl($attachment);
+                    if ($url !== null) {
+                        $map[$cid] = $url;
+                    }
+                }
+            } catch (Exception $e) {
+                Log::error('Failed to process inline image', [
+                    'ticket_id' => $ticket->id,
+                    'cid' => $cid,
+                    'filename' => $img['filename'] ?? '(unknown)',
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return $map;
+    }
+
+    /**
      * Lazily build (or return cached) Gmail client. Subsequent calls reuse
      * the instance, avoiding repeated OAuth refresh roundtrips when many
      * tickets are ingested in a single batch.
