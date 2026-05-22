@@ -52,13 +52,15 @@ El UI muestra los comments en **lista plana cronológica**; no existe representa
 
 **Hallazgos por severidad:**
 
-| Severidad | Cantidad | IDs |
-|-----------|----------|-----|
-| Crítico | 4 | L2, J1+J2+J7 (compuesto), K3+K4+K5 (compuesto), F1+F2+G1 (compuesto) |
-| Alto | 3 | L3, A3, B1 |
-| Medio | 6 | I4, J3, J4, J5, G2, F3 |
-| Bajo | 7 | A1, A2, A4, D1, D3, G4, J8 |
-| Verificado OK | 8 | I1, I2, I3, I5, I7, K1, K2, E1, E2, G3 |
+| Severidad | Cantidad inicial | Estado actual (2026-05-22) |
+|-----------|------------------|----------------------------|
+| Crítico | 4 | 0 — todos cerrados en commit `e3c19e5` |
+| Alto | 3 | 1 — ALT-3 (UI árbol) abierto; L3 y A3 cerrados |
+| Medio | 6 | 1 — MED-5 (G2 tracking pixels) abierto; resto cerrado |
+| Bajo | 7 | 7 — todos abiertos (cosméticos; cierre diferido) |
+| Verificado OK | 10 | sin cambios |
+
+**Cierre del lote crítico + alto + medio:** commit `e3c19e5` (2026-05-22) cierra 11 findings: CRIT-1, CRIT-2, CRIT-3, CRIT-4, ALT-1, ALT-2, MED-1, MED-2 (indirecto por CRIT-2), MED-3, MED-4, MED-6 (indirecto por CRIT-4). Tests adaptados en el mismo commit. Quedan abiertos: ALT-3 (3 fases de UI árbol), MED-5 (G2 + BAJ-6 G4 filtro de tracking pixels), y los 7 hallazgos bajos (cosméticos).
 
 ---
 
@@ -99,6 +101,8 @@ El UI muestra los comments en **lista plana cronológica**; no existe representa
 
 ### CRIT-1 (L2) — Respuestas del cliente a notificaciones se descartan silenciosamente 🔴
 
+> **Cerrado 2026-05-22 — commit `e3c19e5`.** `GmailService::isSystemNotification` ahora descarta solo cuando `From == system_email`. Removidas las dos ramas anteriores (HMAC stamp + legacy `X-Mesa-Ayuda-Notification` con DKIM pass) que producían falsos positivos al citar el subject sellado en las réplicas de clientes. Helper privado `dkimPassesForOwnDomain` eliminado (dead code post-fix). Tests adaptados en `GmailServiceTest`: `testIsSystemNotificationDoesNotDiscardStampedReplyFromExternalSender` (renombrado, ahora assert `false`) + `testIsSystemNotificationIgnoresLegacyHeaderWhenFromIsExternal` (renombrado). Dos tests obsoletos eliminados (legacy DKIM pass own/attacker domain).
+
 **Síntoma:** Toda réplica del cliente a una notificación nuestra se identifica como `is_system_notification = true` y se descarta en el loop de import.
 
 **Cadena de causa:**
@@ -130,6 +134,8 @@ El UI muestra los comments en **lista plana cronológica**; no existe representa
 ---
 
 ### CRIT-2 (J1+J2+J7 compuesto) — Threading outbound roto 🔴
+
+> **Cerrado 2026-05-22 — commit `e3c19e5`.** Tres cambios coordinados: (1) `GmailService::sendEmail` ahora retorna `?string` (el RFC `Message-ID` que Gmail asignó, leído vía `users.messages.get` con `metadataHeaders=['Message-ID']`); (2) `EmailService::sendEmail` acepta y propaga `inReplyTo` + `referencesHeader` como cabeceras MIME; (3) nuevo `TicketCommentService::attachOutboundMessageId(commentId, rfcId, references)` persiste el ID retornado en `ticket_comments.rfc_message_id`. Las strategies `TicketResponded`, `TicketCommentAdded`, `TicketStatusChanged` resuelven la cadena via nuevo helper protected `AbstractTicketStrategy::resolveThreading(Ticket)`. `NotificationMessage` VO gana tres campos opcionales (`inReplyTo`, `referencesHeader`, `commentId`) propagados a través de `EmailChannel`. `TicketCreatedStrategy` deliberadamente NO modificado (primer mensaje del hilo, sin ancla). Cierra también MED-2 (J3 — el fallback a `gmail_thread_id` ya no es la única ruta de reattachment).
 
 Tres gaps que en cadena rompen el hilado en el lado cliente:
 
@@ -232,6 +238,8 @@ $references = implode(' ', $chain);
 
 ### CRIT-3 (K3+K4+K5 compuesto) — Los CC añadidos por agentes no pueden responder 🔴
 
+> **Cerrado 2026-05-22 — commit `e3c19e5`.** `isEmailInTicketRecipients` ahora delega a un nuevo helper privado `getAuthorizedEmailSet(Ticket)` que arma el set autorizado como UNION de: (a) `ticket.email_to_array` + `email_cc_array`, (b) `ticket.requester.email`, (c) **`email_to` + `email_cc` de TODOS los `ticket_comments` públicos del ticket**. Una sola query SQL adicional (no N+1) — la query es `SELECT email_to, email_cc FROM ticket_comments WHERE ticket_id = ? AND is_system_comment = 0 AND comment_type = 'public'`. Un CC añadido por un agente (escalación a experto externo) ahora puede responder y su mensaje queda como comment del ticket existente en lugar de descartarse como "unauthorized sender".
+
 `TicketIngestionService::isEmailInTicketRecipients` líneas 700-738 consulta exclusivamente:
 - `ticket.email_to_array`
 - `ticket.email_cc_array`
@@ -280,6 +288,8 @@ $authorized = $this->fetchTable('TicketComments')->find()
 ---
 
 ### CRIT-4 (F1+F2+G1 compuesto) — Inline images no se procesan + URLs no se reescriben 🔴
+
+> **Cerrado 2026-05-22 — commit `e3c19e5`.** Cuatro cambios coordinados: (1) `GenericAttachmentTrait::buildAttachmentData` y `saveAttachmentFromBinary` aceptan parámetros opcionales `isInline` y `contentId` (defaults `false/null` preservan callers existentes — uploads de form, attachments regulares, WhatsApp ingest); (2) nuevo `TicketAttachmentService::processInlineImages(ticket, inlineImages, userId, ?commentId)` descarga cada imagen vía Gmail API, la persiste con `is_inline=true` + `content_id=<cid>`, y retorna mapa `[cid → /uploads/...url]`; (3) nuevo `TicketIngestionService::rewriteCidReferences(html, cidMap)` reescribe `<img src="cid:XYZ">` a la URL local **antes** del sanitize via `preg_replace_callback`; (4) `GmailService::parseMessage` ya NO sanitiza prematuramente — la sanitización vive solo en `TicketIngestionService` para que el rewriter vea el HTML raw. Tanto `createFromEmail` como `createCommentFromEmail` integran el flujo (save → process inline → rewrite → re-sanitize → re-save). `comments_list.php` actualiza ambos filtros para comparar contra `filename` en vez de `content_id` post-rewrite. Cierra también MED-6 (F3 — el filtro de inline en el template ya no es lógica muerta).
 
 Tres gaps en cadena que rompen las imágenes embebidas (logos de firma, screenshots inline):
 
@@ -380,7 +390,7 @@ El template `comments_list.php:42-50, 140-146` ya tiene la lógica correcta para
 
 ### ALT-1 (L3) — `isAutoReply` falsos positivos por `List-Unsubscribe` o `Feedback-ID` 🟠
 
-`GmailService.php:633-641`:
+> **Cerrado 2026-05-22 — commit `e3c19e5`.** `isAutoReply` ahora requiere que `List-Unsubscribe` y `Feedback-ID` se combinen con `Precedence: bulk|list|junk` O `Auto-Submitted` no-no para marcarse como auto-reply. Headers vendor legacy (`X-Autoreply`, `X-Autorespond`) y `Precedence: bulk/list/junk` siguen siendo señales suficientes por sí solas. Tests adaptados: `testIsAutoReplyDetectsListUnsubscribe` partido en dos (`...IgnoresListUnsubscribeWithoutBulkSignal` + `...DetectsListUnsubscribeWithPrecedenceBulk`); idem `Feedback-ID`.
 ```php
 if (trim($this->getHeader($headers, 'List-Unsubscribe')) !== '') {
     return true;
@@ -402,6 +412,8 @@ Las RFCs 2369/8058 dicen que mail bulk/list TIENE `List-Unsubscribe`, pero el co
 **Fix sugerido:** requerir combinación (`List-Unsubscribe` o `Feedback-ID`) **+** (`Precedence: bulk|list|junk` o `Auto-Submitted != no`). La combinación es el patrón real de bulk sender.
 
 ### ALT-2 (A3) — `withinReattachWindow` rechaza tickets abiertos antiguos 🟠
+
+> **Cerrado 2026-05-22 — commit `e3c19e5`.** `withinReattachWindow` ahora retorna `true` incondicionalmente para tickets no resueltos. La ventana `THREAD_REATTACH_WINDOW_DAYS` solo aplica a tickets resueltos (evita resurrección de hilos cerrados antiguos por clientes stale, sin fragmentar conversaciones abiertas largas).
 
 `src/Service/TicketIngestionService.php:431-443`:
 
@@ -426,6 +438,8 @@ return true;  // open ticket: no recency gate
 
 ### ALT-3 (B1) — UI sin árbol de hilo (lista plana cronológica) 🟠
 
+> **Abierto.** Plan de 3 fases en backlog. Requiere validar primero CRIT-2 (recién cerrado en `e3c19e5`) con datos reales — la calidad del árbol depende de tener `rfc_message_id` poblado en outbound. Fase 1 ya satisfecha al mergear `e3c19e5`. Próximo paso recomendado: Fase 2 (chip "↳ En respuesta a: ..." + botón "Responder" en cada `_thread_message`), bajo riesgo, alto valor informativo, sin requerir Helper.
+
 `templates/element/tickets/comments_list.php:119-161` renderiza una `<section class="thread-messages">` que itera linealmente sobre `$comments`. La única "línea vertical" es decorativa (`.thread-messages::before`, ancla todos los avatares).
 
 Datos disponibles para construir el árbol:
@@ -445,15 +459,21 @@ Datos disponibles para construir el árbol:
 
 ### MED-1 (I4) — Mensaje de éxito engañoso si TX2 hace rollback no-excepción
 
+> **Cerrado 2026-05-22 — commit `e3c19e5`.** `handleResponse` ahora captura el bool retornado por `$connection->transactional()` en `$tx2Ok` (mismo patrón que `$tx1Ok`). Si `$tx2Ok !== true` post-catch, retorna mensaje de éxito parcial (`'Comentario guardado, pero no se pudo cambiar el estado.'`), limpia `$pendingEvents` para evitar dispatch fantasma, y hace return temprano. El catch de `InvalidStatusTransitionException` queda intacto.
+
 `TicketPipelineService.php:184-235`. Si `$table->save($entity)` retorna `false` dentro de la closure transactional (línea 299), la TX2 rollbackea **silenciosamente** sin disparar `InvalidStatusTransitionException`. El catch del `try` no entra. `$pendingEvents` queda vacío. El return en línea 254 invoca `buildResponseResult($hasComment, $hasStatusChange, ...)` con `$hasStatusChange=true` y produce mensaje "Comentario agregado y estado actualizado exitosamente" aunque el estado no cambió.
 
 **Fix sugerido:** captura el `$tx2Ok` del `transactional()` (devuelve `bool`), y si es false propaga un mensaje de éxito parcial.
 
 ### MED-2 (J3) — Threading depende exclusivamente del fallback `gmail_thread_id`
 
+> **Cerrado 2026-05-22 — commit `e3c19e5`** (indirecto, vía CRIT-2). Tras persistir el Message-ID outbound en `ticket_comments.rfc_message_id`, el reattachment por RFC ahora matchea para réplicas a notificaciones nuestras. `gmail_thread_id` queda como fallback genuino (no como único camino).
+
 Ya cubierto en CRIT-2. Se conserva como ítem separado para tracking porque la mitigación parcial (mientras CRIT-2 no se implementa) es **monitorear el ratio "reattachment por RFC vs por threadId"** en logs.
 
 ### MED-3 (J4) — Stamp HMAC se concatena indefinidamente en subjects
+
+> **Cerrado 2026-05-22 — commit `e3c19e5`.** `NotificationStamp::append` ahora hace `preg_replace(STAMP_RE, '', $subject)` antes de concatenar el nuevo stamp. Idempotente: re-estampar con mismo `ticket_number` produce mismo resultado. Cubre el caso de múltiples stamps acumulados de iteraciones previas (la sustitución es global).
 
 `NotificationStamp::append` línea 35-38 hace `rtrim($subject) . ' [#...]'` sin `preg_replace` previo. Si el subject ya tiene stamp (porque el cliente quoteó), append añade un segundo.
 
@@ -463,6 +483,8 @@ Después de N rondas: `Re: foo [#123·s=...] [#123·s=...] [#123·s=...]`. La ve
 
 ### MED-4 (J5) — Templates outbound sin `Re:` y con subjects que cambian
 
+> **Cerrado 2026-05-22 — commit `e3c19e5`.** Nuevo `App\Notification\Email\SubjectFormatter::reply(string): string` (idempotente, `stripos === 0` evita duplicar `Re:`). Aplicado en `TicketCommentAddedTemplate`, `TicketUpdatedTemplate` y `TicketStatusChangedTemplate`. `TicketCreatedTemplate` deliberadamente NO modificado (primer mensaje del hilo, no es respuesta).
+
 `TicketCommentAddedTemplate.php:42`: `"$agentName te respondió en el ticket #N"`.
 `TicketUpdatedTemplate.php:38`: `"$agentName actualizó tu ticket #N"`.
 
@@ -471,6 +493,8 @@ Sin `Re:` y con subjects que mutan entre notificaciones, los MUAs que carecen de
 **Fix sugerido:** prefijar `Re:` cuando el evento es respuesta a una conversación existente (todos los `TicketResponded`, `TicketCommentAdded`, `TicketStatusChanged`); dejar `TicketCreated` sin `Re:`.
 
 ### MED-5 (G2) — URLs `googleusercontent.com` y tracking pixels permanecen en body
+
+> **Abierto.** Se difiere a un segundo lote junto con BAJ-6 (G4 tracking pixels 1×1). Decisión de scope: requiere debate de política (proxy local vs blocklist vs strip) y no es bloqueante para el caso de uso central post-CRIT-4. Pendiente como ítem de privacy hygiene.
 
 Búsqueda en `src/`: no hay filtro/reescritura de `googleusercontent.com`, `mail.google.com`, `gstatic.com` (solo entradas CSP no relacionadas en `Application.php:162`).
 
@@ -493,6 +517,8 @@ $html = preg_replace_callback(
 ```
 
 ### MED-6 (F3) — Filtro inline en `comments_list.php` es lógica muerta hoy
+
+> **Cerrado 2026-05-22 — commit `e3c19e5`** (indirecto vía CRIT-4). El filtro fue actualizado para comparar contra `$a->filename` en vez de `$a->content_id` (post-rewrite el body contiene la URL local, no el `cid:`). Aplicado en ambos sitios (ticket-level y comment-level). Ya no es lógica muerta — discrimina correctamente entre inline cuya URL aparece en el body (oculta como card) e inline huérfana (se muestra como card).
 
 `comments_list.php:42-50` y `:140-146` filtran inline images cuyo `content_id` ya aparece en el body. Lógicamente correcto, pero hoy `is_inline` siempre es false (F2) y `content_id` siempre NULL (F2). El filtro existe pero no opera.
 
@@ -570,23 +596,25 @@ Funciona por convención (`From` = `GMAIL_USER_EMAIL` que es la cuenta ingestora
 
 Ordenado por **impacto / esfuerzo**. Cada ítem indica qué desbloquea.
 
-| # | Fix | Severidad | Esfuerzo | Bloquea |
-|---|-----|-----------|----------|---------|
-| 1 | **CRIT-1 (L2)** — Stamp solo descarta si `From == system_email`; o cambiar a routing en vez de discard | 🔴 Crítico | XS | — |
-| 2 | **ALT-1 (L3)** — Endurecer `isAutoReply` (combinación de headers) | 🟠 Alto | XS | — |
-| 3 | **CRIT-2 (J1+J2+J7)** — Capturar Message-ID outbound, inyectar In-Reply-To/References, persistir en comments | 🔴 Crítico | M | ALT-3 (UI árbol Fase 1) |
-| 4 | **CRIT-3 (K3+K4+K5)** — UNION en `isEmailInTicketRecipients` con `ticket_comments.email_to/cc` | 🔴 Crítico | S | — |
-| 5 | **CRIT-4 (F1+F2+G1)** — Procesar inline images con `is_inline=true`/`content_id`; reescribir `cid:` antes del sanitize | 🔴 Crítico | M | ALT-3 (UI árbol Fase 2 informativa) |
-| 6 | **ALT-2 (A3)** — Corregir `withinReattachWindow` para tickets abiertos | 🟠 Alto | XS | — |
-| 7 | **MED-4 (J5)** — Añadir `Re:` a templates de respuesta | 🟡 Medio | XS | — |
-| 8 | **MED-3 (J4)** — Reemplazar stamp existente en vez de concatenar | 🟡 Medio | XS | — |
-| 9 | **MED-1 (I4)** — Detectar rollback no-excepción y reportar éxito parcial | 🟡 Medio | XS | — |
-| 10 | **MED-5 (G2) + BAJ-6 (G4)** — Filtro de tracking pixels + blocklist de googleusercontent | 🟡 Medio | S | — |
-| 11 | **ALT-3 Fase 2** — Chip "En respuesta a" + botón "Responder" en cada `_thread_message` | 🟠 Alto | S | (3) |
-| 12 | **ALT-3 Fase 3** — Árbol completo con `ThreadTreeHelper` | 🟠 Alto | L | (3), (5), cobertura datos |
-| 13 | Resto de bajos (BAJ-1..5, BAJ-7) | 🟢 Bajo | XS-S | — |
+| # | Fix | Severidad | Esfuerzo | Estado |
+|---|-----|-----------|----------|--------|
+| 1 | **CRIT-1 (L2)** — Stamp solo descarta si `From == system_email` | 🔴 Crítico | XS | ✅ `e3c19e5` |
+| 2 | **ALT-1 (L3)** — Endurecer `isAutoReply` (combinación de headers) | 🟠 Alto | XS | ✅ `e3c19e5` |
+| 3 | **CRIT-2 (J1+J2+J7)** — Capturar Message-ID outbound, inyectar In-Reply-To/References, persistir en comments | 🔴 Crítico | M | ✅ `e3c19e5` |
+| 4 | **CRIT-3 (K3+K4+K5)** — UNION en `isEmailInTicketRecipients` con `ticket_comments.email_to/cc` | 🔴 Crítico | S | ✅ `e3c19e5` |
+| 5 | **CRIT-4 (F1+F2+G1)** — Procesar inline images con `is_inline=true`/`content_id`; reescribir `cid:` antes del sanitize | 🔴 Crítico | M | ✅ `e3c19e5` |
+| 6 | **ALT-2 (A3)** — Corregir `withinReattachWindow` para tickets abiertos | 🟠 Alto | XS | ✅ `e3c19e5` |
+| 7 | **MED-4 (J5)** — Añadir `Re:` a templates de respuesta | 🟡 Medio | XS | ✅ `e3c19e5` |
+| 8 | **MED-3 (J4)** — Reemplazar stamp existente en vez de concatenar | 🟡 Medio | XS | ✅ `e3c19e5` |
+| 9 | **MED-1 (I4)** — Detectar rollback no-excepción y reportar éxito parcial | 🟡 Medio | XS | ✅ `e3c19e5` |
+| 10 | **MED-5 (G2) + BAJ-6 (G4)** — Filtro de tracking pixels + blocklist de googleusercontent | 🟡 Medio | S | ⏳ Abierto |
+| 11 | **ALT-3 Fase 2** — Chip "En respuesta a" + botón "Responder" en cada `_thread_message` | 🟠 Alto | S | ⏳ Abierto (depende de (3) validado en staging) |
+| 12 | **ALT-3 Fase 3** — Árbol completo con `ThreadTreeHelper` | 🟠 Alto | L | ⏳ Abierto (depende de (11) + cobertura datos) |
+| 13 | Resto de bajos (BAJ-1..5, BAJ-7) | 🟢 Bajo | XS-S | ⏳ Abierto (cosméticos) |
 
-**Recomendación de orden de implementación**: 1 → 2 → 6 (todos XS, alto impacto, sin dependencias) → 4 (S, alto impacto) → 3 (M, desbloquea árbol) → 5 (M, desbloquea visualización completa inline) → 7-10 → 11 → 12 → 13.
+**Items cerrados (1-9):** 9 fixes mergeados en commit `e3c19e5` (2026-05-22). Cierran también de forma indirecta MED-2 (J3, vía CRIT-2) y MED-6 (F3, vía CRIT-4) — banners en sus respectivas secciones. Tests adaptados en el mismo commit.
+
+**Próximo lote sugerido:** validar (1-9) en staging con tráfico real antes de mover a (10-13).
 
 ---
 
@@ -614,3 +642,4 @@ Ordenado por **impacto / esfuerzo**. Cada ítem indica qué desbloquea.
 | Fecha | Cambio | Autor |
 |-------|--------|-------|
 | 2026-05-22 | Versión inicial — 4 críticos, 3 altos, 6 medios, 7 bajos, 10 verificados OK | Audit multi-agente |
+| 2026-05-22 | Cierre del lote crítico + alto + medio en commit `e3c19e5`. Cerrados: CRIT-1, CRIT-2, CRIT-3, CRIT-4, ALT-1, ALT-2, MED-1, MED-3, MED-4 directamente; MED-2 y MED-6 indirectamente. Banners de cierre añadidos en §3-§5; §1 tabla de severidades y §8 roadmap actualizados. Abiertos: ALT-3 (UI árbol), MED-5 + BAJ-6 (tracking pixels), BAJ-1..5, BAJ-7. | Cierre post-fix |
