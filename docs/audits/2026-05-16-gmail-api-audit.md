@@ -26,12 +26,12 @@ Sin embargo hay **hallazgos importantes** que afectan privilegios OAuth, resilie
 
 **Hallazgos por severidad:**
 
-| Severidad | Cantidad inicial | Estado actual (2026-05-16) |
+| Severidad | Cantidad inicial | Estado actual (2026-05-22) |
 |-----------|------------------|----------------------------|
-| Alto      | 3 | 0 (H-1, H-2, H-3 cerrados) |
-| Medio     | 5 | 3 (M-1, M-3 cerrados) |
-| Bajo      | 4 | 2 (B-1 WONT_FIX, B-4 cerrado) |
-| Informativo | 3 | 3 |
+| Alto      | 3 | 0 — todos cerrados |
+| Medio     | 5 | 0 — todos cerrados |
+| Bajo      | 4 | 0 — B-2/B-3/B-4 cerrados, B-1 WONT_FIX |
+| Informativo | 3 | 0 — I-1/I-2/I-3 cerrados |
 
 **P0 cerrado el mismo día:** los tres ítems P0 del §8 (H-1, H-3, M-1) fueron implementados y mergeados a `main` en commits `b8e3d2a`, `5b21651`, `8ae81f0`. Ver §11 para detalles operativos.
 
@@ -265,13 +265,28 @@ Si un operador rota la cuenta Gmail (nuevo `client_secret_json` + reautorizació
 
 ### I-1 — `google/apiclient` en modo mantenimiento
 
+> **Cerrado 2026-05-22 — documental.** Estado de la dependencia y cadencia de
+> revisión trimestral (próxima: 2026-08-22) documentados en
+> `docs/operations/gmail-oauth-setup.md` §5. Sin acción de código:
+> `google/apiclient` sigue siendo el cliente oficial soportado. Disparadores de
+> reapertura (migración a SDKs per-service): deprecación anunciada o CVE sin
+> parche.
+
 El repositorio oficial declara la librería como "maintenance mode" — solo bugs críticos y seguridad, sin features nuevas. Para Gmail aún es el camino oficial, pero conviene seguir el `SECURITY.md` del repo y considerar la migración futura a los SDKs per-product (`googleapis/google-api-php-client-services`).
 
 ### I-2 — Proyecto OAuth en GCP debe estar **Published / Production**
 
+> **Cerrado 2026-05-22 — documental.** Requisito de proyecto OAuth en
+> `Publishing status: In production`, scope único `gmail.modify` y redirect URI
+> documentados en el nuevo `docs/operations/gmail-oauth-setup.md`. Cross-link
+> recíproco añadido desde `n8n-gmail-webhook.md`.
+
 Si el proyecto OAuth está en `Testing` con tipo `External`, **todo refresh_token caduca a 7 días**. Documentar en `docs/operations/` que el proyecto debe estar publicado (y que los scopes solicitados deben pasar la verificación de Google, lo cual refuerza H-1: a menos scopes, menos fricción de verificación).
 
 ### I-3 — Logs incluyen `to`/`subject`
+
+> **Cerrado 2026-05-19 — commit `1f58e5d`.** `LogMasker::email` aplicado en los
+> call sites de log `info`. Ver §11, entrada P3.
 
 **Archivos:** `EmailService.php:117-128`, `GmailService.php:556-562`, `TicketIngestionService.php:146-150`.
 
@@ -316,10 +331,16 @@ No es PII grave pero sí dato personal bajo LOPD/GDPR equivalentes. Considerar e
 
 ### P3 (evaluar valor)
 
-10. `watch()` + Pub/Sub si crece volumen.
+10. `watch()` + Pub/Sub si crece volumen. — **DEFERRED 2026-05-22**. M-2 ya
+    migró el polling a `history.list` con checkpoint delta (cuota proporcional
+    al delta real, latencia ~60s) — suficiente para el volumen de un helpdesk
+    pyme. `watch()` + Pub/Sub añade infraestructura (topic Pub/Sub, suscripción
+    push, renovación diaria de la lease) sin beneficio proporcional al volumen
+    actual. Reabrir si: se requiere latencia sub-60s, o el cap por corrida se
+    satura de forma sostenida.
 11. `B-1` token-bucket compartido en lugar de sleep. — **Cerrado 2026-05-19 — WONT_FIX**. Ver spec P3 §4 y banner en §5.
-12. `B-2` selección correcta de rama en `multipart/alternative`.
-13. `I-3` enmascarar PII en logs `info`.
+12. `B-2` selección correcta de rama en `multipart/alternative`. — **Completado** (commit `a98bf4e`).
+13. `I-3` enmascarar PII en logs `info`. — **Completado** (commit `1f58e5d`).
 
 ---
 
@@ -518,6 +539,28 @@ No es PII grave pero sí dato personal bajo LOPD/GDPR equivalentes. Considerar e
 1. Tras el primer run del webhook post-deploy, confirmar en un log `info` que `Created ticket from email` reporta el `from` enmascarado (`a***@dominio.tld`).
 2. Enviar un newsletter de prueba (uno con `List-Unsubscribe` real) a la cuenta de soporte y verificar que NO se crea un ticket (es decir, que `isAutoReply` lo intercepta).
 3. Smoke de `multipart/alternative`: reenviar un email forwardeado de Gmail con cuerpo HTML y verificar que el comentario o ticket persistido no muestre el cuerpo duplicado.
+
+### 2026-05-22 — Cierre de ítems informativos (I-1 + I-2 + P3 #10)
+
+**Hallazgos cubiertos:** los tres ítems que quedaron fuera de los bloques
+P0–P3. Cierre 100% documental — sin código, sin migraciones. Sigue el plan en
+`docs/superpowers/plans/2026-05-22-gmail-audit-informational-closure.md` y la
+spec `docs/superpowers/specs/2026-05-22-gmail-audit-informational-closure-design.md`.
+
+| Ítem | Resumen |
+|---|---|
+| I-2 | Nuevo `docs/operations/gmail-oauth-setup.md`: requisito de proyecto OAuth en `In production` (caducidad de 7 días en Testing/External), scope único `gmail.modify`, redirect URI, flujo de re-consentimiento. Cross-link recíproco con `n8n-gmail-webhook.md`. |
+| I-1 | Sección 5 de `gmail-oauth-setup.md`: `google/apiclient` en modo mantenimiento documentado, cadencia de revisión trimestral (próxima 2026-08-22), disparadores de migración. |
+| P3 #10 | `watch()` + Pub/Sub marcado **DEFERRED**: el polling delta de M-2 cubre el volumen pyme; criterios de reapertura documentados en §8. |
+
+**Reconciliación de estado del documento:** además de los tres ítems, se
+actualizó la tabla de §1 y los marcadores de §8 (#12, #13) y §6 (banner de
+I-3) que habían quedado desfasados tras los cierres de P2/P3. El documento de
+auditoría queda 100% cerrado.
+
+**Verificación:** revisión manual de Markdown (los tres archivos renderizados).
+Sin cambios de código — `composer cs-check` / `phpstan` / `composer test` no
+aplican.
 
 ---
 
