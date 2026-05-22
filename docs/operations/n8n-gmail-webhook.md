@@ -4,6 +4,10 @@ Workflow externo a este repositorio. Reemplaza al servicio `worker` (que corría
 `bin/cake gmail_worker` en bucle) por una invocación HTTP periódica al endpoint
 `POST /webhooks/gmail/import`.
 
+> **Ver también:** `gmail-oauth-setup.md` cubre los pre-requisitos de OAuth en
+> Google Cloud Console (estado de publicación del proyecto, scope único,
+> redirect URI) y la vigilancia de la dependencia `google/apiclient`.
+
 ## Pasos en n8n
 
 1. **Crear workflow** llamado `Mesa de Ayuda — Gmail Import Trigger`.
