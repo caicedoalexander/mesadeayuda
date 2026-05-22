@@ -239,6 +239,8 @@ Con 5 attachments en un mismo email, el request bloquea 1s solo en sleeps; el `s
 
 ### B-2 — Concatenación de `body_html` en `multipart/alternative`
 
+> **Cerrado 2026-05-19 — commit `a98bf4e`.** `extractMessageParts` ahora intercepta `multipart/alternative` y desciende solo en una rama (HTML > multipart con HTML > plain). Cinco tests en `GmailServiceTest`. Ver §11, entrada P3.
+
 **Archivo:** `src/Service/GmailService.php:305-311`
 
 `extractMessageParts()` acumula con `\n` cada parte HTML que encuentra. En `multipart/alternative` solo se debe usar **una** de las alternativas (la más rica que el cliente soporte), no concatenar. Funcional pero potencialmente duplica contenido cuando hay forwards anidados.
@@ -246,6 +248,8 @@ Con 5 attachments en un mismo email, el request bloquea 1s solo en sleeps; el `s
 **Recomendación:** detectar `multipart/alternative` y elegir HTML si existe, ignorando el plain de esa misma rama.
 
 ### B-3 — `isAutoReply` no contempla `List-Unsubscribe` ni `Feedback-ID`
+
+> **Cerrado 2026-05-19 — commit `59a5b14`.** `isAutoReply` amplía `Auto-Submitted` a "cualquier valor distinto de `no`" (RFC 3834 §5) y suma `List-Unsubscribe` (RFC 2369/8058) y `Feedback-ID` (Google/Yahoo bulk-sender 2024+). Cinco tests. Ver §11, entrada P3.
 
 **Archivo:** `src/Service/GmailService.php:417-444`
 
