@@ -350,7 +350,9 @@
     const QUOTE_FWD_REGEX =
         /^(?:[-_=]{2,}\s*)?(Forwarded message|Begin forwarded message|Mensaje reenviado|Mensaje original)\b/i;
 
-    function isQuoteBoundary(el) {
+    // "Hard" quote container: this element IS the quote wrapper by tag or
+    // semantic class. Used by passthrough to decide whether to descend.
+    function isHardQuoteContainer(el) {
         if (!el || el.nodeType !== 1) return false;
         if (el.tagName === 'BLOCKQUOTE') return true;
         if (el.tagName === 'DIV') {
@@ -361,10 +363,21 @@
             if (el.id && /^(divRplyFwdMsg|reply-intro)/i.test(el.id)) {
                 return true;
             }
+        }
+        return false;
+    }
+
+    function isQuoteBoundary(el) {
+        if (!el || el.nodeType !== 1) return false;
+        if (isHardQuoteContainer(el)) return true;
+        if (el.tagName === 'DIV') {
             // Fallback: a <div> that wraps a <blockquote> is almost certainly
             // the container Gmail/Outlook emits around an attribution paragraph
             // plus the quoted body. HTMLPurifier strips the class that would
-            // identify it, but the structure survives.
+            // identify it, but the structure survives. Only applied after the
+            // passthrough check, so a generic wrapper around the whole body
+            // (which may itself contain a blockquote way inside) doesn't get
+            // misclassified — the passthrough logic descends past it first.
             if (el.querySelector('blockquote')) {
                 return true;
             }
@@ -385,10 +398,13 @@
         if (!children.length) return false;
 
         // Passthrough wrapper case: Gmail sometimes wraps the whole reply in
-        // a single <div dir="ltr"> that itself isn't a quote boundary.
+        // a single <div dir="ltr"> that itself isn't a quote container.
         // Descend one level so the disclaimer/signature paragraphs remain
-        // visible as siblings of the eventual boundary.
-        if (children.length === 1 && children[0].tagName === 'DIV' && !isQuoteBoundary(children[0])) {
+        // visible as siblings of the eventual boundary. Use the HARD check
+        // here — a wrapper that merely contains a <blockquote> somewhere
+        // inside is still a passthrough; we want to find the real boundary
+        // at the inner level.
+        if (children.length === 1 && children[0].tagName === 'DIV' && !isHardQuoteContainer(children[0])) {
             return collapseFromBoundary(children[0]);
         }
 
@@ -397,6 +413,12 @@
             if (isQuoteBoundary(children[i])) { idx = i; break; }
         }
         if (idx < 0) return false;
+
+        // Skip collapse when the boundary is the very first child — the
+        // entire message body is quoted/forwarded content (typical when a
+        // ticket is created from a forwarded email). Hiding everything
+        // leaves a useless toggle with no visible context.
+        if (idx === 0) return false;
 
         const wrapper = document.createElement('div');
         wrapper.className = 'thread-message-quoted-hidden';
