@@ -438,7 +438,7 @@ return true;  // open ticket: no recency gate
 
 ### ALT-3 (B1) — UI sin árbol de hilo (lista plana cronológica) 🟠
 
-> **Abierto.** Plan de 3 fases en backlog. Requiere validar primero CRIT-2 (recién cerrado en `e3c19e5`) con datos reales — la calidad del árbol depende de tener `rfc_message_id` poblado en outbound. Fase 1 ya satisfecha al mergear `e3c19e5`. Próximo paso recomendado: Fase 2 (chip "↳ En respuesta a: ..." + botón "Responder" en cada `_thread_message`), bajo riesgo, alto valor informativo, sin requerir Helper.
+> **Abierto.** Plan de 3 fases en backlog. Fase 1 (persistencia RFC outbound) cerrada en `e3c19e5` (comentarios) + `7b2d691` (welcome de TicketCreated) + `652611e` (cambio de estado). Próximo paso recomendado: Fase 2 (chip "↳ En respuesta a: ..." + botón "Responder" en cada `_thread_message`), bajo riesgo, alto valor informativo, sin requerir Helper.
 
 `templates/element/tickets/comments_list.php:119-161` renderiza una `<section class="thread-messages">` que itera linealmente sobre `$comments`. La única "línea vertical" es decorativa (`.thread-messages::before`, ancla todos los avatares).
 
@@ -449,7 +449,8 @@ Datos disponibles para construir el árbol:
 **Impacto:** 🟠 Alto en UX — el agente no ve a qué mensaje responde cada réplica, especialmente en threads largos con múltiples participantes.
 
 **Fix sugerido (plan en 3 fases entregado por el audit):**
-1. **Fase 1**: implementar CRIT-2 (persistir Message-ID outbound). Sube cobertura de threading a ~100% en tickets nuevos.
+1. **Fase 1**: implementar CRIT-2 (persistir Message-ID outbound de comentarios). Cubre el outbound de respuestas y notas; deja fuera el welcome de `TicketCreated` y el outbound de `TicketStatusChanged` (sin `commentId` asociado).
+   - **Actualización 2026-05-23**: gap cerrado por commits `7b2d691` (welcome outbound persistido en `tickets.rfc_message_id` cuando está vacío, sin clobbear el Message-ID original del cliente en tickets email-creados) y `652611e` (outbound de cambio de estado anclado al `system_comment` interno que ya genera `TicketPipelineService::changeStatus`). Cobertura RFC de threading outbound ahora sí ~100% para tickets nuevos.
 2. **Fase 2**: chip `↳ En respuesta a: "Asunto del mensaje"` + botón "Responder" en cada `_thread_message`. Bajo riesgo, alto valor informativo.
 3. **Fase 3**: árbol completo con `ThreadTreeHelper` (construcción O(n), cycle prevention, depth clamp 3 niveles), nuevo `_thread_node.php` recursivo, system notes a nivel raíz por `created`.
 
@@ -643,3 +644,4 @@ Ordenado por **impacto / esfuerzo**. Cada ítem indica qué desbloquea.
 |-------|--------|-------|
 | 2026-05-22 | Versión inicial — 4 críticos, 3 altos, 6 medios, 7 bajos, 10 verificados OK | Audit multi-agente |
 | 2026-05-22 | Cierre del lote crítico + alto + medio en commit `e3c19e5`. Cerrados: CRIT-1, CRIT-2, CRIT-3, CRIT-4, ALT-1, ALT-2, MED-1, MED-3, MED-4 directamente; MED-2 y MED-6 indirectamente. Banners de cierre añadidos en §3-§5; §1 tabla de severidades y §8 roadmap actualizados. Abiertos: ALT-3 (UI árbol), MED-5 + BAJ-6 (tracking pixels), BAJ-1..5, BAJ-7. | Cierre post-fix |
+| 2026-05-23 | Auditoría dirigida sobre threading de notificaciones outbound detectó dos gaps no cubiertos por CRIT-2: (a) `TicketCreated` no persistía su Message-ID en `tickets.rfc_message_id`, (b) `TicketStatusChanged` no persistía su Message-ID en ningún sitio. Ambos cerrados: `7b2d691` (welcome al ticket) + `652611e` (cambio de estado al system_comment interno). Texto corregido en ALT-3 Fase 1 para reflejar que la cobertura RFC outbound ahora sí es ~100% para tickets nuevos. | Cierre follow-up |
