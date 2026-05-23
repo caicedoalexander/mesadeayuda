@@ -6,6 +6,8 @@ namespace App\Test\TestCase\Notification\Channel;
 use App\Notification\Channel\NotificationMessage;
 use Cake\TestSuite\TestCase;
 use InvalidArgumentException;
+use ReflectionClass;
+use ReflectionProperty;
 
 class NotificationMessageTest extends TestCase
 {
@@ -54,5 +56,116 @@ class NotificationMessageTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         NotificationMessage::whatsapp(recipient: '+57x', bodyText: '');
+    }
+
+    public function testWhatsappFactoryRejectsEmptyRecipient(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        NotificationMessage::whatsapp(recipient: '', bodyText: 'hello');
+    }
+
+    /**
+     * MED-1 / CRIT-2 / J7: threading anchors (inReplyTo, referencesHeader,
+     * commentId, ticketId) MUST propagate from the factory to the VO so the
+     * email transport can persist them after Gmail send.
+     */
+    public function testEmailFactoryPropagatesThreadingAnchors(): void
+    {
+        $msg = NotificationMessage::email(
+            recipient: 'user@example.com',
+            subject: 'Re: Hi',
+            bodyHtml: '<p>Body</p>',
+            inReplyTo: 'msg-abc@mail.example.com',
+            referencesHeader: '<root@x> <msg-abc@mail.example.com>',
+            commentId: 99,
+            ticketId: 42,
+        );
+
+        $this->assertSame('msg-abc@mail.example.com', $msg->inReplyTo);
+        $this->assertSame('<root@x> <msg-abc@mail.example.com>', $msg->referencesHeader);
+        $this->assertSame(99, $msg->commentId);
+        $this->assertSame(42, $msg->ticketId);
+    }
+
+    /**
+     * Threading anchors default to null when omitted. This is the contract
+     * TicketCreatedStrategy relies on (no in-reply-to on creation = no
+     * threading header injected by EmailService).
+     */
+    public function testEmailFactoryDefaultsThreadingAnchorsToNull(): void
+    {
+        $msg = NotificationMessage::email(
+            recipient: 'user@example.com',
+            subject: 's',
+            bodyHtml: '<p>b</p>',
+        );
+
+        $this->assertNull($msg->inReplyTo);
+        $this->assertNull($msg->referencesHeader);
+        $this->assertNull($msg->commentId);
+        $this->assertNull($msg->ticketId);
+    }
+
+    /**
+     * commentId and ticketId are mutually independent: the VO does not enforce
+     * an XOR. Strategies choose which to populate (TicketCreated → ticketId
+     * only; comment-bearing strategies → both).
+     */
+    public function testTicketIdAndCommentIdAreIndependent(): void
+    {
+        $bothNull = NotificationMessage::email(
+            recipient: 'a@b.c',
+            subject: 's',
+            bodyHtml: '<p>b</p>',
+        );
+        $this->assertNull($bothNull->commentId);
+        $this->assertNull($bothNull->ticketId);
+
+        $onlyTicket = NotificationMessage::email(
+            recipient: 'a@b.c',
+            subject: 's',
+            bodyHtml: '<p>b</p>',
+            ticketId: 7,
+        );
+        $this->assertNull($onlyTicket->commentId);
+        $this->assertSame(7, $onlyTicket->ticketId);
+
+        $onlyComment = NotificationMessage::email(
+            recipient: 'a@b.c',
+            subject: 's',
+            bodyHtml: '<p>b</p>',
+            commentId: 11,
+        );
+        $this->assertSame(11, $onlyComment->commentId);
+        $this->assertNull($onlyComment->ticketId);
+
+        $both = NotificationMessage::email(
+            recipient: 'a@b.c',
+            subject: 's',
+            bodyHtml: '<p>b</p>',
+            commentId: 11,
+            ticketId: 7,
+        );
+        $this->assertSame(11, $both->commentId);
+        $this->assertSame(7, $both->ticketId);
+    }
+
+    /**
+     * The VO must be deeply immutable — all public properties are declared
+     * readonly. We verify this via reflection so a regression that drops the
+     * readonly keyword fails fast.
+     */
+    public function testAllPublicPropertiesAreReadonly(): void
+    {
+        $ref = new ReflectionClass(NotificationMessage::class);
+        $public = $ref->getProperties(ReflectionProperty::IS_PUBLIC);
+
+        $this->assertNotEmpty($public);
+        foreach ($public as $prop) {
+            $this->assertTrue(
+                $prop->isReadOnly(),
+                "Property {$prop->getName()} must be readonly to preserve VO immutability",
+            );
+        }
     }
 }
