@@ -334,41 +334,87 @@
     }
 
     /**
-     * Wrap the quoted reply chain of each inbound message under a collapsed
-     * toggle. The body HTML already carries nested <blockquote> elements from
-     * the sender's MUA (Gmail, Outlook, Apple Mail, Thunderbird). CSS rules
-     * in tickets-view.css render each nested level further right with a
-     * vertical border guide; this function defaults the chain to collapsed
-     * so the new message stays prominent.
+     * Collapse the quoted reply chain of each inbound message behind a "···"
+     * toggle so only the new content stays prominent. Different MUAs use
+     * different markup to mark where the quote begins:
+     *   - <blockquote> wrappers (most clients on nested replies)
+     *   - <div class="gmail_quote"> / "gmail_attr" / "gmail_quote_container"
+     *   - <div id="divRplyFwdMsg"> (Outlook desktop)
+     *   - Attribution text line like "El X escribió:" / "On X wrote:" with
+     *     no wrapper at all (Gmail flat replies, the case in the screenshot)
+     *   - Forwarded-message markers
+     * Everything from the boundary onwards is moved into a hidden wrapper.
      */
-    function initQuotedToggles() {
-        document.querySelectorAll('.thread-message-content').forEach(function (msg) {
-            const tops = Array.from(msg.children).filter(function (el) {
-                return el.tagName === 'BLOCKQUOTE';
-            });
-            if (!tops.length) {
-                return;
+    const QUOTE_ATTR_REGEX =
+        /^(El|On|Am|Le|Den|Il|Op)\b.{1,240}?\b(escribió|escribio|wrote|schrieb|a écrit|a ecrit|skrev|scrisse|schreef)\s*:?\s*$/i;
+    const QUOTE_FWD_REGEX =
+        /^(?:[-_=]{2,}\s*)?(Forwarded message|Begin forwarded message|Mensaje reenviado|Mensaje original)\b/i;
+
+    function isQuoteBoundary(el) {
+        if (!el || el.nodeType !== 1) return false;
+        if (el.tagName === 'BLOCKQUOTE') return true;
+        if (el.tagName === 'DIV') {
+            const cls = (typeof el.className === 'string' ? el.className : '') || '';
+            if (/\b(gmail_quote|gmail_quote_container|gmail_attr|yahoo_quoted|moz-cite-prefix|OutlookMessageHeader)\b/i.test(cls)) {
+                return true;
             }
+            if (el.id && /^(divRplyFwdMsg|reply-intro)/i.test(el.id)) {
+                return true;
+            }
+        }
+        const text = (el.innerText || el.textContent || '').trim();
+        if (text.length < 6 || text.length > 400) return false;
+        const firstLine = text.split('\n')[0].trim();
+        return QUOTE_ATTR_REGEX.test(firstLine) || QUOTE_FWD_REGEX.test(firstLine);
+    }
 
-            const wrapper = document.createElement('div');
-            wrapper.className = 'thread-message-quoted-hidden';
+    function collapseFromBoundary(container) {
+        const children = Array.from(container.children);
+        if (!children.length) return false;
 
-            const toggle = document.createElement('button');
-            toggle.type = 'button';
-            toggle.className = 'thread-message-quoted-toggle';
-            toggle.textContent = '··· Mostrar contenido anterior';
+        // Passthrough wrapper case: Gmail sometimes wraps the whole reply in
+        // a single <div dir="ltr"> that itself isn't a quote boundary.
+        // Descend one level so the disclaimer/signature paragraphs remain
+        // visible as siblings of the eventual boundary.
+        if (children.length === 1 && children[0].tagName === 'DIV' && !isQuoteBoundary(children[0])) {
+            return collapseFromBoundary(children[0]);
+        }
 
-            tops[0].before(toggle);
-            tops.forEach(function (bq) { wrapper.appendChild(bq); });
-            toggle.after(wrapper);
+        let idx = -1;
+        for (let i = 0; i < children.length; i++) {
+            if (isQuoteBoundary(children[i])) { idx = i; break; }
+        }
+        if (idx < 0) return false;
 
-            toggle.addEventListener('click', function () {
-                const hidden = wrapper.classList.toggle('thread-message-quoted-hidden');
-                toggle.textContent = hidden
-                    ? '··· Mostrar contenido anterior'
-                    : '⌃ Ocultar contenido anterior';
-            });
+        const wrapper = document.createElement('div');
+        wrapper.className = 'thread-message-quoted-hidden';
+
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'thread-message-quoted-toggle';
+        toggle.textContent = '···';
+        toggle.setAttribute('aria-label', 'Mostrar contenido anterior');
+        toggle.setAttribute('title', 'Mostrar contenido anterior');
+
+        children[idx].before(toggle);
+        for (let i = idx; i < children.length; i++) {
+            wrapper.appendChild(children[i]);
+        }
+        toggle.after(wrapper);
+
+        toggle.addEventListener('click', function () {
+            const hidden = wrapper.classList.toggle('thread-message-quoted-hidden');
+            toggle.textContent = hidden ? '···' : '⌃';
+            const label = hidden ? 'Mostrar contenido anterior' : 'Ocultar contenido anterior';
+            toggle.setAttribute('aria-label', label);
+            toggle.setAttribute('title', label);
         });
+
+        return true;
+    }
+
+    function initQuotedToggles() {
+        document.querySelectorAll('.thread-message-content').forEach(collapseFromBoundary);
     }
 
     // Initialize email recipients section visibility on page load
