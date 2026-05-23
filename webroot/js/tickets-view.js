@@ -333,6 +333,44 @@
         }
     }
 
+    /**
+     * Wrap the quoted reply chain of each inbound message under a collapsed
+     * toggle. The body HTML already carries nested <blockquote> elements from
+     * the sender's MUA (Gmail, Outlook, Apple Mail, Thunderbird). CSS rules
+     * in tickets-view.css render each nested level further right with a
+     * vertical border guide; this function defaults the chain to collapsed
+     * so the new message stays prominent.
+     */
+    function initQuotedToggles() {
+        document.querySelectorAll('.thread-message-content').forEach(function (msg) {
+            const tops = Array.from(msg.children).filter(function (el) {
+                return el.tagName === 'BLOCKQUOTE';
+            });
+            if (!tops.length) {
+                return;
+            }
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'thread-message-quoted-hidden';
+
+            const toggle = document.createElement('button');
+            toggle.type = 'button';
+            toggle.className = 'thread-message-quoted-toggle';
+            toggle.textContent = '··· Mostrar contenido anterior';
+
+            tops[0].before(toggle);
+            tops.forEach(function (bq) { wrapper.appendChild(bq); });
+            toggle.after(wrapper);
+
+            toggle.addEventListener('click', function () {
+                const hidden = wrapper.classList.toggle('thread-message-quoted-hidden');
+                toggle.textContent = hidden
+                    ? '··· Mostrar contenido anterior'
+                    : '⌃ Ocultar contenido anterior';
+            });
+        });
+    }
+
     // Initialize email recipients section visibility on page load
     document.addEventListener('DOMContentLoaded', function() {
         const commentType = document.getElementById('comment-type');
@@ -348,6 +386,7 @@
         }
 
         bindComposerDropzone();
+        initQuotedToggles();
     });
 
     // Drag-and-drop attachments into the composer body. The overlay
