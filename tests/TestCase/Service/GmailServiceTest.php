@@ -267,6 +267,136 @@ final class GmailServiceTest extends TestCase
     }
 
     /**
+     * Invoke extractMessageParts followed by harvestInlineImagesDeep — the
+     * pair parseMessage runs in production. Asserts the defense-in-depth
+     * harvest catches inline images that pickAlternativeBranch dropped.
+     *
+     * @return array{body_html: string, body_text: string, attachments: array, inline_images: array}
+     */
+    private function callExtractAndHarvest(MessagePart $payload): array
+    {
+        $service = $this->buildService();
+        $ref = new ReflectionClass($service);
+        $extract = $ref->getMethod('extractMessageParts');
+        $harvest = $ref->getMethod('harvestInlineImagesDeep');
+
+        $data = [
+            'body_html' => '',
+            'body_text' => '',
+            'attachments' => [],
+            'inline_images' => [],
+        ];
+        $extract->invokeArgs($service, [$payload, &$data]);
+        $harvest->invokeArgs($service, [$payload, &$data]);
+
+        return $data;
+    }
+
+    /**
+     * MED-1 follow-up (Outlook MIME quirk): when text/html lives at the
+     * alternative root AND a sibling multipart/related carries the inline
+     * images, pickAlternativeBranch picks the direct text/html and drops the
+     * related subtree. harvestInlineImagesDeep must still collect the images
+     * so cid: references in the body get rewritten and survive sanitization.
+     */
+    public function testOutlookAlternativeSiblingRelatedSurfacesInlineImages(): void
+    {
+        $logo = $this->part(
+            'image/png',
+            $this->b64url('fake-logo-bytes'),
+            filename: 'image001.png',
+            attachmentId: 'att-logo',
+            headers: [
+                $this->header('Content-ID', '<image001.png@01D9XXXX>'),
+                $this->header('Content-Disposition', 'inline'),
+            ],
+        );
+        // Outlook variant: text/html at the alternative root, related sibling
+        // with text/html-replica + image. pickAlternativeBranch returns the
+        // direct text/html and the related subtree is discarded.
+        $payload = $this->part('multipart/alternative', parts: [
+            $this->part('text/plain', $this->b64url('plain version')),
+            $this->part('text/html', $this->b64url('<p>html at root</p>')),
+            $this->part('multipart/related', parts: [
+                $this->part('text/html', $this->b64url('<p>html with cid</p>')),
+                $logo,
+            ]),
+        ]);
+
+        $data = $this->callExtractAndHarvest($payload);
+
+        $this->assertSame('<p>html at root</p>', $data['body_html']);
+        $this->assertCount(1, $data['inline_images'], 'image inside discarded multipart/related must be harvested');
+        $this->assertSame('image001.png@01D9XXXX', $data['inline_images'][0]['content_id']);
+        $this->assertSame('att-logo', $data['inline_images'][0]['attachment_id']);
+    }
+
+    /**
+     * harvestInlineImagesDeep must NOT duplicate an image that
+     * extractMessageParts already catalogued via the normal branch
+     * descent (e.g. when multipart/related IS picked and we recurse into it).
+     */
+    public function testHarvestInlineImagesDedupesAgainstExtractMessageParts(): void
+    {
+        $logo = $this->part(
+            'image/png',
+            $this->b64url('fake'),
+            filename: 'image001.png',
+            attachmentId: 'att-logo',
+            headers: [
+                $this->header('Content-ID', '<image001.png@01D9XXXX>'),
+                $this->header('Content-Disposition', 'inline'),
+            ],
+        );
+        $related = $this->part('multipart/related', parts: [
+            $this->part('text/html', $this->b64url('<p>body</p>')),
+            $logo,
+        ]);
+        // Classic Gmail variant: no direct text/html, only multipart/related.
+        // pickAlternativeBranch picks the related, extractMessageParts already
+        // surfaces the image, harvest must be a no-op for it.
+        $payload = $this->part('multipart/alternative', parts: [
+            $this->part('text/plain', $this->b64url('plain')),
+            $related,
+        ]);
+
+        $data = $this->callExtractAndHarvest($payload);
+
+        $this->assertCount(1, $data['inline_images']);
+        $this->assertSame('att-logo', $data['inline_images'][0]['attachment_id']);
+    }
+
+    /**
+     * If an image was explicitly classified as a regular attachment by
+     * extractMessageParts (Content-Disposition: attachment), harvest must not
+     * re-classify it as inline. Respect the upstream decision; only fill the
+     * gap when nothing has catalogued the part.
+     */
+    public function testHarvestDoesNotReclassifyAttachmentDispositionImage(): void
+    {
+        $logoAsAttachment = $this->part(
+            'image/png',
+            $this->b64url('fake'),
+            filename: 'image001.png',
+            attachmentId: 'att-logo',
+            headers: [
+                $this->header('Content-ID', '<image001.png@01D9XXXX>'),
+                $this->header('Content-Disposition', 'attachment'),
+            ],
+        );
+        $payload = $this->part('multipart/mixed', parts: [
+            $this->part('text/html', $this->b64url('<p>body</p>')),
+            $logoAsAttachment,
+        ]);
+
+        $data = $this->callExtractAndHarvest($payload);
+
+        $this->assertSame([], $data['inline_images']);
+        $this->assertCount(1, $data['attachments']);
+        $this->assertSame('att-logo', $data['attachments'][0]['attachment_id']);
+    }
+
+    /**
      * GmailService::getSystemEmail() honors $this->config['user_email'] (added
      * for testability), so injecting via the constructor is enough.
      */

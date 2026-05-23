@@ -352,6 +352,15 @@ class GmailService
             // Extract body and attachments
             $this->extractMessageParts($message->getPayload(), $data);
 
+            // Defense-in-depth for vendor MIME quirks. Outlook (and some Exchange
+            // forwards) nest text/html inside a multipart/related sibling under
+            // multipart/alternative; pickAlternativeBranch may select the html
+            // branch and discard the related subtree containing the inline
+            // images. Walk the entire tree once more, harvesting any image/*
+            // part with a Content-ID that extractMessageParts hasn't already
+            // catalogued. Defensive against future vendor structures too.
+            $this->harvestInlineImagesDeep($message->getPayload(), $data);
+
             // Body sanitization deliberately deferred to the ingestion layer
             // (TicketIngestionService) so that cid: references in <img src=...> are
             // still rewritable to local URLs before HTMLPurifier strips them.
@@ -489,6 +498,62 @@ class GmailService
         }
 
         return $html ?? $multipartHtml ?? $plain;
+    }
+
+    /**
+     * Walk the entire MIME tree harvesting image/* + Content-ID parts that
+     * extractMessageParts didn't catalogue. Needed because
+     * pickAlternativeBranch may discard the subtree where Outlook puts inline
+     * images (nested under a multipart/related sibling of the chosen
+     * text/html). Dedupes by attachment_id against parts already classified
+     * as inline_images OR attachments — never re-classifies what
+     * extractMessageParts has already decided.
+     */
+    private function harvestInlineImagesDeep(MessagePart $payload, array &$data): void
+    {
+        $seen = [];
+        foreach ($data['inline_images'] as $img) {
+            if (!empty($img['attachment_id'])) {
+                $seen[$img['attachment_id']] = true;
+            }
+        }
+        foreach ($data['attachments'] as $att) {
+            if (!empty($att['attachment_id'])) {
+                $seen[$att['attachment_id']] = true;
+            }
+        }
+        $this->harvestInlineImagesRecursive($payload, $data, $seen);
+    }
+
+    /**
+     * @param array<string, bool> $seen Attachment IDs already catalogued
+     */
+    private function harvestInlineImagesRecursive(MessagePart $payload, array &$data, array &$seen): void
+    {
+        $mimeType = (string)$payload->getMimeType();
+        if (stripos($mimeType, 'image/') === 0) {
+            $headers = $payload->getHeaders();
+            $contentId = $this->getHeader($headers, 'Content-ID');
+            $body = $payload->getBody();
+            $attachmentId = $body->getAttachmentId();
+            if ($contentId !== '' && $attachmentId !== null && $attachmentId !== '' && !isset($seen[$attachmentId])) {
+                $filename = $payload->getFilename();
+                if ($filename === null || $filename === '') {
+                    $filename = 'inline-' . $attachmentId . '.bin';
+                }
+                $data['inline_images'][] = [
+                    'filename' => $filename,
+                    'mime_type' => $mimeType,
+                    'attachment_id' => $attachmentId,
+                    'size' => $body->getSize(),
+                    'content_id' => trim($contentId, '<>'),
+                ];
+                $seen[$attachmentId] = true;
+            }
+        }
+        foreach ($payload->getParts() ?? [] as $child) {
+            $this->harvestInlineImagesRecursive($child, $data, $seen);
+        }
     }
 
     /**
