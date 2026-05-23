@@ -101,6 +101,45 @@
         }
     }
 
+    /**
+     * Handle topbar status change ("Resolver" / "Cambiar estado").
+     *
+     * When the composer has draft text or attachments, route through the
+     * #reply-form (action=addComment → TicketPipelineService::handleResponse),
+     * which commits comment + status atomically and emits the composite
+     * TicketResponded event. Otherwise, submit the dedicated #topbar-status-form
+     * (action=changeStatus) for a status-only transition.
+     */
+    function changeTicketStatus(newStatus) {
+        if (!newStatus) return;
+
+        const editorEl = document.getElementById('comment-textarea');
+        const composerText = editorEl ? (editorEl.innerText || editorEl.textContent || '').trim() : '';
+        const hasFiles = selectedFiles.length > 0;
+
+        if (composerText || hasFiles) {
+            const statusHidden = document.getElementById('status-hidden');
+            const replyForm = document.getElementById('reply-form');
+            if (statusHidden && replyForm) {
+                statusHidden.value = newStatus;
+                if (typeof replyForm.requestSubmit === 'function') {
+                    replyForm.requestSubmit();
+                } else {
+                    replyForm.submit();
+                }
+                return;
+            }
+        }
+
+        const topbarValue = document.getElementById('topbar-status-value');
+        const topbarForm = document.getElementById('topbar-status-form');
+        if (topbarValue && topbarForm) {
+            topbarValue.value = newStatus;
+            LoadingSpinner.show('Cambiando estado...');
+            topbarForm.submit();
+        }
+    }
+
     // File management
     let selectedFiles = [];
 
@@ -400,6 +439,10 @@
             case 'set-status':
                 event.preventDefault();
                 setStatus(trigger.dataset.statusKey);
+                break;
+            case 'change-status':
+                event.preventDefault();
+                changeTicketStatus(trigger.dataset.status);
                 break;
             case 'toggle-recipients':
                 event.preventDefault();

@@ -19,7 +19,7 @@ $canPend    = !$isLocked && !$isPending;
     <?= $this->Html->link(
         '<i class="bi bi-chevron-left"></i> Volver',
         ['action' => 'index'],
-        ['class' => 'btn-brand-secondary btn-brand-sm', 'escape' => false]
+        ['class' => 'btn-brand-secondary btn-brand-sm', 'escape' => false],
     ) ?>
 
     <nav class="ticket-breadcrumb" aria-label="breadcrumb">
@@ -33,7 +33,7 @@ $canPend    = !$isLocked && !$isPending;
     <div class="ticket-topbar-spacer"></div>
 
     <!-- Right: actions -->
-    <?php if (!$isLocked): ?>
+    <?php if (!$isLocked) : ?>
         <?php
         // States the user can switch to from this view (excludes the current
         // one and the "resolver" terminal action which has its own button).
@@ -44,11 +44,26 @@ $canPend    = !$isLocked && !$isPending;
         $availableSwitches = array_filter(
             $switchableStates,
             fn($_, $key) => $key !== $entity->status,
-            ARRAY_FILTER_USE_BOTH
+            ARRAY_FILTER_USE_BOTH,
         );
         ?>
 
-        <?php if (!empty($availableSwitches)): ?>
+        <?php
+        // Hidden form used by tickets-view.js when the composer is empty.
+        // When the composer has text or attachments, the JS instead writes the
+        // requested status into #status-hidden and submits #reply-form, so the
+        // comment + status change commit atomically via TicketPipelineService::
+        // handleResponse (which emits the composite TicketResponded event).
+        ?>
+        <?= $this->Form->create(null, [
+            'url' => ['action' => 'changeStatus', $entity->id],
+            'id' => 'topbar-status-form',
+            'style' => 'display:none',
+        ]) ?>
+        <?= $this->Form->hidden('status', ['id' => 'topbar-status-value', 'value' => '']) ?>
+        <?= $this->Form->end() ?>
+
+        <?php if (!empty($availableSwitches)) : ?>
             <div class="dropdown ticket-topbar-status-wrap">
                 <button type="button"
                         class="btn-brand-secondary dropdown-toggle ticket-topbar-status-btn"
@@ -57,37 +72,32 @@ $canPend    = !$isLocked && !$isPending;
                     Cambiar estado
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end ticket-topbar-status-menu">
-                    <?php foreach ($availableSwitches as $statusKey => $label):
+                    <?php foreach ($availableSwitches as $statusKey => $label) :
                         $dotColor = TicketConstants::STATUS_COLORS[$statusKey] ?? 'var(--gray-500)';
-                    ?>
+                        ?>
                         <li>
-                            <?= $this->Form->postLink(
-                                '<span class="status-dot" style="background:' . h($dotColor) . '"></span> ' . h($label),
-                                ['action' => 'changeStatus', $entity->id],
-                                [
-                                    'class' => 'dropdown-item ticket-topbar-status-item',
-                                    'escape' => false,
-                                    'data' => ['status' => $statusKey],
-                                ]
-                            ) ?>
+                            <button type="button"
+                                    class="dropdown-item ticket-topbar-status-item"
+                                    data-action="change-status"
+                                    data-status="<?= h($statusKey) ?>">
+                                <span class="status-dot" style="background:<?= h($dotColor) ?>"></span>
+                                <?= h($label) ?>
+                            </button>
                         </li>
                     <?php endforeach; ?>
                 </ul>
             </div>
         <?php endif; ?>
 
-        <?php if ($canResolve): ?>
-            <?= $this->Form->postLink(
-                '<i class="bi bi-check-lg"></i> Resolver ticket',
-                ['action' => 'changeStatus', $entity->id],
-                [
-                    'class' => 'btn-brand-primary',
-                    'escape' => false,
-                    'data' => ['status' => TicketConstants::STATUS_RESUELTO],
-                ]
-            ) ?>
+        <?php if ($canResolve) : ?>
+            <button type="button"
+                    class="btn-brand-primary"
+                    data-action="change-status"
+                    data-status="<?= h(TicketConstants::STATUS_RESUELTO) ?>">
+                <i class="bi bi-check-lg"></i> Resolver ticket
+            </button>
         <?php endif; ?>
-    <?php else: ?>
+    <?php else : ?>
         <span class="ticket-locked-pill">
             <i class="bi bi-lock-fill"></i> Cerrado
         </span>

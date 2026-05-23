@@ -7,7 +7,6 @@ use App\Service\Exception\GmailApiException;
 use App\Service\Gmail\GmailErrorCategory;
 use App\Service\Gmail\RetryHandler;
 use App\Service\GmailService;
-use App\Service\Util\NotificationStamp;
 use Cake\Core\Configure;
 use Google\Client as GoogleClient;
 use Google\Service\Gmail\MessagePart;
@@ -295,13 +294,17 @@ final class GmailServiceTest extends TestCase
      * branch "stamp HMAC válido ⇒ system notification" fue eliminado porque
      * producía falsos positivos catastróficos (réplica del cliente perdida).
      * Solo `From == system_email` puede marcar como system notification.
+     *
+     * Aunque el outbound ya no añade stamps (legacy NotificationStamp eliminado),
+     * los correos históricos enviados con stamp aún viven en bandejas de clientes;
+     * sus réplicas seguirán citando el subject estampado verbatim. Este test
+     * asegura que la regresión permanece cerrada para esos hilos.
      */
     public function testIsSystemNotificationDoesNotDiscardStampedReplyFromExternalSender(): void
     {
         $service = $this->buildService();
-        $stamped = NotificationStamp::append('Tu ticket #42 fue creado', '42');
         $headers = [
-            $this->header('Subject', 'Re: ' . $stamped),
+            $this->header('Subject', 'Re: Tu ticket #42 fue creado [#42·s=deadbeef]'),
             $this->header('From', 'cliente@externo.tld'),
         ];
 
