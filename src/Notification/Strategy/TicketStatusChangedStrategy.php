@@ -62,7 +62,11 @@ final class TicketStatusChangedStrategy extends AbstractTicketStrategy
             ],
             inReplyTo: $threading['inReplyTo'],
             referencesHeader: $threading['references'],
-            commentId: null,
+            // MEN-1: anchor the outbound Message-ID against the internal
+            // system_comment recording this transition so a customer reply to
+            // *this specific* notification reattaches by RFC. Falls back to
+            // null on legacy callers that didn't capture the system_comment id.
+            commentId: $event->systemCommentId,
         );
     }
 }

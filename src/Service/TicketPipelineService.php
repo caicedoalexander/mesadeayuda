@@ -193,7 +193,16 @@ class TicketPipelineService
                     $comment,
                     &$pendingEvents,
                 ): bool {
-                    $ok = $this->changeStatus($entity, $newStatus, $userId, null, true, deferDispatch: true);
+                    $statusCommentId = null;
+                    $ok = $this->changeStatus(
+                        $entity,
+                        $newStatus,
+                        $userId,
+                        null,
+                        true,
+                        deferDispatch: true,
+                        outSystemCommentId: $statusCommentId,
+                    );
                     if (!$ok) {
                         return false;
                     }
@@ -212,6 +221,7 @@ class TicketPipelineService
                             oldStatus: $oldStatus,
                             newStatus: (string)$newStatus,
                             actorId: $userId,
+                            systemCommentId: $statusCommentId,
                         );
                     }
 
@@ -299,6 +309,10 @@ class TicketPipelineService
      * @param bool $deferDispatch When true, suppresses inline event dispatch even if
      *        $sendNotifications is true. Used by callers (e.g., handleResponse) that
      *        wrap this call in a transaction and need to dispatch post-commit.
+     * @param int|null $outSystemCommentId Out parameter populated with the id of the
+     *        internal system_comment recording the transition. Callers that buffer
+     *        the TicketStatusChanged event for post-commit dispatch use this to
+     *        anchor the outbound Message-ID against that comment (MEN-1).
      * @return bool
      */
     public function changeStatus(
@@ -308,6 +322,7 @@ class TicketPipelineService
         ?string $comment = null,
         bool $sendNotifications = true,
         bool $deferDispatch = false,
+        ?int &$outSystemCommentId = null,
     ): bool {
         $table = $this->fetchTable('Tickets');
         $oldStatus = $entity->status;
@@ -348,7 +363,16 @@ class TicketPipelineService
         );
 
         $systemComment = $comment ?? "El estado cambió de '{$oldStatus}' a '{$newStatus}'";
-        $this->comments->addComment($entity->id, $userId, $systemComment, TicketConstants::COMMENT_INTERNAL, true);
+        $systemCommentEntity = $this->comments->addComment(
+            $entity->id,
+            $userId,
+            $systemComment,
+            TicketConstants::COMMENT_INTERNAL,
+            true,
+        );
+        if ($systemCommentEntity !== null) {
+            $outSystemCommentId = (int)$systemCommentEntity->id;
+        }
 
         if ($sendNotifications && !$deferDispatch) {
             $this->eventManager->dispatch(new TicketStatusChanged(
@@ -356,6 +380,7 @@ class TicketPipelineService
                 oldStatus: $oldStatus,
                 newStatus: $newStatus,
                 actorId: $userId,
+                systemCommentId: $outSystemCommentId,
             ));
         }
 
