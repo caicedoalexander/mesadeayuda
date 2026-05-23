@@ -361,10 +361,22 @@
             if (el.id && /^(divRplyFwdMsg|reply-intro)/i.test(el.id)) {
                 return true;
             }
+            // Fallback: a <div> that wraps a <blockquote> is almost certainly
+            // the container Gmail/Outlook emits around an attribution paragraph
+            // plus the quoted body. HTMLPurifier strips the class that would
+            // identify it, but the structure survives.
+            if (el.querySelector('blockquote')) {
+                return true;
+            }
         }
+        // Attribution text. Measure only the first line so a wrapper element
+        // whose innerText accidentally includes the whole quoted body still
+        // matches: the attribution lives on the first visible line, and any
+        // length cap on the full text rejected long-but-valid candidates.
         const text = (el.innerText || el.textContent || '').trim();
-        if (text.length < 6 || text.length > 400) return false;
+        if (!text) return false;
         const firstLine = text.split('\n')[0].trim();
+        if (firstLine.length < 6 || firstLine.length > 300) return false;
         return QUOTE_ATTR_REGEX.test(firstLine) || QUOTE_FWD_REGEX.test(firstLine);
     }
 
