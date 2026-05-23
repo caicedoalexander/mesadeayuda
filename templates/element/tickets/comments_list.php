@@ -33,10 +33,9 @@ foreach ($tags as $tagId => $tagName) {
 }
 
 $priorityGlyphs = [
-    TicketConstants::PRIORITY_BAJA    => '↓',
-    TicketConstants::PRIORITY_MEDIA   => '→',
-    TicketConstants::PRIORITY_ALTA    => '↑',
-    TicketConstants::PRIORITY_URGENTE => '↑',
+    TicketConstants::PRIORITY_BAJA  => '↓',
+    TicketConstants::PRIORITY_MEDIA => '→',
+    TicketConstants::PRIORITY_ALTA  => '↑',
 ];
 
 // Hide inline images from the attachment-cards strip only when the body

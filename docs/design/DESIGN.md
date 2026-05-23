@@ -183,9 +183,8 @@ Texto inline (no pill), color sólido + glifo unicode a la izquierda.
 | `baja`     | `--gray-500`       | ↓     |
 | `media`    | `--admin-orange`   | →     |
 | `alta`     | `--danger-color`   | ↑     |
-| `urgente`  | `--danger-color`   | ↑     |
 
-Por convención **solo se muestra cuando es alta o urgente** en la lista.
+Por convención **solo se muestra cuando es alta** en la lista.
 En la vista de detalle se muestra siempre.
 
 ### 2.4 · Tag chip — `.tag-chip`
@@ -242,7 +241,7 @@ Vive dentro de `.tickets-table-card` (card con borde + radius + shadow).
 - **Header:** `font-size: 10px; text-transform: uppercase; color: --gray-500`.
 - **Filas:** padding vertical 14 px (cómoda), borde inferior 1 px `--gray-100`.
 - **Hover de fila:** fondo `#fafafb`.
-- **Fila crítica** (prioridad alta/urgente): clase `.row-critical` agrega
+- **Fila crítica** (prioridad alta): clase `.row-critical` agrega
   barra vertical roja a la izquierda del primer `<td>`.
 - **Footer del card:** count summary + paginador compacto en `--gray-50`.
 

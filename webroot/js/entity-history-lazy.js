@@ -127,14 +127,12 @@
             priority: {
                 'baja': '#6c757d',
                 'media': '#0dcaf0',
-                'alta': '#ffc107',
-                'urgente': '#dc3545'
+                'alta': '#ffc107'
             },
             priorityLabels: {
                 'baja': 'Baja',
                 'media': 'Media',
-                'alta': 'Alta',
-                'urgente': 'Urgente'
+                'alta': 'Alta'
             },
             status: {
                 ticket: {

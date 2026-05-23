@@ -31,7 +31,7 @@ $pageHighPriority = 0;
 $pageUnassigned   = 0;
 $pageResolved     = 0;
 foreach ($tickets as $t) {
-    if (in_array($t->priority, [TicketConstants::PRIORITY_ALTA, TicketConstants::PRIORITY_URGENTE], true)) {
+    if ($t->priority === TicketConstants::PRIORITY_ALTA) {
         $pageHighPriority++;
     }
     if (!$t->hasAssignee()) {
@@ -156,11 +156,7 @@ $activeFiltersCount = (int)!empty($filters['filterPriority'])
                         <tbody>
                             <?php foreach ($tickets as $ticket): ?>
                                 <?php
-                                $isHighPriority = in_array(
-                                    $ticket->priority,
-                                    [TicketConstants::PRIORITY_ALTA, TicketConstants::PRIORITY_URGENTE],
-                                    true
-                                );
+                                $isHighPriority = $ticket->priority === TicketConstants::PRIORITY_ALTA;
                                 $isLocked = $ticket->isLocked();
                                 $isDisabled = $isAssignmentDisabled || $isLocked;
                                 ?>

@@ -74,10 +74,3 @@
     color: var(--danger-ink);
 }
 .badge-priority-alta::before { background-color: var(--danger-color); }
-
-.badge-priority-urgente {
-    background-color: var(--danger-soft);
-    color: var(--danger-ink);
-    font-weight: 700;
-}
-.badge-priority-urgente::before { background-color: var(--danger-color); }

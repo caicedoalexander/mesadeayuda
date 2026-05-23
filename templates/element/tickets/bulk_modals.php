@@ -74,7 +74,6 @@ $showTagModal = $showTagModal ?? false;
                         'baja' => 'Baja',
                         'media' => 'Media',
                         'alta' => 'Alta',
-                        'urgente' => 'Urgente',
                     ], [
                         'empty' => 'Seleccionar...',
                         'class' => 'form-select',

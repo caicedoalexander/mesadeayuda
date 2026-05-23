@@ -52,30 +52,26 @@ final class TicketConstants
         self::STATUS_RESUELTO  => 'bi-circle-fill',
     ];
 
-    public const PRIORITY_BAJA    = 'baja';
-    public const PRIORITY_MEDIA   = 'media';
-    public const PRIORITY_ALTA    = 'alta';
-    public const PRIORITY_URGENTE = 'urgente';
+    public const PRIORITY_BAJA  = 'baja';
+    public const PRIORITY_MEDIA = 'media';
+    public const PRIORITY_ALTA  = 'alta';
 
     public const PRIORITIES = [
         self::PRIORITY_BAJA,
         self::PRIORITY_MEDIA,
         self::PRIORITY_ALTA,
-        self::PRIORITY_URGENTE,
     ];
 
     public const PRIORITY_LABELS = [
-        self::PRIORITY_BAJA    => 'Baja',
-        self::PRIORITY_MEDIA   => 'Media',
-        self::PRIORITY_ALTA    => 'Alta',
-        self::PRIORITY_URGENTE => 'Urgente',
+        self::PRIORITY_BAJA  => 'Baja',
+        self::PRIORITY_MEDIA => 'Media',
+        self::PRIORITY_ALTA  => 'Alta',
     ];
 
     public const PRIORITY_COLORS = [
-        self::PRIORITY_BAJA    => '#6c757d',
-        self::PRIORITY_MEDIA   => '#0dcaf0',
-        self::PRIORITY_ALTA    => '#ffc107',
-        self::PRIORITY_URGENTE => '#dc3545',
+        self::PRIORITY_BAJA  => '#6c757d',
+        self::PRIORITY_MEDIA => '#0dcaf0',
+        self::PRIORITY_ALTA  => '#ffc107',
     ];
 
     public const COMMENT_PUBLIC   = 'public';

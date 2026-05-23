@@ -759,7 +759,6 @@ body {
 .priority-flag.baja    { color: var(--gray-500); }
 .priority-flag.media   { color: var(--admin-orange); }
 .priority-flag.alta    { color: var(--danger-color); }
-.priority-flag.urgente { color: var(--danger-color); }
 
 /* ── Inline stat (header) ─────────────────────── */
 .stat-inline {

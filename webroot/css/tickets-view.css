@@ -1059,7 +1059,6 @@
 .priority-seg.active.priority-seg-baja    { border-color: var(--gray-300);     background: var(--gray-100);          color: var(--gray-700); }
 .priority-seg.active.priority-seg-media   { border-color: var(--admin-orange); background: var(--admin-orange-soft); color: var(--admin-orange); }
 .priority-seg.active.priority-seg-alta    { border-color: var(--danger-color); background: var(--danger-soft);       color: var(--danger-color); }
-.priority-seg.active.priority-seg-urgente { border-color: var(--danger-color); background: var(--danger-color);      color: #fff; }
 
 /* Etiquetas */
 .meta-tags {

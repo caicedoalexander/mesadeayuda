@@ -2,7 +2,7 @@
 /**
  * @var \App\View\AppView $this
  * @var string $kind  Badge family — 'status' or 'priority'. Drives CSS class prefix.
- * @var string $value Key value (e.g. 'nuevo', 'urgente'). Used as CSS modifier.
+ * @var string $value Key value (e.g. 'nuevo', 'alta'). Used as CSS modifier.
  * @var string $label Human-readable label rendered inside the badge.
  * @var string|null $url Optional URL — wraps badge in <a>.
  */

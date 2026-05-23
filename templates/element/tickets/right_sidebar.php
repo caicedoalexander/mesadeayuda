@@ -14,10 +14,9 @@ use App\Constants\TicketConstants;
 
 $priorities = TicketConstants::PRIORITY_LABELS;
 $priorityGlyphs = [
-    TicketConstants::PRIORITY_BAJA    => '↓',
-    TicketConstants::PRIORITY_MEDIA   => '→',
-    TicketConstants::PRIORITY_ALTA    => '↑',
-    TicketConstants::PRIORITY_URGENTE => '↑',
+    TicketConstants::PRIORITY_BAJA  => '↓',
+    TicketConstants::PRIORITY_MEDIA => '→',
+    TicketConstants::PRIORITY_ALTA  => '↑',
 ];
 
 $assignedToCurrent = $currentUser && $ticket->assignee_id === $currentUser->id;
