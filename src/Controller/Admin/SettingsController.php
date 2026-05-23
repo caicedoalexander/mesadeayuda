@@ -12,11 +12,13 @@ use App\Service\ProfileImageService;
 use App\Service\SettingsService;
 use App\Service\WhatsappService;
 use Cake\Cache\Cache;
+use Cake\Datasource\EntityInterface;
 use Cake\Event\EventInterface;
 use Cake\Http\Response;
 use Cake\Log\Log;
 use Cake\Routing\Router;
 use Exception;
+use Throwable;
 
 /**
  * Settings Controller
@@ -244,7 +246,7 @@ class SettingsController extends AppController
             } else {
                 Log::info('Gmail user email persisted', ['email' => $this->maskEmail($email)]);
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning('Failed to auto-populate gmail_user_email after OAuth', [
                 'error' => $e->getMessage(),
             ]);
@@ -515,7 +517,7 @@ class SettingsController extends AppController
      * @param string $fallback Default message when no validation errors are present
      * @return string Composite error string ready for Flash->error()
      */
-    private function formatValidationErrors($entity, string $fallback): string
+    private function formatValidationErrors(EntityInterface $entity, string $fallback): string
     {
         $errors = $entity->getErrors();
         if (empty($errors)) {

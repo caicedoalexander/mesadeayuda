@@ -34,7 +34,7 @@ final class MarkReadQueueService
     {
         $existing = $this->findByMessageId($gmailMessageId);
         if ($existing !== null) {
-            $existing->attempts = ((int)($existing->attempts ?? 0)) + 1;
+            $existing->attempts = (int)($existing->attempts ?? 0) + 1;
             $existing->last_error = $this->truncateError($error);
             $existing->last_category = $category;
             $this->table->saveOrFail($existing);
@@ -85,7 +85,7 @@ final class MarkReadQueueService
                     continue;
                 }
 
-                $row->attempts = ((int)($row->attempts ?? 0)) + 1;
+                $row->attempts = (int)($row->attempts ?? 0) + 1;
                 $row->last_error = $this->truncateError($e->getMessage());
                 $row->last_category = $e->getCategory();
                 if ($row->attempts >= self::MAX_ATTEMPTS) {
