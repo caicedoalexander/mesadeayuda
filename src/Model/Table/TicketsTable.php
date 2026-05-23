@@ -6,6 +6,7 @@ namespace App\Model\Table;
 use App\Constants\RoleConstants;
 use App\Constants\TicketConstants;
 use App\Service\NumberGenerationService;
+use Cake\Log\Log;
 use Cake\ORM\Query\SelectQuery;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
@@ -317,5 +318,46 @@ class TicketsTable extends Table
         }
 
         return $query;
+    }
+
+    /**
+     * Persist the RFC 5322 Message-ID of an outbound notification onto the
+     * ticket so that the customer's reply (which carries
+     * `In-Reply-To: <thisId>`) reattaches via TicketIngestionService::
+     * lookupTicketByRfc instead of falling back to gmail_thread_id matching
+     * (MED-1).
+     *
+     * Only writes when `tickets.rfc_message_id` is currently empty. For
+     * email-created tickets this column holds the customer's original
+     * Message-ID — overwriting it with one of our outbound IDs would break
+     * future reattachment of customer replies that reference the original.
+     * For UI-created tickets the column is NULL on entry; we populate it
+     * with the welcome notification's Message-ID, anchoring the entire
+     * thread from message #1.
+     *
+     * Idempotent: safe to re-invoke. Errors are logged but not propagated —
+     * the email already went out and threading degrades to gmail_thread_id
+     * matching as before.
+     *
+     * @param int $ticketId Target tickets.id
+     * @param string $rfcMessageId The Message-ID Gmail assigned to the outbound
+     *   (already stripped of angle brackets by EmailHeaderParser::extractMessageId)
+     */
+    public function attachOutboundMessageId(int $ticketId, string $rfcMessageId): void
+    {
+        $ticket = $this->get($ticketId);
+        if (!empty($ticket->rfc_message_id)) {
+            return;
+        }
+
+        $ticket->set('rfc_message_id', $rfcMessageId, ['guard' => false]);
+
+        if (!$this->save($ticket)) {
+            Log::error('Failed to persist outbound Message-ID on ticket', [
+                'ticket_id' => $ticketId,
+                'rfc_message_id' => $rfcMessageId,
+                'errors' => $ticket->getErrors(),
+            ]);
+        }
     }
 }

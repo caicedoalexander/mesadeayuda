@@ -93,6 +93,7 @@ class EmailService
             inReplyTo: $message->inReplyTo,
             referencesHeader: $message->referencesHeader,
             commentId: $message->commentId,
+            ticketId: $message->ticketId,
         );
     }
 
@@ -106,6 +107,7 @@ class EmailService
         ?string $inReplyTo = null,
         ?string $referencesHeader = null,
         ?int $commentId = null,
+        ?int $ticketId = null,
     ): bool {
         try {
             $systemTitle = $this->getSettingValue(SettingKeys::SYSTEM_TITLE, CacheConstants::DEFAULT_SYSTEM_TITLE);
@@ -170,6 +172,17 @@ class EmailService
                         $commentId,
                         $result,
                         $referencesHeader,
+                    );
+                } elseif ($ticketId !== null) {
+                    // MED-1: no comment exists yet (TicketCreated). Persist the
+                    // outbound Message-ID at the ticket level so the customer's
+                    // first reply to this welcome reattaches via RFC. Idempotent
+                    // and only writes when tickets.rfc_message_id is empty —
+                    // never clobbers the customer's original on email-created
+                    // tickets.
+                    $this->fetchTable('Tickets')->attachOutboundMessageId(
+                        $ticketId,
+                        $result,
                     );
                 }
             }

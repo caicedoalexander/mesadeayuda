@@ -57,6 +57,11 @@ final class TicketCreatedStrategy extends AbstractTicketStrategy
         $rendered = $this->templates()->get('ticket_created')->render($ctx);
 
         if (!empty($ticket->requester->email)) {
+            // MED-1: no In-Reply-To/References on creation (this is the root of
+            // the thread), but pass ticketId so the transport can persist the
+            // outbound Message-ID onto tickets.rfc_message_id when that column
+            // is empty — anchors the customer's eventual reply to this welcome
+            // via RFC instead of the fragile gmail_thread_id fallback.
             yield NotificationMessage::email(
                 recipient: (string)$ticket->requester->email,
                 subject: $rendered->subject,
@@ -64,6 +69,7 @@ final class TicketCreatedStrategy extends AbstractTicketStrategy
                 additionalTo: $emailTo,
                 additionalCc: $emailCc,
                 metadata: ['ticket_id' => $ticket->id, 'event' => $event->getName()],
+                ticketId: $ticket->id,
             );
         }
 
