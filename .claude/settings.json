@@ -1,10 +1,4 @@
 {
-  "enabledPlugins": {
-    "acc@awesome-claude-code": true,
-    "frontend-design@claude-plugins-official": true,
-    "context7@claude-plugins-official": true,
-    "superpowers@claude-plugins-official": true
-  },
   "permissions": {
     "allow": [
       "mcp__codegraph__codegraph_search",
@@ -15,5 +9,12 @@
       "mcp__codegraph__codegraph_node",
       "mcp__codegraph__codegraph_status"
     ]
+  },
+  "enabledPlugins": {
+    "acc@awesome-claude-code": true,
+    "frontend-design@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": true,
+    "playwright@claude-plugins-official": true
   }
 }
