@@ -58,7 +58,7 @@ trait TicketActionsTrait
         $this->request->allowMethod(['post']);
 
         $tagId = (int)$this->request->getData('tag_id');
-        $result = $this->ticketPipeline->addTag((int)$id, $tagId);
+        $result = $this->ticketPipeline->addTag((int)$id, $tagId, $this->getCurrentUserId());
 
         $this->Flash->{$result['success'] ? 'success' : ($result['message'] === TicketPipelineService::MESSAGE_TAG_ALREADY_ADDED ? 'warning' : 'error')}($result['message']);
 
@@ -73,7 +73,7 @@ trait TicketActionsTrait
     {
         $this->request->allowMethod(['post', 'delete']);
 
-        $result = $this->ticketPipeline->removeTag((int)$id, (int)$tagId);
+        $result = $this->ticketPipeline->removeTag((int)$id, (int)$tagId, $this->getCurrentUserId());
 
         $this->Flash->{$result['success'] ? 'success' : 'error'}($result['message']);
 
@@ -88,7 +88,7 @@ trait TicketActionsTrait
         $this->request->allowMethod(['post']);
 
         $userId = (int)$this->request->getData('user_id');
-        $result = $this->ticketPipeline->addFollower((int)$id, $userId);
+        $result = $this->ticketPipeline->addFollower((int)$id, $userId, $this->getCurrentUserId());
 
         $this->Flash->{$result['success'] ? 'success' : ($result['message'] === 'Este usuario ya está siguiendo el ticket.' ? 'warning' : 'error')}($result['message']);
 

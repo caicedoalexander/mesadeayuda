@@ -87,19 +87,19 @@ class TicketHistoryTable extends Table
             ->maxLength('field_name', 50)
             ->notEmptyString('field_name');
 
+        // old_value/new_value are TEXT columns; no application-side cap.
         $validator
             ->scalar('old_value')
-            ->maxLength('old_value', 255)
             ->allowEmptyString('old_value');
 
         $validator
             ->scalar('new_value')
-            ->maxLength('new_value', 255)
             ->allowEmptyString('new_value');
 
+        // description is VARCHAR(255) in the migration; keep validation aligned.
         $validator
             ->scalar('description')
-            ->maxLength('description', 500)
+            ->maxLength('description', 255)
             ->allowEmptyString('description');
 
         return $validator;
@@ -115,7 +115,12 @@ class TicketHistoryTable extends Table
     public function buildRules(RulesChecker $rules): RulesChecker
     {
         $rules->add($rules->existsIn(['ticket_id'], 'Tickets'), ['errorField' => 'ticket_id']);
-        $rules->add($rules->existsIn(['changed_by'], 'Users'), ['errorField' => 'changed_by']);
+        // changed_by is nullable (NULL = system event); skip the existsIn check
+        // when the FK is empty so inbound-created tickets don't fail validation.
+        $rules->add(
+            $rules->existsIn(['changed_by'], 'Users', ['allowNullableNulls' => true]),
+            ['errorField' => 'changed_by'],
+        );
 
         return $rules;
     }

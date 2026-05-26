@@ -362,6 +362,23 @@ class TicketPipelineService
             "Estado cambiado de '{$oldStatus}' a '{$newStatus}'",
         );
 
+        // G8: log resolved_at as its own entry when the transition actually
+        // set the timestamp. Resolution is a distinct business event from a
+        // generic status change — reports often query "tickets resolved by X"
+        // independently of the status field.
+        if ($newStatus === TicketConstants::STATUS_RESUELTO && $entity->resolved_at !== null) {
+            $this->logHistory(
+                'TicketHistory',
+                'ticket_id',
+                $entity->id,
+                'resolved_at',
+                null,
+                $entity->resolved_at->format('Y-m-d H:i:s'),
+                $userId,
+                'Ticket marcado como resuelto',
+            );
+        }
+
         $systemComment = $comment ?? "El estado cambió de '{$oldStatus}' a '{$newStatus}'";
         $systemCommentEntity = $this->comments->addComment(
             $entity->id,
@@ -450,13 +467,16 @@ class TicketPipelineService
             ? $targetUser->first_name . ' ' . $targetUser->last_name
             : 'Sin asignar';
 
+        // INC-1 fix: old_value/new_value hold the integer assignee_id so
+        // downstream queries can compare by ID. The human-readable mapping
+        // ("Juan Pérez") lives only in the description.
         $this->logHistory(
             'TicketHistory',
             'ticket_id',
             $entity->id,
             'assignee_id',
-            $oldAssigneeName,
-            $newAssigneeName,
+            $oldAssigneeId !== null ? (string)$oldAssigneeId : null,
+            $normalizedAssigneeId !== null ? (string)$normalizedAssigneeId : null,
             $userId,
             "Asignado a {$newAssigneeName}",
         );
@@ -528,9 +548,10 @@ class TicketPipelineService
      *
      * @param int $ticketId Ticket ID
      * @param int $tagId Tag ID
+     * @param int|null $actorUserId User performing the action (NULL = system/webhook)
      * @return array{success: bool, message: string}
      */
-    public function addTag(int $ticketId, int $tagId): array
+    public function addTag(int $ticketId, int $tagId, ?int $actorUserId = null): array
     {
         $ticketsTable = $this->fetchTable('Tickets');
         $ticketsTable->get($ticketId);
@@ -551,6 +572,17 @@ class TicketPipelineService
         ]);
 
         if ($ticketTagsTable->save($ticketTag)) {
+            $this->logHistory(
+                'TicketHistory',
+                'ticket_id',
+                $ticketId,
+                'tag_added',
+                null,
+                (string)$tagId,
+                $actorUserId,
+                'Etiqueta agregada: ' . $this->resolveTagName($tagId),
+            );
+
             return ['success' => true, 'message' => 'Etiqueta agregada.'];
         }
 
@@ -572,9 +604,10 @@ class TicketPipelineService
      *
      * @param int $ticketId Ticket ID
      * @param int $tagId Tag ID
+     * @param int|null $actorUserId User performing the action (NULL = system)
      * @return array{success: bool, message: string}
      */
-    public function removeTag(int $ticketId, int $tagId): array
+    public function removeTag(int $ticketId, int $tagId, ?int $actorUserId = null): array
     {
         $ticketTagsTable = $this->fetchTable('TicketTags');
 
@@ -583,6 +616,17 @@ class TicketPipelineService
             ->first();
 
         if ($ticketTag && $ticketTagsTable->delete($ticketTag)) {
+            $this->logHistory(
+                'TicketHistory',
+                'ticket_id',
+                $ticketId,
+                'tag_removed',
+                (string)$tagId,
+                null,
+                $actorUserId,
+                'Etiqueta removida: ' . $this->resolveTagName($tagId),
+            );
+
             return ['success' => true, 'message' => 'Etiqueta eliminada.'];
         }
 
@@ -593,15 +637,16 @@ class TicketPipelineService
      * Add follower to ticket.
      *
      * @param int $ticketId Ticket ID
-     * @param int $userId User ID
+     * @param int $followerUserId User ID becoming a follower
+     * @param int|null $actorUserId User performing the action (NULL = system)
      * @return array{success: bool, message: string}
      */
-    public function addFollower(int $ticketId, int $userId): array
+    public function addFollower(int $ticketId, int $followerUserId, ?int $actorUserId = null): array
     {
         $followersTable = $this->fetchTable('TicketFollowers');
 
         $exists = $followersTable->find()
-            ->where(['ticket_id' => $ticketId, 'user_id' => $userId])
+            ->where(['ticket_id' => $ticketId, 'user_id' => $followerUserId])
             ->count();
 
         if ($exists) {
@@ -610,14 +655,55 @@ class TicketPipelineService
 
         $follower = $followersTable->newEntity([
             'ticket_id' => $ticketId,
-            'user_id' => $userId,
+            'user_id' => $followerUserId,
         ]);
 
         if ($followersTable->save($follower)) {
+            $this->logHistory(
+                'TicketHistory',
+                'ticket_id',
+                $ticketId,
+                'follower_added',
+                null,
+                (string)$followerUserId,
+                $actorUserId,
+                'Seguidor agregado: ' . $this->resolveUserDisplayName($followerUserId),
+            );
+
             return ['success' => true, 'message' => 'Seguidor agregado.'];
         }
 
         return ['success' => false, 'message' => 'Error al agregar seguidor.'];
+    }
+
+    /**
+     * Resolve a tag name for use in history descriptions. Returns the id as
+     * string on lookup failure so the description is still informative.
+     */
+    private function resolveTagName(int $tagId): string
+    {
+        try {
+            $tag = $this->fetchTable('Tags')->get($tagId);
+
+            return (string)($tag->name ?? "#{$tagId}");
+        } catch (\Throwable) {
+            return "#{$tagId}";
+        }
+    }
+
+    /**
+     * Resolve a user display name for use in history descriptions.
+     */
+    private function resolveUserDisplayName(int $userId): string
+    {
+        try {
+            $user = $this->fetchTable('Users')->get($userId);
+            $name = trim((string)($user->name ?? ''));
+
+            return $name === '' ? "user#{$userId}" : $name;
+        } catch (\Throwable) {
+            return "user#{$userId}";
+        }
     }
 
     /**

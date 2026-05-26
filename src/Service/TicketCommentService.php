@@ -6,6 +6,7 @@ namespace App\Service;
 use App\Constants\TicketConstants;
 use App\Service\Dto\SystemConfig;
 use App\Service\Traits\HtmlSanitizerTrait;
+use App\Service\Traits\TicketHistoryLoggerTrait;
 use Cake\Datasource\EntityInterface;
 use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
@@ -20,6 +21,7 @@ class TicketCommentService
 {
     use LocatorAwareTrait;
     use HtmlSanitizerTrait;
+    use TicketHistoryLoggerTrait;
 
     /**
      * @param \App\Service\Dto\SystemConfig|null $config Accepted for symmetry with sibling services; not used today.
@@ -82,6 +84,24 @@ class TicketCommentService
             Log::error('Failed to add comment', ['errors' => $comment->getErrors()]);
 
             return null;
+        }
+
+        // Audit non-system comments. System comments (status/assign/priority
+        // notes) are already covered by the parent change's history entry, so
+        // logging them again here would duplicate the row.
+        if (!$isSystem) {
+            $this->logHistory(
+                'TicketHistory',
+                'ticket_id',
+                $entityId,
+                $type === TicketConstants::COMMENT_INTERNAL ? 'internal_comment_added' : 'comment_added',
+                null,
+                (string)$comment->id,
+                $userId,
+                $type === TicketConstants::COMMENT_INTERNAL
+                    ? 'Nota interna agregada'
+                    : 'Comentario público agregado',
+            );
         }
 
         return $comment;

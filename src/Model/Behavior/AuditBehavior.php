@@ -10,7 +10,10 @@ use LogicException;
 /**
  * AuditBehavior
  *
- * Provides a generic logChange() method for TicketHistoryTable.
+ * Helper exposing a generic logChange() method on history tables (today
+ * only TicketHistory). NOT an automatic Model.afterSave subscriber — callers
+ * invoke logChange() explicitly when they mutate audited fields. The
+ * TicketHistoryLoggerTrait routes through this method when present.
  *
  * Configuration:
  * - 'foreignKey': The FK field name (e.g., 'ticket_id')

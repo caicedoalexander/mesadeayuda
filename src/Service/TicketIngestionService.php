@@ -13,6 +13,7 @@ use App\Service\Dto\SystemConfig;
 use App\Service\Dto\WhatsappIngestPayload;
 use App\Service\Dto\WhatsappIngestPayloadAttachment;
 use App\Service\Traits\HtmlSanitizerTrait;
+use App\Service\Traits\TicketHistoryLoggerTrait;
 use App\Service\Util\EmailHeaderParser;
 use App\Service\Util\LogMasker;
 use Cake\Event\EventManager;
@@ -30,6 +31,7 @@ class TicketIngestionService
 {
     use LocatorAwareTrait;
     use HtmlSanitizerTrait;
+    use TicketHistoryLoggerTrait;
 
     private TicketAttachmentService $attachments;
     private N8nService $n8n;
@@ -129,6 +131,20 @@ class TicketIngestionService
 
             return null;
         }
+
+        // History: initial creation entry. changed_by is NULL because the actor
+        // is the external mail system, not a logged-in helpdesk user. The
+        // requester's email goes into the description for traceability.
+        $this->logHistory(
+            'TicketHistory',
+            'ticket_id',
+            (int)$ticket->id,
+            'created',
+            null,
+            (string)$ticket->status,
+            null,
+            'Ticket creado desde correo (' . $fromEmail . ')',
+        );
 
         // Inline images: download, persist with is_inline=true/content_id, then
         // rewrite cid: references in the body and re-save the ticket description.
@@ -253,6 +269,19 @@ class TicketIngestionService
             return ['ticket' => null, 'created' => false];
         }
 
+        // History: initial creation entry. changed_by is NULL — actor is the
+        // external messaging gateway, not a logged-in helpdesk user.
+        $this->logHistory(
+            'TicketHistory',
+            'ticket_id',
+            (int)$ticket->id,
+            'created',
+            null,
+            (string)$ticket->status,
+            null,
+            'Ticket creado desde WhatsApp (' . LogMasker::phone($payload->phoneNumber) . ')',
+        );
+
         // Best-effort attachments: failures logged as warning, ticket still created.
         foreach ($payload->attachments as $attachment) {
             $this->downloadAndStoreWhatsappAttachment($ticket, $attachment, (int)$user->id);
@@ -359,6 +388,20 @@ class TicketIngestionService
 
             return null;
         }
+
+        // History: the requester replied via email. Actor is the requester
+        // user we just resolved/created (not null) so the audit row identifies
+        // the customer that responded.
+        $this->logHistory(
+            'TicketHistory',
+            'ticket_id',
+            (int)$ticket->id,
+            'comment_added',
+            null,
+            (string)$comment->id,
+            (int)$user->id,
+            'Respuesta recibida por correo (' . $fromEmail . ')',
+        );
 
         // Inline images for this comment (associated via $comment->id). Same
         // ordering rationale as createFromEmail: persist first, then rewrite

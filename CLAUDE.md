@@ -67,7 +67,7 @@ Rules when extending:
 
 ### Persistence and auditing
 
-`AuditBehavior` (src/Model/Behavior/AuditBehavior.php) auto-writes `*_history` rows for operational tables. **Never bypass this when mutating audited entities** — go through the Table layer; don't issue raw SQL updates that skip behaviors.
+`AuditBehavior` (src/Model/Behavior/AuditBehavior.php) is a helper exposing `logChange()` on `TicketHistoryTable`. **It is NOT an automatic model subscriber** — services call it explicitly via `TicketHistoryLoggerTrait::logHistory()` when they mutate audited fields. `ticket_history.changed_by` is nullable; pass `NULL` for system-initiated mutations (inbound ingestion, scheduled jobs).
 
 Schema source of truth is `config/Migrations/`. `bin/cake bake` is allowed (CakePHP convention) but generated artifacts are expected to be edited to match the existing service-layer style.
 

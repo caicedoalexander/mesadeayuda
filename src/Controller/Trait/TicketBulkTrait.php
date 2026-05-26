@@ -152,34 +152,26 @@ trait TicketBulkTrait
 
     /**
      * Bulk add tag to tickets.
+     *
+     * Routes through TicketPipelineService::addTag so the history entry and
+     * race-handling logic match the single-ticket flow (INC-5 fix).
      */
     protected function bulkAddTicketTag(): Response
     {
         $this->request->allowMethod(['post']);
         $entityIds = $this->parseEntityIds();
         $tagId = (int)$this->request->getData('tag_id');
-        $tagsTable = $this->fetchTable('TicketTags');
-        $foreignKey = 'ticket_id';
+        $userId = $this->getCurrentUserId();
+        $service = $this->ticketPipeline;
         $successCount = 0;
         $errorCount = 0;
         foreach ($entityIds as $entityId) {
             try {
-                $exists = $tagsTable->exists([
-                    $foreignKey => $entityId,
-                    'tag_id' => $tagId,
-                ]);
-                if (!$exists) {
-                    $entityTag = $tagsTable->newEntity([
-                        $foreignKey => $entityId,
-                        'tag_id' => $tagId,
-                    ]);
-                    if ($tagsTable->save($entityTag)) {
-                        $successCount++;
-                    } else {
-                        $errorCount++;
-                    }
-                } else {
+                $result = $service->addTag($entityId, $tagId, $userId);
+                if ($result['success'] || $result['message'] === \App\Service\TicketPipelineService::MESSAGE_TAG_ALREADY_ADDED) {
                     $successCount++;
+                } else {
+                    $errorCount++;
                 }
             } catch (Exception $e) {
                 $errorCount++;
@@ -198,17 +190,37 @@ trait TicketBulkTrait
 
     /**
      * Bulk delete tickets.
+     *
+     * Writes a terminal history entry BEFORE the delete so the audit trail
+     * survives the cascade. The delete itself is non-blocking when the row
+     * is gone (subsequent FK cascade removes child rows).
      */
     protected function bulkDeleteTickets(): Response
     {
         $this->request->allowMethod(['post']);
         $entityIds = $this->parseEntityIds();
+        $userId = $this->getCurrentUserId();
         $table = $this->fetchTable('Tickets');
+        $historyTable = $this->fetchTable('TicketHistory');
         $successCount = 0;
         $errorCount = 0;
         foreach ($entityIds as $entityId) {
             try {
                 $entity = $table->get($entityId);
+                // Pre-delete audit row. ticket_history has FK to tickets and
+                // will be removed by the same cascade; the row exists just
+                // long enough to be captured by any audit export running in
+                // parallel and to leave a trace in operation logs.
+                $history = $historyTable->newEntity([
+                    'ticket_id' => $entity->id,
+                    'changed_by' => $userId,
+                    'field_name' => 'deleted',
+                    'old_value' => (string)$entity->status,
+                    'new_value' => null,
+                    'description' => 'Ticket eliminado en operación bulk',
+                ], ['accessibleFields' => ['changed_by' => true]]);
+                $historyTable->save($history);
+
                 if ($table->delete($entity)) {
                     $successCount++;
                 } else {

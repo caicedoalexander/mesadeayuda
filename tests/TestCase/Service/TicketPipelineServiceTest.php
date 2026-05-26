@@ -321,6 +321,63 @@ class TicketPipelineServiceTest extends TestCase
         $this->assertCount(1, $dispatched, 'Default behavior must dispatch the event inline');
     }
 
+    /**
+     * Cobertura de historial — addTag/removeTag/addFollower deben escribir
+     * una fila en TicketHistory. Capturamos el newEntity() del stub genérico
+     * para inspeccionar el payload sin acoplarnos al schema de la tabla real.
+     */
+    public function testAddTagWritesHistoryEntry(): void
+    {
+        $comments = $this->createMock(TicketCommentService::class);
+        $attachments = $this->createMock(TicketAttachmentService::class);
+        $service = $this->buildService($comments, $attachments);
+
+        $payloads = $this->captureHistoryPayloads($service);
+
+        $service->addTag(1, 7, 42);
+
+        $this->assertGreaterThan(0, $payloads->count(), 'addTag must write to TicketHistory');
+        $row = $payloads[$payloads->count() - 1];
+        $this->assertSame('tag_added', $row['field_name']);
+        $this->assertNull($row['old_value']);
+        $this->assertSame('7', $row['new_value']);
+        $this->assertSame(42, $row['changed_by']);
+    }
+
+    public function testRemoveTagWritesHistoryEntry(): void
+    {
+        $comments = $this->createMock(TicketCommentService::class);
+        $attachments = $this->createMock(TicketAttachmentService::class);
+        $service = $this->buildService($comments, $attachments);
+
+        $payloads = $this->captureHistoryPayloads($service);
+
+        $service->removeTag(1, 7, 42);
+
+        $this->assertGreaterThan(0, $payloads->count(), 'removeTag must write to TicketHistory');
+        $row = $payloads[$payloads->count() - 1];
+        $this->assertSame('tag_removed', $row['field_name']);
+        $this->assertSame('7', $row['old_value']);
+        $this->assertNull($row['new_value']);
+    }
+
+    public function testAddFollowerWritesHistoryEntry(): void
+    {
+        $comments = $this->createMock(TicketCommentService::class);
+        $attachments = $this->createMock(TicketAttachmentService::class);
+        $service = $this->buildService($comments, $attachments);
+
+        $payloads = $this->captureHistoryPayloads($service);
+
+        $service->addFollower(1, 99, 42);
+
+        $this->assertGreaterThan(0, $payloads->count(), 'addFollower must write to TicketHistory');
+        $row = $payloads[$payloads->count() - 1];
+        $this->assertSame('follower_added', $row['field_name']);
+        $this->assertSame('99', $row['new_value']);
+        $this->assertSame(42, $row['changed_by']);
+    }
+
     // -------------------- helpers --------------------
 
     private function buildService(
@@ -345,6 +402,86 @@ class TicketPipelineServiceTest extends TestCase
      *   that runs callbacks inline; save() optionally returns the entity (for changeStatus).
      * - any other table (e.g. 'TicketHistory'): a no-op stub whose save() returns the entity.
      */
+    /**
+     * Configures the table locator with the stubs needed by addTag/removeTag/
+     * addFollower and returns an ArrayObject that captures every newEntity
+     * payload landing in TicketHistory. ArrayObject is used (instead of a raw
+     * array) so the capture container is shared by reference between the test
+     * and the closure inside the locator without `&` gymnastics.
+     */
+    private function captureHistoryPayloads(TicketPipelineService $service): \ArrayObject
+    {
+        $payloads = new \ArrayObject();
+
+        $tickets = $this->getMockBuilder(Table::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['get'])
+            ->getMock();
+        $tickets->method('get')->willReturn($this->ticket);
+
+        $ticketTags = $this->getMockBuilder(Table::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['find', 'newEntity', 'save', 'delete'])
+            ->getMock();
+        $emptyQuery = $this->getMockBuilder(\Cake\ORM\Query\SelectQuery::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['where', 'count', 'first'])
+            ->getMock();
+        $emptyQuery->method('where')->willReturnSelf();
+        $emptyQuery->method('count')->willReturn(0);
+        // For removeTag: find()->where()->first() must return a row to delete.
+        $existingRow = new Entity(['id' => 1]);
+        $emptyQuery->method('first')->willReturn($existingRow);
+        $ticketTags->method('find')->willReturn($emptyQuery);
+        $ticketTags->method('newEntity')->willReturn(new Entity());
+        $ticketTags->method('save')->willReturnArgument(0);
+        $ticketTags->method('delete')->willReturn(true);
+
+        $followers = $this->getMockBuilder(Table::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['find', 'newEntity', 'save'])
+            ->getMock();
+        $followers->method('find')->willReturn($emptyQuery);
+        $followers->method('newEntity')->willReturn(new Entity());
+        $followers->method('save')->willReturnArgument(0);
+
+        $tags = $this->getMockBuilder(Table::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['get'])
+            ->getMock();
+        $tags->method('get')->willReturn(new Entity(['name' => 'Soporte']));
+
+        $users = $this->getMockBuilder(Table::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['get'])
+            ->getMock();
+        $users->method('get')->willReturn(new Entity(['name' => 'Maira']));
+
+        $history = $this->getMockBuilder(Table::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['save', 'newEntity'])
+            ->getMock();
+        $history->method('newEntity')->willReturnCallback(
+            function (array $data) use ($payloads): Entity {
+                $payloads->append($data);
+
+                return new Entity($data);
+            },
+        );
+        $history->method('save')->willReturnArgument(0);
+
+        $locator = new TableLocator();
+        $locator->set('Tickets', $tickets);
+        $locator->set('TicketTags', $ticketTags);
+        $locator->set('TicketFollowers', $followers);
+        $locator->set('Tags', $tags);
+        $locator->set('Users', $users);
+        $locator->set('TicketHistory', $history);
+        $service->setTableLocator($locator);
+
+        return $payloads;
+    }
+
     private function stubTicketsTable(TicketPipelineService $service, bool $saveReturnsEntity = false): void
     {
         $connection = $this->getMockBuilder(Connection::class)

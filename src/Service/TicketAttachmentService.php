@@ -6,6 +6,7 @@ namespace App\Service;
 use App\Model\Entity\Attachment;
 use App\Model\Entity\Ticket;
 use App\Service\Traits\GenericAttachmentTrait;
+use App\Service\Traits\TicketHistoryLoggerTrait;
 use Cake\Datasource\EntityInterface;
 use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
@@ -21,6 +22,7 @@ class TicketAttachmentService
 {
     use LocatorAwareTrait;
     use GenericAttachmentTrait;
+    use TicketHistoryLoggerTrait;
 
     private ?GmailService $gmail;
 
@@ -65,7 +67,7 @@ class TicketAttachmentService
                 );
 
                 // Save attachment using GenericAttachmentTrait
-                $this->saveAttachmentFromBinary(
+                $saved = $this->saveAttachmentFromBinary(
                     $ticket,
                     $attachmentData['filename'],
                     $content,
@@ -73,6 +75,19 @@ class TicketAttachmentService
                     $commentId,
                     $userId,
                 );
+
+                if ($saved !== null) {
+                    $this->logHistory(
+                        'TicketHistory',
+                        'ticket_id',
+                        (int)$ticket->id,
+                        'attachment_added',
+                        null,
+                        (string)$attachmentData['filename'],
+                        $userId,
+                        'Adjunto recibido por correo: ' . $attachmentData['filename'],
+                    );
+                }
             } catch (Exception $e) {
                 Log::error('Failed to process attachment', [
                     'ticket_id' => $ticket->id,
@@ -182,6 +197,19 @@ class TicketAttachmentService
 
         $result = $this->saveGenericUploadedFile($ticket, $file, $commentId, $userId);
         assert($result instanceof Attachment || $result === null);
+
+        if ($result !== null) {
+            $this->logHistory(
+                'TicketHistory',
+                'ticket_id',
+                (int)$ticket->id,
+                'attachment_added',
+                null,
+                (string)$result->filename,
+                $userId,
+                'Adjunto subido: ' . $result->filename,
+            );
+        }
 
         return $result;
     }
