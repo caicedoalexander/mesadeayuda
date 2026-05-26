@@ -5,7 +5,6 @@ namespace App\Test\TestCase\Notification\Email\Component;
 
 use App\Notification\Email\Component\EmailFrame;
 use App\Notification\Email\EmailBrand;
-use App\Notification\Email\EmailTheme;
 use Cake\Core\Configure;
 use PHPUnit\Framework\TestCase;
 
@@ -17,21 +16,27 @@ final class EmailFrameTest extends TestCase
         Configure::write('App.fullBaseUrl', 'https://mesa.example.com');
     }
 
-    public function testRendersAccentBarLogoHeaderInnerAndFooter(): void
+    public function testRendersInnerBodyAndMinimalFooter(): void
     {
-        $html = EmailFrame::render(
-            EmailTheme::creacion(),
-            innerHtml: '<p>BODY</p>',
-            ticketReference: '#1284',
-        );
+        $html = EmailFrame::render('<p>BODY</p>');
 
-        self::assertStringContainsString('background:#CD6A15', $html);
         self::assertStringContainsString('<p>BODY</p>', $html);
-        self::assertStringContainsString(EmailBrand::HEADER_TITLE, $html);
-        self::assertStringContainsString(EmailBrand::HEADER_SUBTITLE, $html);
-        self::assertStringContainsString('#1284', $html);
+        // Footer shows the small logo and the two brand lines.
         self::assertStringContainsString('logo-mesa-ayuda.svg', $html);
-        self::assertStringContainsString(EmailBrand::SUPPORT_EMAIL, $html);
-        self::assertStringContainsString(EmailBrand::ORG_NIT, $html);
+        self::assertStringContainsString(EmailBrand::TEAM_NAME, $html);
+        self::assertStringContainsString(EmailBrand::ORG_NAME, $html);
+    }
+
+    public function testDoesNotRenderLegacyChrome(): void
+    {
+        $html = EmailFrame::render('<p>x</p>');
+
+        // The old frame painted a 4px accent bar (`height:4px`), a header
+        // strip with a logo and "Soporte Interno" subtitle, and a footer
+        // with NIT/address/support email. None of that should remain.
+        self::assertStringNotContainsString('height:4px', $html);
+        self::assertStringNotContainsString('Soporte Interno', $html);
+        self::assertStringNotContainsString('NIT', $html);
+        self::assertStringNotContainsString('@operadoracafetera.com', $html);
     }
 }

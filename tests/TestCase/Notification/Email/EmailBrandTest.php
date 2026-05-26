@@ -17,13 +17,8 @@ final class EmailBrandTest extends TestCase
 
     public function testConstantsHaveExpectedValues(): void
     {
-        self::assertSame('Operadora Cafetera S.A.S.', EmailBrand::ORG_NAME);
-        self::assertSame('MESA DE AYUDA · OPERADORA CAFETERA', EmailBrand::ORG_TAG_LINE);
-        self::assertSame('Carrera 43A #1-50, Medellín', EmailBrand::ORG_ADDRESS);
-        self::assertSame('901.234.567-8', EmailBrand::ORG_NIT);
-        self::assertSame('soporte@operadoracafetera.com', EmailBrand::SUPPORT_EMAIL);
-        self::assertSame('Mesa de Ayuda', EmailBrand::HEADER_TITLE);
-        self::assertSame('Soporte Interno', EmailBrand::HEADER_SUBTITLE);
+        self::assertSame('Compañía Operadora Portuaria Cafetera S.A.', EmailBrand::ORG_NAME);
+        self::assertSame('Mesa de Ayuda', EmailBrand::TEAM_NAME);
     }
 
     public function testLogoUrlReturnsAbsoluteUrlFromFullBaseUrl(): void

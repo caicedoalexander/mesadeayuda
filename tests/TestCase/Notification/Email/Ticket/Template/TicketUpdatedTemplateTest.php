@@ -24,16 +24,16 @@ final class TicketUpdatedTemplateTest extends TestCase
         self::assertSame('ticket_updated', (new TicketUpdatedTemplate())->key());
     }
 
-    public function testRenderIncludesBothTransitionAndCommentBlock(): void
+    public function testRenderShowsCommentQuoteAndTransition(): void
     {
         $requester = new User();
         $requester->set(['first_name' => 'Alex', 'last_name' => ''], ['guard' => false]);
 
         $agent = new User();
-        $agent->set(['first_name' => 'Maira', 'last_name' => 'Pérez', 'role' => 'Líder'], ['guard' => false]);
+        $agent->set(['first_name' => 'Maira', 'last_name' => 'Pérez'], ['guard' => false]);
 
         $comment = new TicketComment();
-        $comment->set(['body' => '<p>Comentario.</p>', 'user' => $agent], ['guard' => false]);
+        $comment->set(['body' => '<p>Comentario.</p>'], ['guard' => false]);
 
         $ticket = new Ticket();
         $ticket->set([
@@ -42,7 +42,7 @@ final class TicketUpdatedTemplateTest extends TestCase
             'status' => 'pendiente',
             'priority' => 'media',
             'requester' => $requester,
-            'tags' => [],
+            'assignee' => null,
         ], ['guard' => false]);
 
         $ctx = new TemplateContext(
@@ -57,15 +57,14 @@ final class TicketUpdatedTemplateTest extends TestCase
 
         $email = (new TicketUpdatedTemplate())->render($ctx);
 
-        // Gmail threading depends on Subject matching the original ticket
-        // subject. Descriptive agent + transition copy lives in the body.
         self::assertSame('Re: Cafetera #14 no enciende', $email->subject);
-        self::assertStringContainsString('Tu ticket fue actualizado', $email->bodyHtml);
-        self::assertStringContainsString('Cambio de estado', $email->bodyHtml);
-        self::assertStringContainsString('Comentario del agente', $email->bodyHtml);
-        self::assertStringContainsString('Abierto', $email->bodyHtml);
-        self::assertStringContainsString('Pendiente', $email->bodyHtml);
+        self::assertStringContainsString('Hola Alex,', $email->bodyHtml);
+        self::assertStringContainsString('Maira Pérez actualizó', $email->bodyHtml);
+        self::assertStringContainsString('#TKT-1', $email->bodyHtml);
         self::assertStringContainsString('<p>Comentario.</p>', $email->bodyHtml);
-        self::assertStringContainsString('Maira Pérez', $email->bodyHtml);
+        self::assertStringContainsString('border-left:3px solid', $email->bodyHtml);
+        self::assertStringContainsString('Abierto → Pendiente', $email->bodyHtml);
+        self::assertStringContainsString('Asignado: Sin asignar', $email->bodyHtml);
+        self::assertStringContainsString('Responde a este correo', $email->bodyHtml);
     }
 }

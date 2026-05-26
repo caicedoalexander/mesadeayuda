@@ -23,7 +23,7 @@ final class TicketCreatedTemplateTest extends TestCase
         self::assertSame('ticket_created', (new TicketCreatedTemplate())->key());
     }
 
-    public function testRenderProducesSubjectAndBodyWithExpectedTokens(): void
+    public function testRenderProducesPlainTextStyleBody(): void
     {
         $requester = new User();
         $requester->set([
@@ -40,7 +40,6 @@ final class TicketCreatedTemplateTest extends TestCase
             'priority' => 'alta',
             'requester' => $requester,
             'assignee' => null,
-            'tags' => ['Mantenimiento'],
         ], ['guard' => false]);
 
         $ctx = new TemplateContext(
@@ -51,15 +50,18 @@ final class TicketCreatedTemplateTest extends TestCase
 
         $email = (new TicketCreatedTemplate())->render($ctx);
 
+        // TicketCreated is the root of the thread; subject is NOT "Re:"-prefixed.
         self::assertSame('Tu ticket #TKT-1284 fue creado', $email->subject);
-        self::assertStringContainsString('Tu ticket fue creado', $email->bodyHtml);
-        self::assertStringContainsString('Hola <strong', $email->bodyHtml);
-        self::assertStringContainsString('Alexander', $email->bodyHtml);
+        self::assertStringContainsString('Hola Alexander,', $email->bodyHtml);
+        self::assertStringContainsString('Recibimos tu solicitud', $email->bodyHtml);
+        self::assertStringContainsString('#TKT-1284', $email->bodyHtml);
         self::assertStringContainsString('Cafetera #14 no enciende', $email->bodyHtml);
-        self::assertStringContainsString('Próximos pasos', $email->bodyHtml);
         self::assertStringContainsString('30 minutos', $email->bodyHtml);
-        self::assertStringContainsString('Ver mi ticket', $email->bodyHtml);
-        self::assertStringContainsString('https://mesa.example.com/tickets/view/1', $email->bodyHtml);
-        self::assertStringContainsString('#CD6A15', $email->bodyHtml);
+        self::assertStringContainsString('Estado: Nuevo', $email->bodyHtml);
+        self::assertStringContainsString('Prioridad: Alta', $email->bodyHtml);
+        self::assertStringContainsString('Responde a este correo', $email->bodyHtml);
+        // Visual chrome removed: no link button, no "Próximos pasos" section.
+        self::assertStringNotContainsString('Ver mi ticket', $email->bodyHtml);
+        self::assertStringNotContainsString('Próximos pasos', $email->bodyHtml);
     }
 }

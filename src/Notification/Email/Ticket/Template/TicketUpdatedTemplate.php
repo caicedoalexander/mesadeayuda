@@ -4,19 +4,18 @@ declare(strict_types=1);
 namespace App\Notification\Email\Ticket\Template;
 
 use App\Notification\Email\Component\EmailFrame;
-use App\Notification\Email\Component\Greeting;
 use App\Notification\Email\EmailTemplate;
-use App\Notification\Email\EmailTheme;
 use App\Notification\Email\RenderedEmail;
 use App\Notification\Email\SubjectFormatter;
 use App\Notification\Email\TemplateContext;
-use App\Notification\Email\Ticket\Component\CommentBlock;
-use App\Notification\Email\Ticket\Component\StatusTransition;
-use App\Notification\Email\Ticket\Component\TicketCard;
+use App\Service\Renderer\NotificationRenderer;
 
 /**
- * Combo notification: status changed AND new comment in the same operation.
- * Theme: actualizacion (purple). Sent to requester only.
+ * Combo notification: status changed AND a new public comment in the same
+ * operation. Plain-text style: comment quoted, single line with the
+ * transition and assignee.
+ *
+ * SECURITY: $ctx->comment->body must arrive sanitized via HtmlSanitizerTrait.
  */
 final class TicketUpdatedTemplate implements EmailTemplate
 {
@@ -33,44 +32,31 @@ final class TicketUpdatedTemplate implements EmailTemplate
      */
     public function render(TemplateContext $ctx): RenderedEmail
     {
-        $theme = EmailTheme::actualizacion();
-        $agentName = $this->resolveAgentName($ctx);
-
-        // Gmail API requires the outbound Subject to match the original
-        // thread's Subject (after stripping Re:/Fwd:) for setThreadId() to
-        // group the message into the same conversation. The agent name and
-        // "fue actualizado" copy live in the body headline instead.
+        // Gmail threading: Subject must equal the original ticket subject.
         $subject = SubjectFormatter::reply((string)$ctx->ticket->subject);
 
-        $inner =
-            Greeting::render(
-                headline: 'Tu ticket fue actualizado',
-                intro: 'hubo dos cambios en tu ticket: cambió el estado y un agente añadió un comentario. '
-                    . 'Aquí el detalle:',
-                recipientName: $ctx->recipientName,
-            )
-            . $this->renderBadgeBanner($theme)
-            . StatusTransition::render(
-                (string)($ctx->oldStatus ?? ''),
-                (string)($ctx->newStatus ?? ''),
-                $theme->accent,
-            )
-            . CommentBlock::render(
-                authorName: $agentName,
-                authorRole: (string)($ctx->actor->role ?? ''),
-                authorColor: $theme->accent,
-                bodyHtml: (string)($ctx->comment?->body ?? ''),
-                accent: $theme->accent,
-                accentSoft: $theme->accentSoft,
-                timestamp: '',
-            )
-            . TicketCard::render($ctx->ticket);
+        $renderer = new NotificationRenderer();
+        $oldLabel = $renderer->getStatusLabel((string)($ctx->oldStatus ?? ''));
+        $newLabel = $renderer->getStatusLabel((string)($ctx->newStatus ?? ''));
 
-        return new RenderedEmail($subject, EmailFrame::render(
-            $theme,
-            $inner,
-            '#' . $ctx->ticket->ticket_number,
-        ));
+        $name = htmlspecialchars(trim((string)$ctx->recipientName), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $agent = htmlspecialchars($this->resolveAgentName($ctx), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $assignee = htmlspecialchars(self::resolveAssigneeName($ctx), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $ticketNumber = htmlspecialchars((string)$ctx->ticket->ticket_number, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $ticketSubject = htmlspecialchars((string)$ctx->ticket->subject, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $oldEsc = htmlspecialchars($oldLabel, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $newEsc = htmlspecialchars($newLabel, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $commentBody = (string)($ctx->comment?->body ?? '');
+
+        $body = '<p>Hola ' . $name . ',</p>'
+            . '<p>' . $agent . ' actualizó tu ticket #' . $ticketNumber
+            . ' (' . $ticketSubject . '):</p>'
+            . self::renderQuote($commentBody)
+            . '<p>Estado: <strong>' . $oldEsc . ' → ' . $newEsc . '</strong>'
+            . ' &nbsp; Asignado: ' . $assignee . '</p>'
+            . '<p>Responde a este correo para continuar.</p>';
+
+        return new RenderedEmail($subject, EmailFrame::render($body));
     }
 
     /**
@@ -82,28 +68,35 @@ final class TicketUpdatedTemplate implements EmailTemplate
         if ($ctx->actor === null) {
             return 'Mesa de Ayuda';
         }
-
         $name = trim((string)($ctx->actor->name ?? ''));
 
         return $name === '' ? 'Mesa de Ayuda' : $name;
     }
 
     /**
-     * @param \App\Notification\Email\EmailTheme $theme Theme used for the banner pills
-     * @return string Badge banner HTML
+     * @param \App\Notification\Email\TemplateContext $ctx Context with optional ticket assignee
+     * @return string Assignee display name, falling back to "Sin asignar"
      */
-    private function renderBadgeBanner(EmailTheme $theme): string
+    private static function resolveAssigneeName(TemplateContext $ctx): string
     {
-        $wrap = 'display:flex;align-items:center;gap:8px;padding:12px 14px;'
-            . 'margin-bottom:18px;background:' . $theme->accentSoft . ';border-radius:10px;';
-        $pill = 'display:inline-flex;align-items:center;gap:6px;padding:4px 10px;'
-            . 'border-radius:999px;background:#fff;color:' . $theme->accentInk . ';'
-            . 'font-size:11px;font-weight:600;border:1px solid ' . $theme->accent . '33;';
+        $assignee = $ctx->ticket->assignee ?? null;
+        if ($assignee === null) {
+            return 'Sin asignar';
+        }
+        $name = trim((string)($assignee->name ?? ''));
 
-        return '<div style="' . $wrap . '">'
-            . '<span style="' . $pill . '">↻ Cambio de estado</span>'
-            . '<span style="color:' . $theme->accentInk . ';font-size:11px;font-weight:600;">+</span>'
-            . '<span style="' . $pill . '">💬 Comentario del agente</span>'
-            . '</div>';
+        return $name === '' ? 'Sin asignar' : $name;
+    }
+
+    /**
+     * Comment body wrap: simple gray left border (blockquote-ish). The
+     * bodyHtml is inserted raw (sanitized upstream).
+     */
+    private static function renderQuote(string $bodyHtml): string
+    {
+        $style = 'border-left:3px solid #D1D5DB;padding:4px 0 4px 16px;'
+            . 'margin:8px 0 16px;color:#374151;';
+
+        return '<div style="' . $style . '">' . $bodyHtml . '</div>';
     }
 }

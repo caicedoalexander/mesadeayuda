@@ -3,20 +3,16 @@ declare(strict_types=1);
 
 namespace App\Notification\Email\Ticket\Template;
 
-use App\Notification\Email\Component\Avatar;
 use App\Notification\Email\Component\EmailFrame;
-use App\Notification\Email\Component\Greeting;
 use App\Notification\Email\EmailTemplate;
-use App\Notification\Email\EmailTheme;
 use App\Notification\Email\RenderedEmail;
 use App\Notification\Email\SubjectFormatter;
 use App\Notification\Email\TemplateContext;
-use App\Notification\Email\Ticket\Component\StatusTransition;
-use App\Notification\Email\Ticket\Component\TicketCard;
+use App\Service\Renderer\NotificationRenderer;
 
 /**
- * Notifies the requester that the ticket status changed.
- * Theme: estado (blue). Sent to requester only.
+ * Notifies the requester that the ticket status changed without a
+ * public comment. Plain-text style.
  */
 final class TicketStatusChangedTemplate implements EmailTemplate
 {
@@ -33,58 +29,61 @@ final class TicketStatusChangedTemplate implements EmailTemplate
      */
     public function render(TemplateContext $ctx): RenderedEmail
     {
-        $theme = EmailTheme::estado();
-        $oldStatus = (string)($ctx->oldStatus ?? '');
-        $newStatus = (string)($ctx->newStatus ?? '');
-
-        // Gmail API requires the outbound Subject to match the original
-        // thread's Subject (after stripping Re:/Fwd:) for setThreadId() to
-        // group the message into the same conversation. The new status label
-        // and transition visualization live in the body instead.
+        // Gmail threading: Subject must equal the original ticket subject.
         $subject = SubjectFormatter::reply((string)$ctx->ticket->subject);
 
-        $inner =
-            Greeting::render(
-                headline: 'El estado de tu ticket cambió',
-                intro: 'te avisamos porque hay un cambio en el seguimiento. '
-                    . 'El nuevo estado refleja la acción más reciente del agente:',
-                recipientName: $ctx->recipientName,
-            )
-            . StatusTransition::render($oldStatus, $newStatus, $theme->accent)
-            . TicketCard::render($ctx->ticket)
-            . $this->renderActorBanner($ctx, $theme);
+        $renderer = new NotificationRenderer();
+        $oldLabel = $renderer->getStatusLabel((string)($ctx->oldStatus ?? ''));
+        $newLabel = $renderer->getStatusLabel((string)($ctx->newStatus ?? ''));
 
-        $body = EmailFrame::render($theme, $inner, '#' . $ctx->ticket->ticket_number);
+        $name = htmlspecialchars(trim((string)$ctx->recipientName), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $ticketNumber = htmlspecialchars((string)$ctx->ticket->ticket_number, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $ticketSubject = htmlspecialchars((string)$ctx->ticket->subject, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $oldEsc = htmlspecialchars($oldLabel, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $newEsc = htmlspecialchars($newLabel, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $assignee = htmlspecialchars(self::resolveAssigneeName($ctx), ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
-        return new RenderedEmail($subject, $body);
+        $body = '<p>Hola ' . $name . ',</p>'
+            . '<p>El estado de tu ticket #' . $ticketNumber . ' (' . $ticketSubject . ') cambió:<br>'
+            . '<strong>' . $oldEsc . ' → ' . $newEsc . '</strong></p>'
+            . $this->renderActorLine($ctx)
+            . '<p>Asignado: ' . $assignee . '</p>'
+            . '<p>Responde a este correo si necesitas seguimiento.</p>';
+
+        return new RenderedEmail($subject, EmailFrame::render($body));
     }
 
     /**
      * @param \App\Notification\Email\TemplateContext $ctx Context with optional actor
-     * @param \App\Notification\Email\EmailTheme $theme Theme used for the banner
-     * @return string Banner HTML, or empty string when no actor
+     * @return string Paragraph attributing the change, or empty string when no actor
      */
-    private function renderActorBanner(TemplateContext $ctx, EmailTheme $theme): string
+    private function renderActorLine(TemplateContext $ctx): string
     {
         if ($ctx->actor === null) {
             return '';
         }
-
-        $name = (string)($ctx->actor->name ?? '');
-        if (trim($name) === '') {
+        $name = trim((string)($ctx->actor->name ?? ''));
+        if ($name === '') {
             return '';
         }
 
-        $initials = Avatar::initialsFromName($name);
-        $avatar = Avatar::render($initials, $theme->accent, 22);
-
-        $banner = 'display:flex;align-items:center;gap:10px;padding:10px 14px;'
-            . 'margin-bottom:20px;background:' . $theme->accentSoft . ';'
-            . 'border-radius:8px;font-size:12px;color:' . $theme->accentInk . ';';
-
-        return '<div style="' . $banner . '">' . $avatar
-            . '<span><strong style="font-weight:600;">'
+        return '<p>Aplicado por '
             . htmlspecialchars($name, ENT_QUOTES | ENT_HTML5, 'UTF-8')
-            . '</strong> aplicó este cambio.</span></div>';
+            . '.</p>';
+    }
+
+    /**
+     * @param \App\Notification\Email\TemplateContext $ctx Context with optional ticket assignee
+     * @return string Assignee display name, falling back to "Sin asignar"
+     */
+    private static function resolveAssigneeName(TemplateContext $ctx): string
+    {
+        $assignee = $ctx->ticket->assignee ?? null;
+        if ($assignee === null) {
+            return 'Sin asignar';
+        }
+        $name = trim((string)($assignee->name ?? ''));
+
+        return $name === '' ? 'Sin asignar' : $name;
     }
 }

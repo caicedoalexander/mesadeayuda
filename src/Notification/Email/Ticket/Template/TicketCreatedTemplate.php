@@ -4,17 +4,15 @@ declare(strict_types=1);
 namespace App\Notification\Email\Ticket\Template;
 
 use App\Notification\Email\Component\EmailFrame;
-use App\Notification\Email\Component\Greeting;
-use App\Notification\Email\Component\InfoBox;
 use App\Notification\Email\EmailTemplate;
-use App\Notification\Email\EmailTheme;
 use App\Notification\Email\RenderedEmail;
 use App\Notification\Email\TemplateContext;
-use App\Notification\Email\Ticket\Component\TicketCard;
+use App\Service\Renderer\NotificationRenderer;
 
 /**
  * Notifies the requester that their ticket was created.
- * Theme: creacion (orange). Sent to requester only.
+ * Plain-text style: a short paragraph + status/priority line. Subject is
+ * not "Re:" prefixed — this is the root of the conversation.
  */
 final class TicketCreatedTemplate implements EmailTemplate
 {
@@ -31,29 +29,25 @@ final class TicketCreatedTemplate implements EmailTemplate
      */
     public function render(TemplateContext $ctx): RenderedEmail
     {
-        $theme = EmailTheme::creacion();
         $subject = 'Tu ticket #' . $ctx->ticket->ticket_number . ' fue creado';
 
-        $nextSteps =
-            '<ol style="margin:0;padding-left:18px;font-size:13px;'
-            . 'color:#374151;line-height:1.7;">'
-            . '<li>Un agente tomará el ticket en los próximos <strong style="color:#111827;">30 minutos</strong>.</li>'
-            . '<li>Recibirás un correo cuando el ticket sea asignado o cambie de estado.</li>'
-            . '<li>Puedes añadir información respondiendo este correo.</li>'
-            . '</ol>';
+        $renderer = new NotificationRenderer();
+        $statusLabel = $renderer->getStatusLabel((string)$ctx->ticket->status);
+        $priorityLabel = ucfirst((string)$ctx->ticket->priority);
 
-        $inner =
-            Greeting::render(
-                headline: 'Tu ticket fue creado',
-                intro: 'hemos recibido tu solicitud y la asignaremos pronto a un agente. '
-                    . 'Mientras tanto, este es el resumen:',
-                recipientName: $ctx->recipientName,
-            )
-            . TicketCard::render($ctx->ticket)
-            . InfoBox::render('Próximos pasos', $nextSteps, InfoBox::VARIANT_DASHED);
+        $name = htmlspecialchars(trim((string)$ctx->recipientName), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $ticketNumber = htmlspecialchars((string)$ctx->ticket->ticket_number, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $ticketSubject = htmlspecialchars((string)$ctx->ticket->subject, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
-        $body = EmailFrame::render($theme, $inner, '#' . $ctx->ticket->ticket_number);
+        $body = '<p>Hola ' . ($name === '' ? '' : $name) . ',</p>'
+            . '<p>Recibimos tu solicitud y creamos el ticket #' . $ticketNumber
+            . ' (' . $ticketSubject . ').<br>'
+            . 'Un agente la tomará en los próximos 30 minutos.</p>'
+            . '<p>Estado: ' . htmlspecialchars($statusLabel, ENT_QUOTES | ENT_HTML5, 'UTF-8')
+            . ' &nbsp; Prioridad: ' . htmlspecialchars($priorityLabel, ENT_QUOTES | ENT_HTML5, 'UTF-8')
+            . '</p>'
+            . '<p>Responde a este correo para añadir información.</p>';
 
-        return new RenderedEmail($subject, $body);
+        return new RenderedEmail($subject, EmailFrame::render($body));
     }
 }

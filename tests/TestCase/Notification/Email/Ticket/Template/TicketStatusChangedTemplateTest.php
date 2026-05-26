@@ -35,7 +35,7 @@ final class TicketStatusChangedTemplateTest extends TestCase
             'status' => 'pendiente',
             'priority' => 'media',
             'requester' => $requester,
-            'tags' => [],
+            'assignee' => null,
         ], ['guard' => false]);
 
         $actor = new User();
@@ -52,16 +52,17 @@ final class TicketStatusChangedTemplateTest extends TestCase
 
         $email = (new TicketStatusChangedTemplate())->render($ctx);
 
-        // Gmail threading depends on Subject matching the original ticket
-        // subject. The new status label and ticket number live in the body.
         self::assertSame('Re: Cafetera #14 no enciende', $email->subject);
-        self::assertStringContainsString('El estado de tu ticket cambió', $email->bodyHtml);
-        self::assertStringContainsString('Abierto', $email->bodyHtml);
-        self::assertStringContainsString('Pendiente', $email->bodyHtml);
-        self::assertStringContainsString('Maira Pérez', $email->bodyHtml);
+        self::assertStringContainsString('Hola Alex,', $email->bodyHtml);
+        self::assertStringContainsString('El estado de tu ticket #TKT-1', $email->bodyHtml);
+        self::assertStringContainsString('Cafetera #14 no enciende', $email->bodyHtml);
+        self::assertStringContainsString('Abierto → Pendiente', $email->bodyHtml);
+        self::assertStringContainsString('Aplicado por Maira Pérez', $email->bodyHtml);
+        self::assertStringContainsString('Asignado: Sin asignar', $email->bodyHtml);
+        self::assertStringContainsString('Responde a este correo', $email->bodyHtml);
     }
 
-    public function testWithoutActorOmitsActorBanner(): void
+    public function testWithoutActorOmitsActorLine(): void
     {
         $requester = new User();
         $requester->set(['first_name' => 'Alex', 'last_name' => ''], ['guard' => false]);
@@ -73,7 +74,7 @@ final class TicketStatusChangedTemplateTest extends TestCase
             'status' => 'resuelto',
             'priority' => 'media',
             'requester' => $requester,
-            'tags' => [],
+            'assignee' => null,
         ], ['guard' => false]);
 
         $ctx = new TemplateContext(
@@ -85,6 +86,6 @@ final class TicketStatusChangedTemplateTest extends TestCase
         );
 
         $email = (new TicketStatusChangedTemplate())->render($ctx);
-        self::assertStringNotContainsString('aplicó este cambio', $email->bodyHtml);
+        self::assertStringNotContainsString('Aplicado por', $email->bodyHtml);
     }
 }

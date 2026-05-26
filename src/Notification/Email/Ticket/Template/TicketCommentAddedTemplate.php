@@ -4,19 +4,16 @@ declare(strict_types=1);
 namespace App\Notification\Email\Ticket\Template;
 
 use App\Notification\Email\Component\EmailFrame;
-use App\Notification\Email\Component\Greeting;
 use App\Notification\Email\EmailTemplate;
-use App\Notification\Email\EmailTheme;
 use App\Notification\Email\RenderedEmail;
 use App\Notification\Email\SubjectFormatter;
 use App\Notification\Email\TemplateContext;
-use App\Notification\Email\Ticket\Component\CommentBlock;
-use App\Notification\Email\Ticket\Component\TicketCard;
-use DateTimeInterface;
+use App\Service\Renderer\NotificationRenderer;
 
 /**
- * Notifies the requester that an agent left a new comment (without a status change).
- * Theme: comentario (green). Sent to requester only.
+ * Notifies the requester that an agent added a public comment without a
+ * status change. Plain-text style: short paragraph, comment quoted, single
+ * line of metadata.
  *
  * SECURITY: $ctx->comment->body must arrive sanitized via HtmlSanitizerTrait.
  */
@@ -35,47 +32,30 @@ final class TicketCommentAddedTemplate implements EmailTemplate
      */
     public function render(TemplateContext $ctx): RenderedEmail
     {
-        $theme = EmailTheme::comentario();
-        $agentName = $this->resolveAgentName($ctx);
-        $agentRole = (string)($ctx->actor->role ?? '');
-        $body = (string)($ctx->comment?->body ?? '');
-
         // Gmail API requires the outbound Subject to match the original
         // thread's Subject (after stripping Re:/Fwd:) for setThreadId() to
-        // group the message into the same conversation. Descriptive copy
-        // ("<agent> te respondió") lives in the body headline instead.
+        // group the message into the same conversation.
         $subject = SubjectFormatter::reply((string)$ctx->ticket->subject);
 
-        $timestamp = '';
-        $created = $ctx->comment?->get('created');
-        if ($created instanceof DateTimeInterface) {
-            $timestamp = $created->format('d M · H:i');
-        }
+        $renderer = new NotificationRenderer();
+        $statusLabel = $renderer->getStatusLabel((string)$ctx->ticket->status);
 
-        $inner =
-            Greeting::render(
-                headline: 'Tienes una nueva respuesta',
-                intro: $agentName
-                    . ' respondió a tu ticket. Puedes contestar desde la mesa de ayuda o respondiendo este correo.',
-                recipientName: $ctx->recipientName,
-            )
-            . CommentBlock::render(
-                authorName: $agentName,
-                authorRole: $agentRole,
-                authorColor: $theme->accent,
-                bodyHtml: $body,
-                accent: $theme->accent,
-                accentSoft: $theme->accentSoft,
-                timestamp: $timestamp,
-            )
-            . TicketCard::render($ctx->ticket)
-            . $this->renderReplyHint($theme);
+        $name = htmlspecialchars(trim((string)$ctx->recipientName), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $agent = htmlspecialchars($this->resolveAgentName($ctx), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $assignee = htmlspecialchars(self::resolveAssigneeName($ctx), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $ticketNumber = htmlspecialchars((string)$ctx->ticket->ticket_number, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $ticketSubject = htmlspecialchars((string)$ctx->ticket->subject, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $commentBody = (string)($ctx->comment?->body ?? '');
 
-        return new RenderedEmail($subject, EmailFrame::render(
-            $theme,
-            $inner,
-            '#' . $ctx->ticket->ticket_number,
-        ));
+        $body = '<p>Hola ' . $name . ',</p>'
+            . '<p>' . $agent . ' respondió a tu ticket #' . $ticketNumber
+            . ' (' . $ticketSubject . '):</p>'
+            . self::renderQuote($commentBody)
+            . '<p>Estado: ' . htmlspecialchars($statusLabel, ENT_QUOTES | ENT_HTML5, 'UTF-8')
+            . ' &nbsp; Asignado: ' . $assignee . '</p>'
+            . '<p>Responde a este correo para continuar.</p>';
+
+        return new RenderedEmail($subject, EmailFrame::render($body));
     }
 
     /**
@@ -94,25 +74,29 @@ final class TicketCommentAddedTemplate implements EmailTemplate
     }
 
     /**
-     * @param \App\Notification\Email\EmailTheme $theme Theme used for the hint icon
-     * @return string Reply-hint HTML
+     * @param \App\Notification\Email\TemplateContext $ctx Context with optional ticket assignee
+     * @return string Assignee display name, falling back to "Sin asignar"
      */
-    private function renderReplyHint(EmailTheme $theme): string
+    private static function resolveAssigneeName(TemplateContext $ctx): string
     {
-        $wrap = 'display:flex;align-items:center;gap:12px;padding:12px 14px;'
-            . 'margin-bottom:20px;background:#FAFAFA;border:1px solid #E5E7EB;'
-            . 'border-radius:8px;font-size:12px;color:#4B5563;line-height:1.5;';
+        $assignee = $ctx->ticket->assignee ?? null;
+        if ($assignee === null) {
+            return 'Sin asignar';
+        }
+        $name = trim((string)($assignee->name ?? ''));
 
-        $icon = '<span style="display:inline-flex;align-items:center;justify-content:center;'
-            . 'width:34px;height:34px;border-radius:50%;flex-shrink:0;'
-            . 'background:' . $theme->accentSoft . ';color:' . $theme->accentInk
-            . ';font-weight:700;">↩</span>';
+        return $name === '' ? 'Sin asignar' : $name;
+    }
 
-        $text = '<div><div style="font-weight:600;color:#111827;margin-bottom:2px;">'
-            . 'Responde desde este mismo correo</div>'
-            . 'Cualquier texto que envíes responderá automáticamente al hilo del ticket'
-            . ' y se notificará al agente.</div>';
+    /**
+     * Comment body wrap: a simple gray left border to mimic an email
+     * blockquote. The bodyHtml is inserted raw (sanitized upstream).
+     */
+    private static function renderQuote(string $bodyHtml): string
+    {
+        $style = 'border-left:3px solid #D1D5DB;padding:4px 0 4px 16px;'
+            . 'margin:8px 0 16px;color:#374151;';
 
-        return '<div style="' . $wrap . '">' . $icon . $text . '</div>';
+        return '<div style="' . $style . '">' . $bodyHtml . '</div>';
     }
 }
