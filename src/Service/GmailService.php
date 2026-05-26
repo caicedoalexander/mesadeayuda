@@ -939,6 +939,18 @@ class GmailService
             $message = new Message();
             $message->setRaw($encodedMessage);
 
+            // Gmail-specific threading: RFC 5322 headers (In-Reply-To /
+            // References) alone are insufficient for Gmail's UI to group the
+            // outbound message into the same conversation in the recipient's
+            // mailbox — Gmail's threading honors its internal threadId. Callers
+            // (EmailService::dispatch) populate $options['threadId'] from the
+            // ticket's persisted gmail_thread_id only for reply-class
+            // notifications; TicketCreated leaves it absent so it starts a
+            // fresh conversation.
+            if (!empty($options['threadId'])) {
+                $message->setThreadId((string)$options['threadId']);
+            }
+
             /** @var \Google\Service\Gmail\Message $sent */
             $sent = $service->users_messages->send('me', $message);
             $sentId = $sent->getId();

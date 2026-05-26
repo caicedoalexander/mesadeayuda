@@ -66,8 +66,9 @@ class NotificationMessageTest extends TestCase
 
     /**
      * MED-1 / CRIT-2 / J7: threading anchors (inReplyTo, referencesHeader,
-     * commentId, ticketId) MUST propagate from the factory to the VO so the
-     * email transport can persist them after Gmail send.
+     * commentId, ticketId, gmailThreadId) MUST propagate from the factory to
+     * the VO so the email transport can persist them after Gmail send and
+     * anchor the outbound to the right Gmail conversation.
      */
     public function testEmailFactoryPropagatesThreadingAnchors(): void
     {
@@ -79,18 +80,21 @@ class NotificationMessageTest extends TestCase
             referencesHeader: '<root@x> <msg-abc@mail.example.com>',
             commentId: 99,
             ticketId: 42,
+            gmailThreadId: '18c1abf0d2e34567',
         );
 
         $this->assertSame('msg-abc@mail.example.com', $msg->inReplyTo);
         $this->assertSame('<root@x> <msg-abc@mail.example.com>', $msg->referencesHeader);
         $this->assertSame(99, $msg->commentId);
         $this->assertSame(42, $msg->ticketId);
+        $this->assertSame('18c1abf0d2e34567', $msg->gmailThreadId);
     }
 
     /**
      * Threading anchors default to null when omitted. This is the contract
-     * TicketCreatedStrategy relies on (no in-reply-to on creation = no
-     * threading header injected by EmailService).
+     * TicketCreatedStrategy relies on (no in-reply-to and no threadId on
+     * creation = no threading header injected by EmailService and a fresh
+     * Gmail conversation started by GmailService).
      */
     public function testEmailFactoryDefaultsThreadingAnchorsToNull(): void
     {
@@ -104,6 +108,7 @@ class NotificationMessageTest extends TestCase
         $this->assertNull($msg->referencesHeader);
         $this->assertNull($msg->commentId);
         $this->assertNull($msg->ticketId);
+        $this->assertNull($msg->gmailThreadId);
     }
 
     /**

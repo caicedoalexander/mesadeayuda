@@ -85,6 +85,45 @@ class TicketStatusChangedStrategyTest extends TestCase
     }
 
     /**
+     * Gmail UI threading hinges on Message::setThreadId(), which requires the
+     * ticket's gmail_thread_id to reach the transport. Reply-class strategies
+     * MUST propagate it into the NotificationMessage so EmailService can pass
+     * it to GmailService::sendEmail.
+     */
+    public function testEmailMessageCarriesGmailThreadIdFromTicket(): void
+    {
+        $strategy = $this->buildStrategy(
+            $this->makeTicket(rfcMessageId: 'orig@example.com', gmailThreadId: '18c1abf0d2e34567'),
+        );
+
+        $messages = iterator_to_array(
+            $strategy->buildMessages(new TicketStatusChanged(1, 'abierto', 'resuelto', 2)),
+            false,
+        );
+
+        $email = $this->firstEmail($messages);
+        $this->assertSame('18c1abf0d2e34567', $email->gmailThreadId);
+    }
+
+    /**
+     * Tickets created manually (no Gmail thread of origin) leave
+     * gmail_thread_id null. The propagated value must stay null so the
+     * transport does NOT call setThreadId() with an empty argument.
+     */
+    public function testEmailMessageOmitsGmailThreadIdWhenTicketHasNone(): void
+    {
+        $strategy = $this->buildStrategy($this->makeTicket(rfcMessageId: null));
+
+        $messages = iterator_to_array(
+            $strategy->buildMessages(new TicketStatusChanged(1, 'abierto', 'resuelto', 2)),
+            false,
+        );
+
+        $email = $this->firstEmail($messages);
+        $this->assertNull($email->gmailThreadId);
+    }
+
+    /**
      * Threading headers must be present whenever the ticket already has any
      * RFC anchor — even though this is a status-only notification.
      */
@@ -115,7 +154,7 @@ class TicketStatusChangedStrategyTest extends TestCase
 
     // -------------------- helpers --------------------
 
-    private function makeTicket(?string $rfcMessageId = null): Ticket
+    private function makeTicket(?string $rfcMessageId = null, ?string $gmailThreadId = null): Ticket
     {
         $requester = new User();
         $requester->patch([
@@ -134,6 +173,7 @@ class TicketStatusChangedStrategyTest extends TestCase
             'requester' => $requester,
             'assignee' => null,
             'rfc_message_id' => $rfcMessageId,
+            'gmail_thread_id' => $gmailThreadId,
             'email_to' => null,
             'email_cc' => null,
             'attachments' => [],

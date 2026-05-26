@@ -191,6 +191,76 @@ class EmailServiceTest extends TestCase
     }
 
     /**
+     * Gmail-specific threading: when a reply-class strategy populates
+     * gmailThreadId, the transport MUST forward it via $options['threadId']
+     * so GmailService::sendEmail can call Message::setThreadId(). Without
+     * this, the outbound notification arrives as a new conversation in
+     * the customer's Gmail UI even with correct RFC 5322 headers.
+     */
+    public function testDispatchForwardsGmailThreadIdToTransportOptions(): void
+    {
+        $capturedOptions = null;
+        $gmail = $this->getMockBuilder(GmailService::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['sendEmail'])
+            ->getMock();
+        $gmail->method('sendEmail')->willReturnCallback(
+            static function ($to, $subject, $body, $attachments, $options) use (&$capturedOptions): ?string {
+                $capturedOptions = $options;
+
+                return 'sent@mail.gmail.com';
+            },
+        );
+
+        $service = $this->buildService($this->createMock(TicketCommentService::class), $gmail);
+
+        $msg = NotificationMessage::email(
+            recipient: 'user@example.com',
+            subject: 'Re: hi',
+            bodyHtml: '<p>b</p>',
+            gmailThreadId: '18c1abf0d2e34567',
+        );
+
+        $service->dispatch($msg);
+
+        $this->assertIsArray($capturedOptions);
+        $this->assertSame('18c1abf0d2e34567', $capturedOptions['threadId']);
+    }
+
+    /**
+     * TicketCreated must NOT carry a threadId — it starts the conversation.
+     * Without a threadId in the options map, Gmail opens a new thread.
+     */
+    public function testDispatchDoesNotForwardThreadIdWhenAbsent(): void
+    {
+        $capturedOptions = null;
+        $gmail = $this->getMockBuilder(GmailService::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['sendEmail'])
+            ->getMock();
+        $gmail->method('sendEmail')->willReturnCallback(
+            static function ($to, $subject, $body, $attachments, $options) use (&$capturedOptions): ?string {
+                $capturedOptions = $options;
+
+                return 'sent@mail.gmail.com';
+            },
+        );
+
+        $service = $this->buildService($this->createMock(TicketCommentService::class), $gmail);
+
+        $msg = NotificationMessage::email(
+            recipient: 'user@example.com',
+            subject: 'New ticket',
+            bodyHtml: '<p>b</p>',
+        );
+
+        $service->dispatch($msg);
+
+        $this->assertIsArray($capturedOptions);
+        $this->assertArrayNotHasKey('threadId', $capturedOptions);
+    }
+
+    /**
      * Dispatch must reject non-email messages — the WhatsApp transport
      * is a sibling, not an alias.
      */

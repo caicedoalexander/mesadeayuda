@@ -35,15 +35,17 @@ final class NotificationMessage
         public readonly ?string $referencesHeader = null,
         public readonly ?int $commentId = null,
         public readonly ?int $ticketId = null,
+        public readonly ?string $gmailThreadId = null,
     ) {
     }
 
     /**
      * Factory for an email notification.
      *
-     * Threading params ($inReplyTo, $referencesHeader, $commentId, $ticketId) are
-     * optional and only meaningful for the email channel; they implement RFC 5322
-     * threading on outbound notifications (CRIT-2 / J1+J2+J7, MED-1):
+     * Threading params ($inReplyTo, $referencesHeader, $commentId, $ticketId,
+     * $gmailThreadId) are optional and only meaningful for the email channel;
+     * they implement RFC 5322 threading on outbound notifications
+     * (CRIT-2 / J1+J2+J7, MED-1):
      *   - $inReplyTo: most recent persisted RFC Message-ID we anchor against.
      *   - $referencesHeader: full chain `<id1> <id2>` (newest LAST per RFC 5322).
      *   - $commentId: ticket_comments.id whose rfc_message_id the transport must
@@ -52,6 +54,13 @@ final class NotificationMessage
      *     (TicketCreated). The transport persists the outbound Message-ID onto
      *     tickets.rfc_message_id ONLY when that column is still empty — never
      *     clobbers the customer's original Message-ID on email-created tickets.
+     *   - $gmailThreadId: tickets.gmail_thread_id to anchor the outbound message
+     *     to the same Gmail conversation. RFC headers alone are insufficient for
+     *     Gmail's UI threading; the Gmail API requires Message.setThreadId() to
+     *     keep replies inside the conversation in the customer's mailbox. Only
+     *     set on reply-class notifications (TicketCommentAdded, TicketResponded,
+     *     TicketStatusChanged); TicketCreated leaves it null because it is the
+     *     root of the conversation.
      *
      * @param array<int, array{email: string, name?: string}> $additionalTo
      * @param array<int, array{email: string, name?: string}> $additionalCc
@@ -70,6 +79,7 @@ final class NotificationMessage
         ?string $referencesHeader = null,
         ?int $commentId = null,
         ?int $ticketId = null,
+        ?string $gmailThreadId = null,
     ): self {
         if ($recipient === '') {
             throw new InvalidArgumentException('Email recipient cannot be empty');
@@ -89,6 +99,7 @@ final class NotificationMessage
             referencesHeader: $referencesHeader,
             commentId: $commentId,
             ticketId: $ticketId,
+            gmailThreadId: $gmailThreadId,
         );
     }
 

@@ -67,6 +67,7 @@ final class TicketStatusChangedStrategy extends AbstractTicketStrategy
             // *this specific* notification reattaches by RFC. Falls back to
             // null on legacy callers that didn't capture the system_comment id.
             commentId: $event->systemCommentId,
+            gmailThreadId: $ticket->gmail_thread_id,
         );
     }
 }

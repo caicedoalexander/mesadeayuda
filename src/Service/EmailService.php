@@ -94,6 +94,7 @@ class EmailService
             referencesHeader: $message->referencesHeader,
             commentId: $message->commentId,
             ticketId: $message->ticketId,
+            gmailThreadId: $message->gmailThreadId,
         );
     }
 
@@ -108,6 +109,7 @@ class EmailService
         ?string $referencesHeader = null,
         ?int $commentId = null,
         ?int $ticketId = null,
+        ?string $gmailThreadId = null,
     ): bool {
         try {
             $systemTitle = $this->getSettingValue(SettingKeys::SYSTEM_TITLE, CacheConstants::DEFAULT_SYSTEM_TITLE);
@@ -150,6 +152,15 @@ class EmailService
             }
             if ($referencesHeader !== null && $referencesHeader !== '') {
                 $options['headers']['References'] = $referencesHeader;
+            }
+            // Gmail-specific threading: RFC headers alone are not enough for
+            // Gmail's UI to group the outbound message into the same
+            // conversation. Gmail API requires Message.setThreadId() (see
+            // GmailService::sendEmail). Reply-class strategies populate this
+            // from tickets.gmail_thread_id; TicketCreated leaves it null
+            // because it is the root of the thread.
+            if ($gmailThreadId !== null && $gmailThreadId !== '') {
+                $options['threadId'] = $gmailThreadId;
             }
 
             if (!empty($ccRecipients)) {

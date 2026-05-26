@@ -84,6 +84,7 @@ final class TicketCommentAddedStrategy extends AbstractTicketStrategy
             inReplyTo: $threading['inReplyTo'],
             referencesHeader: $threading['references'],
             commentId: $comment->id,
+            gmailThreadId: $ticket->gmail_thread_id,
         );
     }
 }
