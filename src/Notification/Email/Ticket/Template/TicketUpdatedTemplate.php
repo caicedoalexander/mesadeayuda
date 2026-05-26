@@ -36,9 +36,11 @@ final class TicketUpdatedTemplate implements EmailTemplate
         $theme = EmailTheme::actualizacion();
         $agentName = $this->resolveAgentName($ctx);
 
-        $subject = SubjectFormatter::reply(
-            $agentName . ' actualizó tu ticket #' . $ctx->ticket->ticket_number,
-        );
+        // Gmail API requires the outbound Subject to match the original
+        // thread's Subject (after stripping Re:/Fwd:) for setThreadId() to
+        // group the message into the same conversation. The agent name and
+        // "fue actualizado" copy live in the body headline instead.
+        $subject = SubjectFormatter::reply((string)$ctx->ticket->subject);
 
         $inner =
             Greeting::render(

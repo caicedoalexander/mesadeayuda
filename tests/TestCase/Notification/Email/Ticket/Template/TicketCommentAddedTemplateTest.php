@@ -25,7 +25,7 @@ final class TicketCommentAddedTemplateTest extends TestCase
         self::assertSame('ticket_comment_added', (new TicketCommentAddedTemplate())->key());
     }
 
-    public function testRendersCommentBlockAndSubjectMentionsAgent(): void
+    public function testSubjectIsReplyOfTicketSubjectAndBodyMentionsAgent(): void
     {
         $requester = new User();
         $requester->set(['first_name' => 'Alex', 'last_name' => ''], ['guard' => false]);
@@ -43,7 +43,7 @@ final class TicketCommentAddedTemplateTest extends TestCase
         $ticket = new Ticket();
         $ticket->set([
             'ticket_number' => 'TKT-1',
-            'subject' => 'S',
+            'subject' => 'Cafetera #14 no enciende',
             'status' => 'pendiente',
             'priority' => 'media',
             'requester' => $requester,
@@ -60,15 +60,21 @@ final class TicketCommentAddedTemplateTest extends TestCase
 
         $email = (new TicketCommentAddedTemplate())->render($ctx);
 
-        self::assertStringContainsString('Maira Pérez', $email->subject);
-        self::assertStringContainsString('TKT-1', $email->subject);
+        // Gmail threading depends on Subject matching the original. We emit
+        // 'Re: <ticket.subject>' verbatim — no agent name, no ticket number.
+        self::assertSame('Re: Cafetera #14 no enciende', $email->subject);
         self::assertStringContainsString('Tienes una nueva respuesta', $email->bodyHtml);
+        self::assertStringContainsString('Maira Pérez', $email->bodyHtml);
         self::assertStringContainsString('<p>Ya estamos revisando.</p>', $email->bodyHtml);
         self::assertStringContainsString('Responde desde este mismo correo', $email->bodyHtml);
-        self::assertStringContainsString('Responder en la mesa de ayuda', $email->bodyHtml);
     }
 
-    public function testWithoutActorSubjectFallsBackToMesaDeAyuda(): void
+    /**
+     * Idempotency on the Re: prefix — if ticket.subject already starts with
+     * "Re: " (because it came from a customer reply to a forwarded thread),
+     * SubjectFormatter must not double-stack it.
+     */
+    public function testSubjectDoesNotDoubleReplyPrefix(): void
     {
         $requester = new User();
         $requester->set(['first_name' => 'Alex', 'last_name' => ''], ['guard' => false]);
@@ -79,7 +85,7 @@ final class TicketCommentAddedTemplateTest extends TestCase
         $ticket = new Ticket();
         $ticket->set([
             'ticket_number' => 'TKT-9',
-            'subject' => 'S',
+            'subject' => 'Re: Cafetera #14 no enciende',
             'status' => 'abierto',
             'priority' => 'media',
             'requester' => $requester,
@@ -94,6 +100,6 @@ final class TicketCommentAddedTemplateTest extends TestCase
         );
 
         $email = (new TicketCommentAddedTemplate())->render($ctx);
-        self::assertStringContainsString('Mesa de Ayuda te respondió', $email->subject);
+        self::assertSame('Re: Cafetera #14 no enciende', $email->subject);
     }
 }

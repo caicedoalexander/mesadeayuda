@@ -40,9 +40,11 @@ final class TicketCommentAddedTemplate implements EmailTemplate
         $agentRole = (string)($ctx->actor->role ?? '');
         $body = (string)($ctx->comment?->body ?? '');
 
-        $subject = SubjectFormatter::reply(
-            $agentName . ' te respondió en el ticket #' . $ctx->ticket->ticket_number,
-        );
+        // Gmail API requires the outbound Subject to match the original
+        // thread's Subject (after stripping Re:/Fwd:) for setThreadId() to
+        // group the message into the same conversation. Descriptive copy
+        // ("<agent> te respondió") lives in the body headline instead.
+        $subject = SubjectFormatter::reply((string)$ctx->ticket->subject);
 
         $timestamp = '';
         $created = $ctx->comment?->get('created');

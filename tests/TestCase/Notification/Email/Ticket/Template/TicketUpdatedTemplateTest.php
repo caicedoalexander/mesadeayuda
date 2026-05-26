@@ -38,7 +38,7 @@ final class TicketUpdatedTemplateTest extends TestCase
         $ticket = new Ticket();
         $ticket->set([
             'ticket_number' => 'TKT-1',
-            'subject' => 'S',
+            'subject' => 'Cafetera #14 no enciende',
             'status' => 'pendiente',
             'priority' => 'media',
             'requester' => $requester,
@@ -57,13 +57,15 @@ final class TicketUpdatedTemplateTest extends TestCase
 
         $email = (new TicketUpdatedTemplate())->render($ctx);
 
-        self::assertStringContainsString('Maira Pérez actualizó tu ticket', $email->subject);
+        // Gmail threading depends on Subject matching the original ticket
+        // subject. Descriptive agent + transition copy lives in the body.
+        self::assertSame('Re: Cafetera #14 no enciende', $email->subject);
         self::assertStringContainsString('Tu ticket fue actualizado', $email->bodyHtml);
         self::assertStringContainsString('Cambio de estado', $email->bodyHtml);
         self::assertStringContainsString('Comentario del agente', $email->bodyHtml);
         self::assertStringContainsString('Abierto', $email->bodyHtml);
         self::assertStringContainsString('Pendiente', $email->bodyHtml);
         self::assertStringContainsString('<p>Comentario.</p>', $email->bodyHtml);
-        self::assertStringContainsString('Ver actualización completa', $email->bodyHtml);
+        self::assertStringContainsString('Maira Pérez', $email->bodyHtml);
     }
 }

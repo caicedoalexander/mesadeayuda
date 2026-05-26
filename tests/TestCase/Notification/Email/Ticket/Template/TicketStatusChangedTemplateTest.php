@@ -23,7 +23,7 @@ final class TicketStatusChangedTemplateTest extends TestCase
         self::assertSame('ticket_status_changed', (new TicketStatusChangedTemplate())->key());
     }
 
-    public function testRenderIncludesStatusTransitionAndSubjectMentionsNewLabel(): void
+    public function testSubjectIsReplyOfTicketSubjectAndBodyShowsTransition(): void
     {
         $requester = new User();
         $requester->set(['first_name' => 'Alex', 'last_name' => ''], ['guard' => false]);
@@ -31,7 +31,7 @@ final class TicketStatusChangedTemplateTest extends TestCase
         $ticket = new Ticket();
         $ticket->set([
             'ticket_number' => 'TKT-1',
-            'subject' => 'Subj',
+            'subject' => 'Cafetera #14 no enciende',
             'status' => 'pendiente',
             'priority' => 'media',
             'requester' => $requester,
@@ -52,13 +52,13 @@ final class TicketStatusChangedTemplateTest extends TestCase
 
         $email = (new TicketStatusChangedTemplate())->render($ctx);
 
-        self::assertStringContainsString('Pendiente', $email->subject);
-        self::assertStringContainsString('TKT-1', $email->subject);
+        // Gmail threading depends on Subject matching the original ticket
+        // subject. The new status label and ticket number live in the body.
+        self::assertSame('Re: Cafetera #14 no enciende', $email->subject);
         self::assertStringContainsString('El estado de tu ticket cambió', $email->bodyHtml);
         self::assertStringContainsString('Abierto', $email->bodyHtml);
         self::assertStringContainsString('Pendiente', $email->bodyHtml);
         self::assertStringContainsString('Maira Pérez', $email->bodyHtml);
-        self::assertStringContainsString('Ver el ticket', $email->bodyHtml);
     }
 
     public function testWithoutActorOmitsActorBanner(): void

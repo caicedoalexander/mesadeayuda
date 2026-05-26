@@ -13,7 +13,6 @@ use App\Notification\Email\SubjectFormatter;
 use App\Notification\Email\TemplateContext;
 use App\Notification\Email\Ticket\Component\StatusTransition;
 use App\Notification\Email\Ticket\Component\TicketCard;
-use App\Service\Renderer\NotificationRenderer;
 
 /**
  * Notifies the requester that the ticket status changed.
@@ -38,12 +37,11 @@ final class TicketStatusChangedTemplate implements EmailTemplate
         $oldStatus = (string)($ctx->oldStatus ?? '');
         $newStatus = (string)($ctx->newStatus ?? '');
 
-        $renderer = new NotificationRenderer();
-        $newLabel = $renderer->getStatusLabel($newStatus);
-        $subject = SubjectFormatter::reply(
-            'El estado de tu ticket #' . $ctx->ticket->ticket_number
-            . ' cambió a ' . $newLabel,
-        );
+        // Gmail API requires the outbound Subject to match the original
+        // thread's Subject (after stripping Re:/Fwd:) for setThreadId() to
+        // group the message into the same conversation. The new status label
+        // and transition visualization live in the body instead.
+        $subject = SubjectFormatter::reply((string)$ctx->ticket->subject);
 
         $inner =
             Greeting::render(
