@@ -279,20 +279,5 @@ trait TicketActionsTrait
         return (int)$value;
     }
 
-    /**
-     * @param array $result Service result with success/message keys
-     * @param string $redirectUrl URL to redirect to
-     */
-    protected function handleServiceResult(array $result, string $redirectUrl): Response
-    {
-        if (!empty($result['success'])) {
-            $this->Flash->success($result['message'] ?? 'Operación exitosa.');
-        } else {
-            $this->Flash->error($result['message'] ?? 'Error en la operación.');
-        }
-
-        return $this->redirect($redirectUrl);
-    }
-
     // endregion
 }
