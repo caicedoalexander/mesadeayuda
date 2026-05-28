@@ -494,7 +494,7 @@ body {
 /* Scrollbars: ver "DESIGN SYSTEM — SCROLLBARS" en la cabecera de este
    archivo. Las reglas globales aplican a todos los contenedores con
    overflow, incluyendo .table-scroll, .comments-scroll y el dropdown de
-   Select2. Para variantes usar .scroll-dark / .scroll-auto-hide / .scroll-hide.
+   Select2. Para fondos oscuros usar .scroll-dark.
    El contenedor .comments-scroll conserva sólo su radius/border. */
 .comments-scroll {
     border-radius: var(--radius-md);
