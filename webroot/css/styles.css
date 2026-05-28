@@ -88,8 +88,7 @@ body {
    DESIGN SYSTEM — SCROLLBARS
    Globales. Thumb 6px visible sobre hit-target de 12px (3px de
    border transparente). Idle gray-300 → hover gray-400 → drag
-   admin-green. Helpers: .scroll-dark (sidebar), .scroll-auto-hide
-   (oculto hasta hover), .scroll-hide (sin barra, overflow vivo).
+   admin-green. Helper: .scroll-dark (sidebar).
    Nota: WebKit no resuelve var() dentro de ::-webkit-scrollbar-*,
    por eso los valores van en hex literal. Si cambian los tokens
    --gray-300/400 o --admin-green, sincronizar aquí.
@@ -117,18 +116,6 @@ body {
 .scroll-dark::-webkit-scrollbar-thumb        { background: rgba(255, 255, 255, 0.22); background-clip: padding-box; border: 3px solid transparent; }
 .scroll-dark::-webkit-scrollbar-thumb:hover  { background: rgba(255, 255, 255, 0.36); background-clip: padding-box; }
 .scroll-dark::-webkit-scrollbar-thumb:active { background: #00D477; background-clip: padding-box; }
-
-/* Oculto hasta hover / focus-within (feeds, popovers) */
-.scroll-auto-hide { scrollbar-color: transparent transparent; transition: scrollbar-color 0.2s; }
-.scroll-auto-hide::-webkit-scrollbar-thumb { background: transparent; background-clip: padding-box; border: 3px solid transparent; transition: background 0.2s; }
-.scroll-auto-hide:hover,
-.scroll-auto-hide:focus-within { scrollbar-color: #D1D5DB transparent; }
-.scroll-auto-hide:hover::-webkit-scrollbar-thumb,
-.scroll-auto-hide:focus-within::-webkit-scrollbar-thumb { background: #D1D5DB; background-clip: padding-box; }
-
-/* Sin barra (overflow funcional vive, sólo se oculta el rail) */
-.scroll-hide { scrollbar-width: none; }
-.scroll-hide::-webkit-scrollbar { display: none; }
 
 /* Helpers tipográficos del DS — wordmark Mesa de Ayuda */
 .serif-italic {
