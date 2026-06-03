@@ -156,7 +156,6 @@ final class WebhooksController extends Controller
 
             return $this->jsonOk([
                 'ticket_id' => (int)$result['ticket']->id,
-                'ticket_number' => $result['ticket']->ticket_number,
                 'created' => $result['created'],
             ]);
         } catch (Throwable $e) {

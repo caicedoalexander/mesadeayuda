@@ -182,7 +182,6 @@ class TicketIngestionService
 
         Log::info('Created ticket from email', [
             'ticket_id' => $ticket->id,
-            'ticket_number' => $ticket->ticket_number,
             'from' => LogMasker::email($fromEmail),
         ]);
 
@@ -288,7 +287,6 @@ class TicketIngestionService
 
         Log::info('Created ticket from WhatsApp', [
             'ticket_id' => $ticket->id,
-            'ticket_number' => $ticket->ticket_number,
             'phone' => LogMasker::phone($payload->phoneNumber),
         ]);
 
@@ -313,7 +311,6 @@ class TicketIngestionService
         if (!$this->isEmailInTicketRecipients($ticket, $fromEmail)) {
             Log::warning('Unauthorized email sender attempted to reply to ticket', [
                 'ticket_id' => $ticket->id,
-                'ticket_number' => $ticket->ticket_number,
                 'from_email' => $fromEmail,
             ]);
 
@@ -428,7 +425,6 @@ class TicketIngestionService
         // Log success
         Log::info('Created ticket comment from email', [
             'ticket_id' => $ticket->id,
-            'ticket_number' => $ticket->ticket_number,
             'comment_id' => $comment->id,
             'from_email' => $fromEmail,
         ]);
