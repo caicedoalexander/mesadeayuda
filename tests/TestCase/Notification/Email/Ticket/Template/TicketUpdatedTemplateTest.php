@@ -13,10 +13,23 @@ use PHPUnit\Framework\TestCase;
 
 final class TicketUpdatedTemplateTest extends TestCase
 {
+    private mixed $previousFullBaseUrl = null;
+
     protected function setUp(): void
     {
         parent::setUp();
+        $this->previousFullBaseUrl = Configure::read('App.fullBaseUrl');
         Configure::write('App.fullBaseUrl', 'https://mesa.example.com');
+    }
+
+    protected function tearDown(): void
+    {
+        if ($this->previousFullBaseUrl === null) {
+            Configure::delete('App.fullBaseUrl');
+        } else {
+            Configure::write('App.fullBaseUrl', $this->previousFullBaseUrl);
+        }
+        parent::tearDown();
     }
 
     public function testKey(): void

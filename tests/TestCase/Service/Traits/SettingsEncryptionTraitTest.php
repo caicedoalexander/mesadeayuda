@@ -11,6 +11,7 @@ use Cake\Log\Log;
 use Cake\Utility\Security;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use Throwable;
 
 /**
  * Unit tests for {@see SettingsEncryptionTrait}.
@@ -28,10 +29,18 @@ final class SettingsEncryptionTraitTest extends TestCase
 
     private object $harness;
 
+    private ?string $originalSalt = null;
+
     protected function setUp(): void
     {
         parent::setUp();
 
+        try {
+            $this->originalSalt = Security::getSalt();
+        } catch (Throwable) {
+            // No salt configured by the bootstrap; nothing to restore to.
+            $this->originalSalt = null;
+        }
         Security::setSalt(self::TEST_SALT);
         Configure::write('Security.cipher', 'aes');
         // Logger must be configured because processSettings() logs on failures.
@@ -49,6 +58,10 @@ final class SettingsEncryptionTraitTest extends TestCase
     protected function tearDown(): void
     {
         parent::tearDown();
+        // Several tests rotate the global salt mid-test; restore the prior salt
+        // (or fall back to the test salt) so no rotated value leaks into other
+        // suites in the same process. The public API cannot represent "unset".
+        Security::setSalt($this->originalSalt ?? self::TEST_SALT);
         Log::drop('error');
     }
 

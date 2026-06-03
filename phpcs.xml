@@ -2,7 +2,13 @@
 <ruleset name="App">
     <config name="installed_paths" value="../../cakephp/cakephp-codesniffer,../../slevomat/coding-standard"/>
 
-    <rule ref="CakePHP"/>
+    <rule ref="CakePHP">
+        <!-- The codebase aligns constant `=` (and array `=>`) with extra spaces
+             for readability. This sniff flags that intentional alignment as a
+             "Double space found" error and phpcbf cannot auto-collapse it, so
+             exclude it project-wide to keep the aligned style. -->
+        <exclude name="CakePHP.WhiteSpace.TabAndSpace.DoubleSpace"/>
+    </rule>
     <rule ref="SlevomatCodingStandard.TypeHints.ReturnTypeHint.MissingNativeTypeHint">
         <exclude-pattern>*/src/Controller/*</exclude-pattern>
     </rule>
