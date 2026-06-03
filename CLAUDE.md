@@ -95,7 +95,7 @@ Do NOT call `EmailService`, `WhatsappService`, or any channel directly from cont
 
 Cada API tiene su propio caso de uso y credenciales en `system_settings`.
 
-`GmailImportService` + `TicketIngestionService` cover the inbound side; UTF-8 + markup-safe truncation lives in `TicketIngestionService`. Atomic ticket-number allocation runs through `NumberGenerationService` — don't reintroduce read-modify-write on the counter.
+`GmailImportService` + `TicketIngestionService` cover the inbound side; UTF-8 + markup-safe truncation lives in `TicketIngestionService`. El identificador del ticket es el `id` autoincremental de la tabla `tickets` (arranca en 1000); MySQL garantiza unicidad y atomicidad — no introducir tablas de secuencia ni contadores propios.
 
 ### Attachments
 

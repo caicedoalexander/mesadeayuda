@@ -11,7 +11,6 @@ use Cake\ORM\Entity;
  * Ticket Entity
  *
  * @property int $id
- * @property string $ticket_number
  * @property string|null $gmail_message_id
  * @property string|null $gmail_thread_id
  * @property string|null $whatsapp_message_id
@@ -54,7 +53,6 @@ class Ticket extends Entity
      * @var array<string, bool>
      */
     protected array $_accessible = [
-        'ticket_number' => false,
         'gmail_message_id' => false,
         'gmail_thread_id' => false,
         'whatsapp_message_id' => false,
