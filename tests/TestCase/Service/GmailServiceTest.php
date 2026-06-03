@@ -23,12 +23,23 @@ use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 
 final class GmailServiceTest extends TestCase
 {
+    private bool $wroteSalt = false;
+
     protected function setUp(): void
     {
         parent::setUp();
         if (Configure::read('Security.salt') === null) {
             Configure::write('Security.salt', str_repeat('a', 64));
+            $this->wroteSalt = true;
         }
+    }
+
+    protected function tearDown(): void
+    {
+        if ($this->wroteSalt) {
+            Configure::delete('Security.salt');
+        }
+        parent::tearDown();
     }
 
     private function buildService(): GmailService
