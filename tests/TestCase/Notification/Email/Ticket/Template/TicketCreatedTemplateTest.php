@@ -46,8 +46,7 @@ final class TicketCreatedTemplateTest extends TestCase
 
         $ticket = new Ticket();
         $ticket->set([
-            'id' => 1,
-            'ticket_number' => 'TKT-1284',
+            'id' => 1284,
             'subject' => 'Cafetera #14 no enciende',
             'status' => 'nuevo',
             'priority' => 'alta',
@@ -64,10 +63,10 @@ final class TicketCreatedTemplateTest extends TestCase
         $email = (new TicketCreatedTemplate())->render($ctx);
 
         // TicketCreated is the root of the thread; subject is NOT "Re:"-prefixed.
-        self::assertSame('Tu ticket #TKT-1284 fue creado', $email->subject);
+        self::assertSame('Tu ticket #1284 fue creado', $email->subject);
         self::assertStringContainsString('Hola Alexander,', $email->bodyHtml);
         self::assertStringContainsString('Recibimos tu solicitud', $email->bodyHtml);
-        self::assertStringContainsString('#TKT-1284', $email->bodyHtml);
+        self::assertStringContainsString('#1284', $email->bodyHtml);
         self::assertStringContainsString('Cafetera #14 no enciende', $email->bodyHtml);
         self::assertStringContainsString('30 minutos', $email->bodyHtml);
         self::assertStringContainsString('Estado: Nuevo', $email->bodyHtml);

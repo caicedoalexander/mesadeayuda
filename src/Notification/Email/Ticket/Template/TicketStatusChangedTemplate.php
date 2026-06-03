@@ -37,7 +37,7 @@ final class TicketStatusChangedTemplate implements EmailTemplate
         $newLabel = $renderer->getStatusLabel((string)($ctx->newStatus ?? ''));
 
         $name = htmlspecialchars(trim((string)$ctx->recipientName), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        $ticketNumber = htmlspecialchars((string)$ctx->ticket->ticket_number, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $ticketNumber = htmlspecialchars((string)$ctx->ticket->id, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $ticketSubject = htmlspecialchars((string)$ctx->ticket->subject, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $oldEsc = htmlspecialchars($oldLabel, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $newEsc = htmlspecialchars($newLabel, ENT_QUOTES | ENT_HTML5, 'UTF-8');

@@ -34,8 +34,7 @@ final class TicketCardTest extends TestCase
 
         $t = new Ticket();
         $t->set(array_merge([
-            'id' => 1,
-            'ticket_number' => 'TKT-1284',
+            'id' => 1284,
             'subject' => 'Cafetera #14 no enciende',
             'status' => 'pendiente',
             'priority' => 'alta',
@@ -52,7 +51,7 @@ final class TicketCardTest extends TestCase
     {
         $html = TicketCard::render($this->ticket());
 
-        self::assertStringContainsString('TKT-1284', $html);
+        self::assertStringContainsString('1284', $html);
         self::assertStringContainsString('Pendiente', $html);
         self::assertStringContainsString('Alta', $html);
         self::assertStringContainsString('Cafetera #14 no enciende', $html);

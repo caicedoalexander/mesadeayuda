@@ -34,7 +34,7 @@ final class TicketCard
      */
     public static function render(Ticket $ticket): string
     {
-        $number = (string)($ticket->ticket_number ?? '');
+        $number = (string)($ticket->id ?? '');
         $status = (string)($ticket->status ?? '');
         $priority = (string)($ticket->priority ?? 'media');
         $subject = (string)($ticket->subject ?? '');
