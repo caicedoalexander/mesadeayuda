@@ -64,6 +64,16 @@ class EmailService
     }
 
     /**
+     * Test seam: inject the Gmail transport so the lazy resolver never reaches
+     * loadConfigFromDatabase() (the test bootstrap forbids DB connections).
+     * Used only by tests.
+     */
+    public function setGmailServiceForTesting(GmailService $gmailService): void
+    {
+        $this->gmailService = $gmailService;
+    }
+
+    /**
      * Lazy resolver for TicketCommentService. Used to persist the Message-ID
      * Gmail assigns to outbound notifications back onto the originating
      * ticket_comment so future client replies reattach by RFC (audit CRIT-2 / J7).

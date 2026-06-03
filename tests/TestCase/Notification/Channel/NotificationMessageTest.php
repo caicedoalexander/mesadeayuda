@@ -5,8 +5,9 @@ namespace App\Test\TestCase\Notification\Channel;
 
 use App\Notification\Channel\NotificationMessage;
 use Cake\TestSuite\TestCase;
+use Error;
 use InvalidArgumentException;
-use ReflectionClass;
+use ReflectionObject;
 use ReflectionProperty;
 
 class NotificationMessageTest extends TestCase
@@ -156,21 +157,26 @@ class NotificationMessageTest extends TestCase
     }
 
     /**
-     * The VO must be deeply immutable — all public properties are declared
-     * readonly. We verify this via reflection so a regression that drops the
-     * readonly keyword fails fast.
+     * The VO must be deeply immutable. Rather than inspecting the `readonly`
+     * modifier structurally, assert the observable guarantee: every public
+     * property rejects reassignment (even to its own current value) with an
+     * Error. Enumerating the properties keeps current and future fields covered
+     * without coupling the test to the declaration keyword.
      */
-    public function testAllPublicPropertiesAreReadonly(): void
+    public function testPublicPropertiesCannotBeReassigned(): void
     {
-        $ref = new ReflectionClass(NotificationMessage::class);
-        $public = $ref->getProperties(ReflectionProperty::IS_PUBLIC);
+        $msg = NotificationMessage::email(recipient: 'a@b.c', subject: 's', bodyHtml: '<p>b</p>');
+        $public = (new ReflectionObject($msg))->getProperties(ReflectionProperty::IS_PUBLIC);
 
         $this->assertNotEmpty($public);
         foreach ($public as $prop) {
-            $this->assertTrue(
-                $prop->isReadOnly(),
-                "Property {$prop->getName()} must be readonly to preserve VO immutability",
-            );
+            $name = $prop->getName();
+            try {
+                $msg->{$name} = $msg->{$name};
+                self::fail("Property {$name} is mutable; readonly should reject reassignment.");
+            } catch (Error $e) {
+                self::assertStringContainsString('readonly', $e->getMessage());
+            }
         }
     }
 }
