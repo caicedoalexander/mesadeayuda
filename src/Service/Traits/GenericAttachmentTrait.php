@@ -124,7 +124,7 @@ trait GenericAttachmentTrait
 
         $extension = pathinfo($originalFilename, PATHINFO_EXTENSION);
         $filename = Text::uuid() . '.' . $extension;
-        $entityNumber = (string)$entity->ticket_number;
+        $entityNumber = (string)$entity->id;
 
         $uploadDir = $this->getUploadDirectory($entityNumber);
         if (!file_exists($uploadDir)) {
@@ -304,7 +304,7 @@ trait GenericAttachmentTrait
 
         $extension = pathinfo($filename, PATHINFO_EXTENSION);
         $uniqueFilename = Text::uuid() . '.' . $extension;
-        $entityNumber = (string)$entity->ticket_number;
+        $entityNumber = (string)$entity->id;
 
         $uploadDir = $this->getUploadDirectory($entityNumber);
         if (!file_exists($uploadDir)) {
