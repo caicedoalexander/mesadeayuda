@@ -27,7 +27,7 @@ $canPend    = !$isLocked && !$isPending;
         <i class="bi bi-chevron-right separator"></i>
         <span>Sin resolver</span>
         <i class="bi bi-chevron-right separator"></i>
-        <span class="mono current">#<?= h($entity->ticket_number ?? $entity->id) ?></span>
+        <span class="mono current">#<?= h($entity->id) ?></span>
     </nav>
 
     <div class="ticket-topbar-spacer"></div>
