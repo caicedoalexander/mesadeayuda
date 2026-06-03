@@ -5,22 +5,12 @@ namespace App\Test\TestCase\Model\Entity;
 
 use App\Model\Entity\Ticket;
 use App\Model\Entity\User;
+use App\Service\Exception\InvalidStatusTransitionException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class TicketTest extends TestCase
 {
-    /**
-     * Mirror of the (private) Ticket::TRANSITIONS state machine.
-     *
-     * @var array<string, list<string>>
-     */
-    private const ALLOWED_TRANSITIONS = [
-        'nuevo' => ['abierto', 'pendiente', 'resuelto'],
-        'abierto' => ['pendiente', 'resuelto', 'nuevo'],
-        'pendiente' => ['abierto', 'resuelto'],
-        'resuelto' => ['abierto'],
-    ];
-
     private function makeTicket(array $props = []): Ticket
     {
         $defaults = [
@@ -113,32 +103,82 @@ final class TicketTest extends TestCase
         self::assertFalse($this->makeTicket(['gmail_message_id' => null])->wasCreatedFromEmail());
     }
 
-    public function testCanTransitionAllowed(): void
+    /**
+     * Every legal transition of the domain state machine, one row per pair.
+     *
+     * @return array<string, array{0: string, 1: string}>
+     */
+    public static function allowedTransitionProvider(): array
     {
-        foreach (self::ALLOWED_TRANSITIONS as $from => $allowedTos) {
-            $ticket = $this->makeTicket(['status' => $from]);
-            foreach ($allowedTos as $to) {
-                self::assertTrue(
-                    $ticket->canTransitionTo($to),
-                    "Expected {$from} -> {$to} to be allowed",
-                );
-            }
-        }
+        return [
+            'nuevo -> abierto' => ['nuevo', 'abierto'],
+            'nuevo -> pendiente' => ['nuevo', 'pendiente'],
+            'nuevo -> resuelto' => ['nuevo', 'resuelto'],
+            'abierto -> pendiente' => ['abierto', 'pendiente'],
+            'abierto -> resuelto' => ['abierto', 'resuelto'],
+            'abierto -> nuevo' => ['abierto', 'nuevo'],
+            'pendiente -> abierto' => ['pendiente', 'abierto'],
+            'pendiente -> resuelto' => ['pendiente', 'resuelto'],
+            'resuelto -> abierto' => ['resuelto', 'abierto'],
+        ];
     }
 
-    public function testCanTransitionForbidden(): void
+    #[DataProvider('allowedTransitionProvider')]
+    public function testCanTransitionToAllowedTarget(string $from, string $to): void
     {
-        $allStatuses = ['nuevo', 'abierto', 'pendiente', 'resuelto'];
-        foreach (self::ALLOWED_TRANSITIONS as $from => $allowedTos) {
-            $forbidden = array_diff($allStatuses, $allowedTos, [$from]);
-            $ticket = $this->makeTicket(['status' => $from]);
-            foreach ($forbidden as $to) {
-                self::assertFalse(
-                    $ticket->canTransitionTo($to),
-                    "Expected {$from} -> {$to} to be forbidden",
-                );
-            }
-        }
+        self::assertTrue($this->makeTicket(['status' => $from])->canTransitionTo($to));
+    }
+
+    /**
+     * Forbidden transitions, covering all three rejection branches of
+     * canTransitionTo(): a cross-status pair outside the allowed set, a
+     * same-status no-op (Ticket.php:218), and an unknown target (Ticket.php:215).
+     *
+     * @return array<string, array{0: string, 1: string}>
+     */
+    public static function forbiddenTransitionProvider(): array
+    {
+        return [
+            // Valid status, but not reachable from the source.
+            'pendiente -> nuevo' => ['pendiente', 'nuevo'],
+            'resuelto -> nuevo' => ['resuelto', 'nuevo'],
+            'resuelto -> pendiente' => ['resuelto', 'pendiente'],
+            // Same-status is never a transition.
+            'nuevo -> nuevo' => ['nuevo', 'nuevo'],
+            'abierto -> abierto' => ['abierto', 'abierto'],
+            'pendiente -> pendiente' => ['pendiente', 'pendiente'],
+            'resuelto -> resuelto' => ['resuelto', 'resuelto'],
+            // Unknown target status.
+            'abierto -> unknown' => ['abierto', 'basura'],
+            'nuevo -> unknown' => ['nuevo', 'cerrado'],
+        ];
+    }
+
+    #[DataProvider('forbiddenTransitionProvider')]
+    public function testCanTransitionToForbiddenTarget(string $from, string $to): void
+    {
+        self::assertFalse($this->makeTicket(['status' => $from])->canTransitionTo($to));
+    }
+
+    public function testTransitionToAppliesLegalTransition(): void
+    {
+        $ticket = $this->makeTicket(['status' => 'nuevo']);
+        $ticket->transitionTo('abierto');
+        self::assertSame('abierto', $ticket->status);
+    }
+
+    public function testTransitionToSameStatusIsNoOp(): void
+    {
+        $ticket = $this->makeTicket(['status' => 'abierto']);
+        $ticket->transitionTo('abierto');
+        self::assertSame('abierto', $ticket->status);
+    }
+
+    public function testTransitionToIllegalTargetThrows(): void
+    {
+        $ticket = $this->makeTicket(['status' => 'resuelto']);
+        $this->expectException(InvalidStatusTransitionException::class);
+        $ticket->transitionTo('pendiente');
     }
 
     public function testCanBeAssignedToActiveStaff(): void

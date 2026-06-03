@@ -41,6 +41,15 @@ final class CardTest extends TestCase
     public function testOmitsTagsRowWhenEmpty(): void
     {
         $html = Card::render('', '', 'Title', [], []);
-        self::assertStringNotContainsString('padding-top:10px', $html);
+        // The tags row is the only block wrapped in `margin-top:10px`; with no
+        // tags that wrapper must be absent.
+        self::assertStringNotContainsString('margin-top:10px', $html);
+    }
+
+    public function testRendersTagsRowWhenPresent(): void
+    {
+        $html = Card::render('', '', 'Title', ['Mantenimiento'], []);
+        self::assertStringContainsString('margin-top:10px', $html);
+        self::assertStringContainsString('Mantenimiento', $html);
     }
 }
