@@ -212,7 +212,6 @@ final class TicketTest extends TestCase
     public function testFromEmailIngestSetsInitialStatusAndPriority(): void
     {
         $ticket = Ticket::fromEmailIngest(
-            ticketNumber: 'T-0001',
             requesterId: 42,
             subject: 'Mi pedido',
             sanitizedDescription: '<p>cuerpo limpio</p>',
@@ -222,7 +221,6 @@ final class TicketTest extends TestCase
 
         self::assertSame('nuevo', $ticket->status);
         self::assertSame('media', $ticket->priority);
-        self::assertSame('T-0001', $ticket->ticket_number);
         self::assertSame(42, $ticket->requester_id);
         self::assertSame('Mi pedido', $ticket->subject);
         self::assertSame('<p>cuerpo limpio</p>', $ticket->description);
@@ -233,7 +231,6 @@ final class TicketTest extends TestCase
     public function testFromEmailIngestFallsBackToSinAsuntoWhenSubjectEmpty(): void
     {
         $ticket = Ticket::fromEmailIngest(
-            ticketNumber: 'T-0002',
             requesterId: 1,
             subject: '',
             sanitizedDescription: '',
@@ -250,7 +247,6 @@ final class TicketTest extends TestCase
         $emailCc = [['email' => 'c@d.com', 'name' => 'C D']];
 
         $ticket = Ticket::fromEmailIngest(
-            ticketNumber: 'T-0003',
             requesterId: 1,
             subject: 'x',
             sanitizedDescription: '',

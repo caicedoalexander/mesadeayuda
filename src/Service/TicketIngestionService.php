@@ -95,9 +95,6 @@ class TicketIngestionService
         $rawBody = $emailData['body_html'] ?: $emailData['body_text'];
         $description = $this->sanitizeHtml($rawBody);
 
-        // Generate ticket number
-        $ticketNumber = $ticketsTable->generateTicketNumber();
-
         $subject = trim($emailData['subject'] ?? '');
 
         // Determine channel: if email comes from the configured WhatsApp bot
@@ -111,7 +108,6 @@ class TicketIngestionService
         // Build ticket via domain factory: status/priority defaults and
         // (Sin asunto) fallback live in the entity, not in this IO layer.
         $ticket = Ticket::fromEmailIngest(
-            ticketNumber: $ticketNumber,
             requesterId: (int)$user->id,
             subject: $subject,
             sanitizedDescription: $description,
@@ -148,8 +144,8 @@ class TicketIngestionService
 
         // Inline images: download, persist with is_inline=true/content_id, then
         // rewrite cid: references in the body and re-save the ticket description.
-        // Must run AFTER the initial ticket save so we have ticket.id and ticket_number
-        // (the latter is used to compute the local upload URL). See audit CRIT-4 (F1+F2+G1).
+        // Must run AFTER the initial ticket save so we have ticket.id
+        // (used to compute the local upload URL). See audit CRIT-4 (F1+F2+G1).
         if (!empty($emailData['inline_images'])) {
             $cidMap = $this->attachments->processInlineImages($ticket, $emailData['inline_images'], (int)$user->id);
             if ($cidMap !== []) {
@@ -232,10 +228,7 @@ class TicketIngestionService
         // Sanitize description (treat as untrusted free text from user).
         $description = $this->sanitizeHtml($payload->description);
 
-        $ticketNumber = $ticketsTable->generateTicketNumber();
-
         $ticket = Ticket::fromWhatsappIngest(
-            ticketNumber: $ticketNumber,
             requesterId: (int)$user->id,
             subject: $payload->subject,
             sanitizedDescription: $description,
