@@ -12,17 +12,15 @@ use App\Service\TicketCommentService;
 use Cake\ORM\Locator\TableLocator;
 use Cake\ORM\Table;
 use Cake\TestSuite\TestCase;
-use ReflectionClass;
 
 /**
  * Unit tests for EmailService::dispatch — the email transport layer that
  * bridges NotificationMessage VOs into Gmail API sends and persists the
  * RFC Message-ID Gmail returns (CRIT-2 / J7, MED-1).
  *
- * The bootstrap forbids DB connections, so GmailService is injected via
- * reflection on the private $gmailService property; the Tickets table is
- * swapped via setTableLocator(); TicketCommentService is injected by
- * constructor.
+ * The bootstrap forbids DB connections, so GmailService is injected via the
+ * setGmailServiceForTesting() seam; the Tickets table is swapped via
+ * setTableLocator(); TicketCommentService is injected by constructor.
  */
 class EmailServiceTest extends TestCase
 {
@@ -292,8 +290,8 @@ class EmailServiceTest extends TestCase
     }
 
     /**
-     * Wire EmailService with mocked collaborators. The private
-     * $gmailService property is set via reflection so the lazy
+     * Wire EmailService with mocked collaborators. The Gmail transport is
+     * injected via the setGmailServiceForTesting() seam so the lazy
      * `getGmailService()` resolver never reaches `loadConfigFromDatabase()`.
      */
     private function buildService(
@@ -302,10 +300,7 @@ class EmailServiceTest extends TestCase
         ?Table $ticketsTable = null,
     ): EmailService {
         $service = new EmailService(SystemConfig::empty(), $comments);
-
-        $ref = new ReflectionClass(EmailService::class);
-        $prop = $ref->getProperty('gmailService');
-        $prop->setValue($service, $gmail);
+        $service->setGmailServiceForTesting($gmail);
 
         if ($ticketsTable !== null) {
             $locator = new TableLocator();

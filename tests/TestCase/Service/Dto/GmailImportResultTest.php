@@ -36,7 +36,7 @@ final class GmailImportResultTest extends TestCase
         $this->assertSame(3, $array['errors']);
     }
 
-    public function testCounterSumMatchesTotalErrors(): void
+    public function testConstructorStoresEachErrorCategoryCounter(): void
     {
         $result = new GmailImportResult(
             fetched: 5,
@@ -53,13 +53,14 @@ final class GmailImportResultTest extends TestCase
             unknownErrors: 1,
         );
 
-        $sum = $result->authErrors
-             + $result->rateErrors
-             + $result->transientErrors
-             + $result->permanentErrors
-             + $result->unknownErrors;
-
-        $this->assertSame($result->errors, $sum);
+        // Assert against fixed literals rather than re-summing the counters in
+        // the test (which would only verify the test's own arithmetic).
+        $this->assertSame(2, $result->authErrors);
+        $this->assertSame(1, $result->rateErrors);
+        $this->assertSame(1, $result->transientErrors);
+        $this->assertSame(0, $result->permanentErrors);
+        $this->assertSame(1, $result->unknownErrors);
+        $this->assertSame(5, $result->errors);
     }
 
     public function testBackwardCompatibleConstructorDefaultsCountersToZero(): void
