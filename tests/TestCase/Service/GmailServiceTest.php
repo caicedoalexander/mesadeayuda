@@ -9,8 +9,6 @@ use App\Service\Gmail\RetryHandler;
 use App\Service\GmailService;
 use Cake\Core\Configure;
 use Google\Client as GoogleClient;
-use Google\Service\Gmail\MessagePart;
-use Google\Service\Gmail\MessagePartBody;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
@@ -97,47 +95,6 @@ final class GmailServiceTest extends TestCase
         };
     }
 
-    /**
-     * Build a real Google\Service\Gmail\MessagePart populated from a small
-     * spec. Body data must already be base64-url-encoded — the production
-     * code calls base64_decode + strtr internally.
-     *
-     * @param list<MessagePart> $parts
-     * @param list<object> $headers
-     */
-    private function part(
-        string $mimeType,
-        ?string $bodyData = null,
-        array $parts = [],
-        string $filename = '',
-        ?string $attachmentId = null,
-        array $headers = [],
-    ): MessagePart {
-        $body = new MessagePartBody();
-        if ($bodyData !== null) {
-            $body->setData($bodyData);
-            $body->setSize(strlen($bodyData));
-        } else {
-            $body->setSize(0);
-        }
-        if ($attachmentId !== null) {
-            $body->setAttachmentId($attachmentId);
-        }
-
-        $part = new MessagePart();
-        $part->setMimeType($mimeType);
-        $part->setBody($body);
-        $part->setFilename($filename);
-        if ($parts !== []) {
-            $part->setParts($parts);
-        }
-        if ($headers !== []) {
-            $part->setHeaders($headers);
-        }
-
-        return $part;
-    }
-
     /** Encode a raw string the way Gmail does for part body data. */
     private function b64url(string $raw): string
     {
@@ -145,34 +102,75 @@ final class GmailServiceTest extends TestCase
     }
 
     /**
-     * Invoke the private extractMessageParts on a freshly-built GmailService,
-     * returning the data array it populated.
+     * Build a Gmail message-part in the wire JSON shape the Google SDK
+     * deserializes (the array mirror of part()). Used to drive parseMessage()
+     * through a stubbed HTTP response instead of reflecting into the private
+     * extractMessageParts.
+     *
+     * @param list<array<string, mixed>> $parts Nested child parts (wire shape)
+     * @param list<array{name: string, value: string}> $headers
+     * @return array<string, mixed>
      */
-    private function callExtractParts(MessagePart $payload): array
+    private function payloadPart(
+        string $mimeType,
+        ?string $bodyData = null,
+        array $parts = [],
+        string $filename = '',
+        ?string $attachmentId = null,
+        array $headers = [],
+    ): array {
+        $body = $bodyData !== null
+            ? ['data' => $bodyData, 'size' => strlen($bodyData)]
+            : ['size' => 0];
+        if ($attachmentId !== null) {
+            $body['attachmentId'] = $attachmentId;
+        }
+
+        $part = ['mimeType' => $mimeType, 'body' => $body];
+        if ($filename !== '') {
+            $part['filename'] = $filename;
+        }
+        if ($headers !== []) {
+            $part['headers'] = $headers;
+        }
+        if ($parts !== []) {
+            $part['parts'] = $parts;
+        }
+
+        return $part;
+    }
+
+    /**
+     * Drive parseMessage() over a stubbed HTTP GET whose body is a full Gmail
+     * message wrapping the given payload, returning the parsed data array. This
+     * exercises the real public path (extractMessageParts + the deep inline-image
+     * harvest parseMessage always runs together) without any reflection.
+     *
+     * @param array<string, mixed> $payload Wire-shape message payload
+     * @return array<string, mixed>
+     */
+    private function parseViaStub(array $payload): array
     {
         $service = $this->buildService();
-        $ref = new ReflectionClass($service);
-        $method = $ref->getMethod('extractMessageParts');
+        $message = json_encode([
+            'id' => 'gmail-id-1',
+            'threadId' => 'thread-1',
+            'historyId' => '1',
+            'payload' => $payload,
+        ]);
+        $this->stubHttp($service, [new Response(200, ['Content-Type' => 'application/json'], (string)$message)]);
 
-        $data = [
-            'body_html' => '',
-            'body_text' => '',
-            'attachments' => [],
-            'inline_images' => [],
-        ];
-        $method->invokeArgs($service, [$payload, &$data]);
-
-        return $data;
+        return $service->parseMessage('gmail-id-1');
     }
 
     public function testMultipartAlternativePicksHtmlBranch(): void
     {
-        $payload = $this->part('multipart/alternative', parts: [
-            $this->part('text/plain', $this->b64url('plain version')),
-            $this->part('text/html', $this->b64url('<p>html version</p>')),
+        $payload = $this->payloadPart('multipart/alternative', parts: [
+            $this->payloadPart('text/plain', $this->b64url('plain version')),
+            $this->payloadPart('text/html', $this->b64url('<p>html version</p>')),
         ]);
 
-        $data = $this->callExtractParts($payload);
+        $data = $this->parseViaStub($payload);
 
         $this->assertSame('<p>html version</p>', $data['body_html']);
         $this->assertSame('', $data['body_text'], 'plain branch must be skipped when html is available');
@@ -180,11 +178,11 @@ final class GmailServiceTest extends TestCase
 
     public function testMultipartAlternativeFallsBackToPlainWhenNoHtml(): void
     {
-        $payload = $this->part('multipart/alternative', parts: [
-            $this->part('text/plain', $this->b64url('plain only')),
+        $payload = $this->payloadPart('multipart/alternative', parts: [
+            $this->payloadPart('text/plain', $this->b64url('plain only')),
         ]);
 
-        $data = $this->callExtractParts($payload);
+        $data = $this->parseViaStub($payload);
 
         $this->assertSame('', $data['body_html']);
         $this->assertSame('plain only', $data['body_text']);
@@ -192,26 +190,26 @@ final class GmailServiceTest extends TestCase
 
     public function testMultipartAlternativeWithRelatedHtmlBranch(): void
     {
-        $imagePart = $this->part(
+        $imagePart = $this->payloadPart(
             'image/png',
             $this->b64url('fake-png-bytes'),
             filename: 'inline.png',
             attachmentId: 'att-1',
             headers: [
-                $this->header('Content-ID', '<cid-1>'),
-                $this->header('Content-Disposition', 'inline'),
+                ['name' => 'Content-ID', 'value' => '<cid-1>'],
+                ['name' => 'Content-Disposition', 'value' => 'inline'],
             ],
         );
-        $related = $this->part('multipart/related', parts: [
-            $this->part('text/html', $this->b64url('<p>rich body</p>')),
+        $related = $this->payloadPart('multipart/related', parts: [
+            $this->payloadPart('text/html', $this->b64url('<p>rich body</p>')),
             $imagePart,
         ]);
-        $payload = $this->part('multipart/alternative', parts: [
-            $this->part('text/plain', $this->b64url('plain fallback')),
+        $payload = $this->payloadPart('multipart/alternative', parts: [
+            $this->payloadPart('text/plain', $this->b64url('plain fallback')),
             $related,
         ]);
 
-        $data = $this->callExtractParts($payload);
+        $data = $this->parseViaStub($payload);
 
         $this->assertSame('<p>rich body</p>', $data['body_html']);
         $this->assertSame('', $data['body_text'], 'plain alternative must be skipped');
@@ -221,18 +219,18 @@ final class GmailServiceTest extends TestCase
 
     public function testNestedForwardDoesNotDuplicateHtml(): void
     {
-        $mixed = $this->part('multipart/mixed', parts: [
-            $this->part('multipart/alternative', parts: [
-                $this->part('text/plain', $this->b64url('plain A')),
-                $this->part('text/html', $this->b64url('<p>A</p>')),
+        $mixed = $this->payloadPart('multipart/mixed', parts: [
+            $this->payloadPart('multipart/alternative', parts: [
+                $this->payloadPart('text/plain', $this->b64url('plain A')),
+                $this->payloadPart('text/html', $this->b64url('<p>A</p>')),
             ]),
-            $this->part('multipart/alternative', parts: [
-                $this->part('text/plain', $this->b64url('plain B')),
-                $this->part('text/html', $this->b64url('<p>B</p>')),
+            $this->payloadPart('multipart/alternative', parts: [
+                $this->payloadPart('text/plain', $this->b64url('plain B')),
+                $this->payloadPart('text/html', $this->b64url('<p>B</p>')),
             ]),
         ]);
 
-        $data = $this->callExtractParts($mixed);
+        $data = $this->parseViaStub($mixed);
 
         // Each alternative resolves to ONE html branch; the two distinct htmls
         // are still concatenated by the outer multipart/mixed (correct: they
@@ -243,22 +241,22 @@ final class GmailServiceTest extends TestCase
 
     public function testAttachmentInsideMixedSurvivesAlternativeFilter(): void
     {
-        $pdf = $this->part(
+        $pdf = $this->payloadPart(
             'application/pdf',
             $this->b64url('%PDF-1.4 fake'),
             filename: 'invoice.pdf',
             attachmentId: 'pdf-1',
-            headers: [$this->header('Content-Disposition', 'attachment; filename="invoice.pdf"')],
+            headers: [['name' => 'Content-Disposition', 'value' => 'attachment; filename="invoice.pdf"']],
         );
-        $payload = $this->part('multipart/mixed', parts: [
-            $this->part('multipart/alternative', parts: [
-                $this->part('text/plain', $this->b64url('plain')),
-                $this->part('text/html', $this->b64url('<p>html</p>')),
+        $payload = $this->payloadPart('multipart/mixed', parts: [
+            $this->payloadPart('multipart/alternative', parts: [
+                $this->payloadPart('text/plain', $this->b64url('plain')),
+                $this->payloadPart('text/html', $this->b64url('<p>html</p>')),
             ]),
             $pdf,
         ]);
 
-        $data = $this->callExtractParts($payload);
+        $data = $this->parseViaStub($payload);
 
         $this->assertSame('<p>html</p>', $data['body_html']);
         $this->assertCount(1, $data['attachments']);
@@ -268,39 +266,13 @@ final class GmailServiceTest extends TestCase
 
     public function testMultipartAlternativeReturnsNullBranchWhenEmpty(): void
     {
-        $payload = $this->part('multipart/alternative', parts: []);
+        $payload = $this->payloadPart('multipart/alternative', parts: []);
 
-        $data = $this->callExtractParts($payload);
+        $data = $this->parseViaStub($payload);
 
         $this->assertSame('', $data['body_html']);
         $this->assertSame('', $data['body_text']);
         $this->assertSame([], $data['attachments']);
-    }
-
-    /**
-     * Invoke extractMessageParts followed by harvestInlineImagesDeep — the
-     * pair parseMessage runs in production. Asserts the defense-in-depth
-     * harvest catches inline images that pickAlternativeBranch dropped.
-     *
-     * @return array{body_html: string, body_text: string, attachments: array, inline_images: array}
-     */
-    private function callExtractAndHarvest(MessagePart $payload): array
-    {
-        $service = $this->buildService();
-        $ref = new ReflectionClass($service);
-        $extract = $ref->getMethod('extractMessageParts');
-        $harvest = $ref->getMethod('harvestInlineImagesDeep');
-
-        $data = [
-            'body_html' => '',
-            'body_text' => '',
-            'attachments' => [],
-            'inline_images' => [],
-        ];
-        $extract->invokeArgs($service, [$payload, &$data]);
-        $harvest->invokeArgs($service, [$payload, &$data]);
-
-        return $data;
     }
 
     /**
@@ -312,29 +284,29 @@ final class GmailServiceTest extends TestCase
      */
     public function testOutlookAlternativeSiblingRelatedSurfacesInlineImages(): void
     {
-        $logo = $this->part(
+        $logo = $this->payloadPart(
             'image/png',
             $this->b64url('fake-logo-bytes'),
             filename: 'image001.png',
             attachmentId: 'att-logo',
             headers: [
-                $this->header('Content-ID', '<image001.png@01D9XXXX>'),
-                $this->header('Content-Disposition', 'inline'),
+                ['name' => 'Content-ID', 'value' => '<image001.png@01D9XXXX>'],
+                ['name' => 'Content-Disposition', 'value' => 'inline'],
             ],
         );
         // Outlook variant: text/html at the alternative root, related sibling
         // with text/html-replica + image. pickAlternativeBranch returns the
         // direct text/html and the related subtree is discarded.
-        $payload = $this->part('multipart/alternative', parts: [
-            $this->part('text/plain', $this->b64url('plain version')),
-            $this->part('text/html', $this->b64url('<p>html at root</p>')),
-            $this->part('multipart/related', parts: [
-                $this->part('text/html', $this->b64url('<p>html with cid</p>')),
+        $payload = $this->payloadPart('multipart/alternative', parts: [
+            $this->payloadPart('text/plain', $this->b64url('plain version')),
+            $this->payloadPart('text/html', $this->b64url('<p>html at root</p>')),
+            $this->payloadPart('multipart/related', parts: [
+                $this->payloadPart('text/html', $this->b64url('<p>html with cid</p>')),
                 $logo,
             ]),
         ]);
 
-        $data = $this->callExtractAndHarvest($payload);
+        $data = $this->parseViaStub($payload);
 
         $this->assertSame('<p>html at root</p>', $data['body_html']);
         $this->assertCount(1, $data['inline_images'], 'image inside discarded multipart/related must be harvested');
@@ -349,29 +321,29 @@ final class GmailServiceTest extends TestCase
      */
     public function testHarvestInlineImagesDedupesAgainstExtractMessageParts(): void
     {
-        $logo = $this->part(
+        $logo = $this->payloadPart(
             'image/png',
             $this->b64url('fake'),
             filename: 'image001.png',
             attachmentId: 'att-logo',
             headers: [
-                $this->header('Content-ID', '<image001.png@01D9XXXX>'),
-                $this->header('Content-Disposition', 'inline'),
+                ['name' => 'Content-ID', 'value' => '<image001.png@01D9XXXX>'],
+                ['name' => 'Content-Disposition', 'value' => 'inline'],
             ],
         );
-        $related = $this->part('multipart/related', parts: [
-            $this->part('text/html', $this->b64url('<p>body</p>')),
+        $related = $this->payloadPart('multipart/related', parts: [
+            $this->payloadPart('text/html', $this->b64url('<p>body</p>')),
             $logo,
         ]);
         // Classic Gmail variant: no direct text/html, only multipart/related.
         // pickAlternativeBranch picks the related, extractMessageParts already
         // surfaces the image, harvest must be a no-op for it.
-        $payload = $this->part('multipart/alternative', parts: [
-            $this->part('text/plain', $this->b64url('plain')),
+        $payload = $this->payloadPart('multipart/alternative', parts: [
+            $this->payloadPart('text/plain', $this->b64url('plain')),
             $related,
         ]);
 
-        $data = $this->callExtractAndHarvest($payload);
+        $data = $this->parseViaStub($payload);
 
         $this->assertCount(1, $data['inline_images']);
         $this->assertSame('att-logo', $data['inline_images'][0]['attachment_id']);
@@ -385,22 +357,22 @@ final class GmailServiceTest extends TestCase
      */
     public function testHarvestDoesNotReclassifyAttachmentDispositionImage(): void
     {
-        $logoAsAttachment = $this->part(
+        $logoAsAttachment = $this->payloadPart(
             'image/png',
             $this->b64url('fake'),
             filename: 'image001.png',
             attachmentId: 'att-logo',
             headers: [
-                $this->header('Content-ID', '<image001.png@01D9XXXX>'),
-                $this->header('Content-Disposition', 'attachment'),
+                ['name' => 'Content-ID', 'value' => '<image001.png@01D9XXXX>'],
+                ['name' => 'Content-Disposition', 'value' => 'attachment'],
             ],
         );
-        $payload = $this->part('multipart/mixed', parts: [
-            $this->part('text/html', $this->b64url('<p>body</p>')),
+        $payload = $this->payloadPart('multipart/mixed', parts: [
+            $this->payloadPart('text/html', $this->b64url('<p>body</p>')),
             $logoAsAttachment,
         ]);
 
-        $data = $this->callExtractAndHarvest($payload);
+        $data = $this->parseViaStub($payload);
 
         $this->assertSame([], $data['inline_images']);
         $this->assertCount(1, $data['attachments']);
