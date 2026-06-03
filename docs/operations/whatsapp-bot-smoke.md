@@ -17,11 +17,11 @@ Casos manuales a ejecutar tras activar los workflows en producción.
 ## Checklist (7 casos)
 
 - [ ] **Caso 1 — Happy path sin archivos.** Desde un número whitelisteado, manda mensaje al bot → "Crear Ticket" → asunto → descripción → "Saltar" archivos → "Crear Ticket". Verifica:
-  - Respuesta del bot incluye `ticket_number` real.
+  - Respuesta del bot incluye el `id` real del ticket.
   - Ticket aparece en `/` con `channel=whatsapp`, `whatsapp_message_id` poblado.
 
 - [ ] **Caso 2 — Happy path con archivo.** Igual al caso 1 pero adjunta foto en el paso de archivos. Verifica:
-  - Attachment guardado bajo `webroot/uploads/attachments/{ticket_number}/`.
+  - Attachment guardado bajo `webroot/uploads/attachments/{id}/`.
   - Ticket muestra el adjunto en la UI.
 
 - [ ] **Caso 3 — Cancelación.** Llega a confirmación, elige "Cancelar". Verifica:

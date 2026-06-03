@@ -99,7 +99,7 @@ Cada API tiene su propio caso de uso y credenciales en `system_settings`.
 
 ### Attachments
 
-`GenericAttachmentTrait` is the shared upload/validation entry point (security tests in `tests/TestCase/Service/...`, commit da5a70d). Files land under `webroot/uploads/attachments/{ticket_number}/`; this path is volume-mounted in `docker-compose.yml` and must remain writable by the FPM user.
+`GenericAttachmentTrait` is the shared upload/validation entry point (security tests in `tests/TestCase/Service/...`, commit da5a70d). Files land under `webroot/uploads/attachments/{id}/` (the ticket id); this path is volume-mounted in `docker-compose.yml` and must remain writable by the FPM user.
 
 ### Sidebar counts
 
