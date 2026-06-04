@@ -81,9 +81,11 @@ Workflow externo a este repositorio. Reemplaza al servicio `worker` (que corría
   `errors`) con la salida de `bin/cake import_gmail` ejecutado manualmente:
   los conteos deben converger una vez el worker se apague.
 - **Identificador de ticket en el payload:** el response usa la clave `id` (entero,
-  arranca en 1000) como identificador de cada ticket creado. La clave anterior
-  `ticket_number` fue eliminada; actualizar cualquier expresión n8n que la
-  referenciara para leer `id` en su lugar.
+  arranca en 1000) como identificador de cada ticket creado. La clave redundante
+  `ticket_number` fue eliminada. Los workflows de n8n existentes (Auto Tagging,
+  Gmail Import Trigger, Smoke Tests, bot COPC SA) ya leían `id`/`ticket_id` y no
+  requirieron cambios (verificado 2026-06-03); cualquier expresión futura debe
+  leer `id`.
 - En logs de la app: `Gmail import completed` con los mismos totales.
 
 ## Códigos de respuesta
