@@ -5,6 +5,9 @@ use Migrations\BaseMigration;
 
 final class AddSourcePhoneAndRestoreWhatsappIndex extends BaseMigration
 {
+    /**
+     * @return void
+     */
     public function change(): void
     {
         $table = $this->table('tickets');
@@ -21,7 +24,7 @@ final class AddSourcePhoneAndRestoreWhatsappIndex extends BaseMigration
         // index from the live database while leaving whatsapp_message_id in
         // place. Only re-add if it does not already exist (fresh installs
         // get the index from the prior migration).
-        if (!$table->hasIndex('idx_tickets_whatsapp_message_id')) {
+        if (!$table->hasIndex(['whatsapp_message_id'])) {
             $table->addIndex(['whatsapp_message_id'], [
                 'name' => 'idx_tickets_whatsapp_message_id',
                 'unique' => true,
