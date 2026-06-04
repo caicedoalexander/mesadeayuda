@@ -12,7 +12,6 @@ final class TicketWhatsappFactoryTest extends TestCase
     public function testBuildsTicketWithChannelWhatsapp(): void
     {
         $ticket = Ticket::fromWhatsappIngest(
-            ticketNumber: 'T-2025-000123',
             requesterId: 42,
             subject: 'Impresora',
             sanitizedDescription: '<p>desde ayer</p>',
@@ -20,7 +19,6 @@ final class TicketWhatsappFactoryTest extends TestCase
             whatsappMessageId: 'wamid.abc',
         );
 
-        self::assertSame('T-2025-000123', $ticket->ticket_number);
         self::assertSame(42, $ticket->requester_id);
         self::assertSame('Impresora', $ticket->subject);
         self::assertSame('<p>desde ayer</p>', $ticket->description);
@@ -34,7 +32,6 @@ final class TicketWhatsappFactoryTest extends TestCase
     public function testReplacesEmptySubjectWithFallback(): void
     {
         $ticket = Ticket::fromWhatsappIngest(
-            ticketNumber: 'T-2025-000124',
             requesterId: 1,
             subject: '',
             sanitizedDescription: 'x',

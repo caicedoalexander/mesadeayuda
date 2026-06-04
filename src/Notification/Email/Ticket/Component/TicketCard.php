@@ -34,7 +34,7 @@ final class TicketCard
      */
     public static function render(Ticket $ticket): string
     {
-        $number = (string)($ticket->ticket_number ?? '');
+        $ticketId = (string)($ticket->id ?? '');
         $status = (string)($ticket->status ?? '');
         $priority = (string)($ticket->priority ?? 'media');
         $subject = (string)($ticket->subject ?? '');
@@ -46,7 +46,7 @@ final class TicketCard
 
         $headerLeft = '<span style="font-family:Geist Mono,Menlo,Consolas,monospace;'
             . 'font-size:11px;font-weight:600;color:#6B7280;margin-right:10px;">#'
-            . htmlspecialchars($number, ENT_QUOTES | ENT_HTML5, 'UTF-8') . '</span>'
+            . htmlspecialchars($ticketId, ENT_QUOTES | ENT_HTML5, 'UTF-8') . '</span>'
             . Pill::forStatus($status)
             . '<span style="margin-left:10px;">' . PriorityArrow::render($priority) . '</span>';
 

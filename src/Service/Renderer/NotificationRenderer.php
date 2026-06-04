@@ -81,7 +81,7 @@ class NotificationRenderer
         return "━━━━━━━━━━━━━━━━━━━━\n" .
             "*NUEVO TICKET DE SOPORTE*\n" .
             "━━━━━━━━━━━━━━━━━━━━\n\n" .
-            "*{$ticket->ticket_number}*\n" .
+            "*{$ticket->id}*\n" .
             "{$ticket->subject}\n\n" .
             "*Solicitante:* {$ticket->requester->name}\n" .
             "*Correo:* {$ticket->requester->email}\n" .

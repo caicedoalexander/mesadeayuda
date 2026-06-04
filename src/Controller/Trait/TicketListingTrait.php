@@ -145,7 +145,7 @@ trait TicketListingTrait
      */
     private function getValidSortFields(): array
     {
-        return ['created', 'modified', 'status', 'priority', 'subject', 'ticket_number'];
+        return ['created', 'modified', 'status', 'priority', 'subject', 'id'];
     }
 
     /**

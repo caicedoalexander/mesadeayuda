@@ -563,12 +563,6 @@ class Initial extends BaseMigration
                 'signed' => false,
             ])
             ->addPrimaryKey(['id'])
-            ->addColumn('ticket_number', 'string', [
-                'comment' => 'Unique ticket identifier. Format: TKT-YYYY-NNNNN',
-                'default' => null,
-                'limit' => 20,
-                'null' => false,
-            ])
             ->addColumn('gmail_message_id', 'string', [
                 'comment' => 'Gmail Message-ID for email threading and duplicate prevention',
                 'default' => null,
@@ -656,11 +650,6 @@ class Initial extends BaseMigration
                 'null' => true,
             ])
             ->addIndex(
-                $this->index('ticket_number')
-                    ->setName('idx_ticket_number_unique')
-                    ->setType('unique')
-            )
-            ->addIndex(
                 $this->index('gmail_message_id')
                     ->setName('idx_gmail_message_id_unique')
                     ->setType('unique')
@@ -711,6 +700,9 @@ class Initial extends BaseMigration
                     ->setName('idx_status_created')
             )
             ->create();
+
+        // Los tickets nuevos arrancan su id (identificador visible) en 1000.
+        $this->execute('ALTER TABLE tickets AUTO_INCREMENT = 1000');
 
         $this->table('tickets_tags')
             ->addColumn('ticket_id', 'integer', [

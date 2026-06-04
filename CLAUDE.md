@@ -95,11 +95,11 @@ Do NOT call `EmailService`, `WhatsappService`, or any channel directly from cont
 
 Cada API tiene su propio caso de uso y credenciales en `system_settings`.
 
-`GmailImportService` + `TicketIngestionService` cover the inbound side; UTF-8 + markup-safe truncation lives in `TicketIngestionService`. Atomic ticket-number allocation runs through `NumberGenerationService` — don't reintroduce read-modify-write on the counter.
+`GmailImportService` + `TicketIngestionService` cover the inbound side; UTF-8 + markup-safe truncation lives in `TicketIngestionService`. El identificador del ticket es el `id` autoincremental de la tabla `tickets` (arranca en 1000); MySQL garantiza unicidad y atomicidad — no introducir tablas de secuencia ni contadores propios.
 
 ### Attachments
 
-`GenericAttachmentTrait` is the shared upload/validation entry point (security tests in `tests/TestCase/Service/...`, commit da5a70d). Files land under `webroot/uploads/attachments/{ticket_number}/`; this path is volume-mounted in `docker-compose.yml` and must remain writable by the FPM user.
+`GenericAttachmentTrait` is the shared upload/validation entry point (security tests in `tests/TestCase/Service/...`, commit da5a70d). Files land under `webroot/uploads/attachments/{id}/` (the ticket id); this path is volume-mounted in `docker-compose.yml` and must remain writable by the FPM user.
 
 ### Sidebar counts
 

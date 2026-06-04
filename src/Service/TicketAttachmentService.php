@@ -107,7 +107,7 @@ class TicketAttachmentService
      * differs (map vs void) and only inline images need this round-trip. See
      * audit CRIT-4 (F1+F2+G1).
      *
-     * @param \Cake\Datasource\EntityInterface $ticket Ticket entity (must have gmail_message_id and ticket_number)
+     * @param \Cake\Datasource\EntityInterface $ticket Ticket entity (must have gmail_message_id)
      * @param array<int, array{filename: string, mime_type: string, attachment_id: string, content_id: string, size: int}> $inlineImages
      * @param int $userId Uploader user ID (typically the requester)
      * @param int|null $commentId Optional comment to associate inline images with (null for ticket-level)

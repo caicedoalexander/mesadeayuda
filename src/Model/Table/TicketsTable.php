@@ -5,7 +5,6 @@ namespace App\Model\Table;
 
 use App\Constants\RoleConstants;
 use App\Constants\TicketConstants;
-use App\Service\NumberGenerationService;
 use Cake\Log\Log;
 use Cake\ORM\Query\SelectQuery;
 use Cake\ORM\RulesChecker;
@@ -49,7 +48,7 @@ class TicketsTable extends Table
         parent::initialize($config);
 
         $this->setTable('tickets');
-        $this->setDisplayField('ticket_number');
+        $this->setDisplayField('id');
         $this->setPrimaryKey('id');
 
         $this->addBehavior('Timestamp');
@@ -94,13 +93,6 @@ class TicketsTable extends Table
      */
     public function validationDefault(Validator $validator): Validator
     {
-        $validator
-            ->scalar('ticket_number')
-            ->maxLength('ticket_number', 20)
-            ->requirePresence('ticket_number', 'create')
-            ->notEmptyString('ticket_number')
-            ->add('ticket_number', 'unique', ['rule' => 'validateUnique', 'provider' => 'table']);
-
         $validator
             ->scalar('gmail_message_id')
             ->maxLength('gmail_message_id', 255)
@@ -171,7 +163,6 @@ class TicketsTable extends Table
      */
     public function buildRules(RulesChecker $rules): RulesChecker
     {
-        $rules->add($rules->isUnique(['ticket_number']), ['errorField' => 'ticket_number']);
         $rules->add($rules->isUnique(['gmail_message_id'], ['allowMultipleNulls' => true]), ['errorField' => 'gmail_message_id']);
         $rules->add($rules->existsIn(['requester_id'], 'Requesters'), ['errorField' => 'requester_id']);
 
@@ -185,16 +176,6 @@ class TicketsTable extends Table
         );
 
         return $rules;
-    }
-
-    /**
-     * Generate unique ticket number in format TKT-YYYY-NNNNN
-     *
-     * @return string
-     */
-    public function generateTicketNumber(): string
-    {
-        return (new NumberGenerationService())->generate();
     }
 
     /**
@@ -286,7 +267,7 @@ class TicketsTable extends Table
             $search = $filters['search'];
             $query->where([
                 'OR' => [
-                    'Tickets.ticket_number LIKE' => '%' . $search . '%',
+                    'Tickets.id LIKE' => '%' . $search . '%',
                     'Tickets.subject LIKE' => '%' . $search . '%',
                     'Tickets.description LIKE' => '%' . $search . '%',
                     'Tickets.source_email LIKE' => '%' . $search . '%',

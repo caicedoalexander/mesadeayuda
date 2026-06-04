@@ -166,7 +166,6 @@ class TicketStatusChangedStrategyTest extends TestCase
         $ticket = new Ticket();
         $ticket->patch([
             'id' => 1,
-            'ticket_number' => 'TKT-0001',
             'subject' => 'Subj',
             'status' => 'abierto',
             'priority' => 'media',

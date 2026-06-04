@@ -49,8 +49,7 @@ final class PreviewFixture
 
         $ticket = new Ticket();
         $ticket->set([
-            'id' => 1,
-            'ticket_number' => 'TKT-1284',
+            'id' => 1284,
             'subject' => 'Cafetera #14 no enciende',
             'status' => 'pendiente',
             'priority' => 'alta',

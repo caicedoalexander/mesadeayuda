@@ -12,7 +12,7 @@ final class TemplateContextTest extends TestCase
     private function ticket(): Ticket
     {
         $t = new Ticket();
-        $t->set(['id' => 1, 'ticket_number' => 'TKT-1'], ['guard' => false]);
+        $t->set(['id' => 1], ['guard' => false]);
 
         return $t;
     }
@@ -25,7 +25,7 @@ final class TemplateContextTest extends TestCase
             recipientName: 'Alex',
         );
 
-        self::assertSame('TKT-1', $ctx->ticket->ticket_number);
+        self::assertSame(1, $ctx->ticket->id);
         self::assertSame('https://example.com/t/1', $ctx->ticketUrl);
         self::assertSame('Alex', $ctx->recipientName);
         self::assertNull($ctx->comment);

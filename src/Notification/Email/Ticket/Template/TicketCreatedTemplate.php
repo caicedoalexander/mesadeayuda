@@ -29,18 +29,18 @@ final class TicketCreatedTemplate implements EmailTemplate
      */
     public function render(TemplateContext $ctx): RenderedEmail
     {
-        $subject = 'Tu ticket #' . $ctx->ticket->ticket_number . ' fue creado';
+        $subject = 'Tu ticket #' . $ctx->ticket->id . ' fue creado';
 
         $renderer = new NotificationRenderer();
         $statusLabel = $renderer->getStatusLabel((string)$ctx->ticket->status);
         $priorityLabel = ucfirst((string)$ctx->ticket->priority);
 
         $name = htmlspecialchars(trim((string)$ctx->recipientName), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        $ticketNumber = htmlspecialchars((string)$ctx->ticket->ticket_number, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $ticketId = htmlspecialchars((string)$ctx->ticket->id, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $ticketSubject = htmlspecialchars((string)$ctx->ticket->subject, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
         $body = '<p>Hola ' . ($name === '' ? '' : $name) . ',</p>'
-            . '<p>Recibimos tu solicitud y creamos el ticket #' . $ticketNumber
+            . '<p>Recibimos tu solicitud y creamos el ticket #' . $ticketId
             . ' (' . $ticketSubject . ').<br>'
             . 'Un agente la tomará en los próximos 30 minutos.</p>'
             . '<p>Estado: ' . htmlspecialchars($statusLabel, ENT_QUOTES | ENT_HTML5, 'UTF-8')

@@ -43,7 +43,7 @@ final class TicketStatusChangedTemplateTest extends TestCase
 
         $ticket = new Ticket();
         $ticket->set([
-            'ticket_number' => 'TKT-1',
+            'id' => 1,
             'subject' => 'Cafetera #14 no enciende',
             'status' => 'pendiente',
             'priority' => 'media',
@@ -67,7 +67,7 @@ final class TicketStatusChangedTemplateTest extends TestCase
 
         self::assertSame('Re: Cafetera #14 no enciende', $email->subject);
         self::assertStringContainsString('Hola Alex,', $email->bodyHtml);
-        self::assertStringContainsString('El estado de tu ticket #TKT-1', $email->bodyHtml);
+        self::assertStringContainsString('El estado de tu ticket #1', $email->bodyHtml);
         self::assertStringContainsString('Cafetera #14 no enciende', $email->bodyHtml);
         self::assertStringContainsString('Abierto → Pendiente', $email->bodyHtml);
         self::assertStringContainsString('Aplicado por Maira Pérez', $email->bodyHtml);
@@ -82,7 +82,7 @@ final class TicketStatusChangedTemplateTest extends TestCase
 
         $ticket = new Ticket();
         $ticket->set([
-            'ticket_number' => 'TKT-1',
+            'id' => 1,
             'subject' => 'S',
             'status' => 'resuelto',
             'priority' => 'media',

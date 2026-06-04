@@ -187,7 +187,7 @@ Dockerfile                  # Imagen Nginx + PHP-FPM
 
 - **Auditoría:** todos los módulos operativos escriben en su tabla `*_history` mediante `AuditBehavior`. No se debe omitir esta capa al mutar entidades.
 - **Notificaciones:** salen a través de `NotificationDispatcherTrait` + `EmailTemplateRenderer`, que orquestan email, WhatsApp y webhooks de n8n. Para tipos nuevos extender el renderer y las plantillas, no llamar integraciones desde controladores.
-- **Adjuntos:** uso compartido vía `GenericAttachmentTrait`. Almacenamiento en disco local bajo `webroot/uploads/attachments/{ticket_number}/`.
+- **Adjuntos:** uso compartido vía `GenericAttachmentTrait`. Almacenamiento en disco local bajo `webroot/uploads/attachments/{id}/`.
 - **Contadores del sidebar:** centralizados en `SidebarCountsService`. Reutilizarlo en lugar de consultar tablas desde las vistas.
 
 ---

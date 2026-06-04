@@ -50,7 +50,7 @@ final class TicketCommentAddedTemplateTest extends TestCase
 
         $ticket = new Ticket();
         $ticket->set([
-            'ticket_number' => 'TKT-1',
+            'id' => 1,
             'subject' => 'Cafetera #14 no enciende',
             'status' => 'pendiente',
             'priority' => 'media',
@@ -72,7 +72,7 @@ final class TicketCommentAddedTemplateTest extends TestCase
         self::assertSame('Re: Cafetera #14 no enciende', $email->subject);
         self::assertStringContainsString('Hola Alex,', $email->bodyHtml);
         self::assertStringContainsString('Maira Pérez respondió', $email->bodyHtml);
-        self::assertStringContainsString('#TKT-1', $email->bodyHtml);
+        self::assertStringContainsString('#1', $email->bodyHtml);
         self::assertStringContainsString('Cafetera #14 no enciende', $email->bodyHtml);
         // Comment body is wrapped raw inside the blockquote.
         self::assertStringContainsString('<p>Ya estamos revisando.</p>', $email->bodyHtml);
@@ -92,7 +92,7 @@ final class TicketCommentAddedTemplateTest extends TestCase
 
         $ticket = new Ticket();
         $ticket->set([
-            'ticket_number' => 'TKT-9',
+            'id' => 1,
             'subject' => 'Re: Cafetera #14 no enciende',
             'status' => 'abierto',
             'priority' => 'media',
@@ -121,7 +121,7 @@ final class TicketCommentAddedTemplateTest extends TestCase
 
         $ticket = new Ticket();
         $ticket->set([
-            'ticket_number' => 'TKT-9',
+            'id' => 1,
             'subject' => 'X',
             'status' => 'abierto',
             'priority' => 'media',

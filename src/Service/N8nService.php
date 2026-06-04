@@ -109,7 +109,6 @@ class N8nService
             if ($response['success']) {
                 Log::info('n8n webhook sent successfully', [
                     'ticket_id' => $ticket->id,
-                    'ticket_number' => $ticket->ticket_number,
                 ]);
 
                 return true;
@@ -149,7 +148,6 @@ class N8nService
             'timestamp' => FrozenTime::now()->toIso8601String(),
             'ticket' => [
                 'id' => $ticket->id,
-                'ticket_number' => $ticket->ticket_number,
                 'subject' => $ticket->subject,
                 'description' => $ticket->description,
                 'description_plain' => $descriptionPlain,

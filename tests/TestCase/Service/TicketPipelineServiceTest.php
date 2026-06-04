@@ -43,7 +43,6 @@ class TicketPipelineServiceTest extends TestCase
 
         $this->ticket = new Ticket([
             'id' => 1,
-            'ticket_number' => 'T-0001',
             'status' => TicketConstants::STATUS_ABIERTO,
         ]);
         $this->ticket->setNew(false);
@@ -310,7 +309,6 @@ class TicketPipelineServiceTest extends TestCase
 
         $ticket = new Ticket([
             'id' => 1,
-            'ticket_number' => 'T-0002',
             'status' => TicketConstants::STATUS_ABIERTO,
         ]);
         $ticket->setNew(false);

@@ -26,7 +26,6 @@ class TicketsTableTest extends TestCase
         $ticket = new Ticket();
         $ticket->patch([
             'id' => 1,
-            'ticket_number' => 'TKT-0001',
             'rfc_message_id' => null,
         ], ['guard' => false]);
         $ticket->setNew(false);
@@ -58,7 +57,6 @@ class TicketsTableTest extends TestCase
         $ticket = new Ticket();
         $ticket->patch([
             'id' => 1,
-            'ticket_number' => 'TKT-0001',
             'rfc_message_id' => 'customer-original@mail.example.com',
         ], ['guard' => false]);
         $ticket->setNew(false);
@@ -89,7 +87,6 @@ class TicketsTableTest extends TestCase
         $ticket = new Ticket();
         $ticket->patch([
             'id' => 1,
-            'ticket_number' => 'TKT-0001',
             'rfc_message_id' => null,
         ], ['guard' => false]);
         $ticket->setNew(false);
