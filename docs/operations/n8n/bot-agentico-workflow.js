@@ -212,7 +212,7 @@ const chatModel = languageModel({
   config: {
     name: 'OpenCode Zen Model',
     parameters: {
-      model: { __rl: true, mode: 'id', value: 'opencode/gpt-5.5' },
+      model: { __rl: true, mode: 'id', value: 'opencode/qwen3.5-plus' },
       options: { baseURL: 'https://opencode.ai/zen/v1', temperature: 0.3 },
     },
     credentials: { openAiApi: newCredential('OpenCode Zen') },
