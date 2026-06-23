@@ -111,7 +111,7 @@ class TicketAttachmentService
      * @param array<int, array{filename: string, mime_type: string, attachment_id: string, content_id: string, size: int}> $inlineImages
      * @param int $userId Uploader user ID (typically the requester)
      * @param int|null $commentId Optional comment to associate inline images with (null for ticket-level)
-     * @return array<string, string> Map content_id => '/uploads/attachments/{n}/{uuid}.ext'
+     * @return array<string, string> Map content_id => '/attachments/view/{id}'
      */
     public function processInlineImages(EntityInterface $ticket, array $inlineImages, int $userId, ?int $commentId = null): array
     {
@@ -162,6 +162,18 @@ class TicketAttachmentService
         }
 
         return $map;
+    }
+
+    /**
+     * Borrado directo de un objeto S3 por clave. Solo para compensación de
+     * rollbacks (el registro attachments ya no existe).
+     *
+     * @param string $key Clave S3 tal como estaba en attachments.file_path
+     * @return bool True si se borró
+     */
+    public function deleteStoredObject(string $key): bool
+    {
+        return $this->s3Storage()->delete($key);
     }
 
     /**

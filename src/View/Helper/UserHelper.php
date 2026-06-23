@@ -16,29 +16,25 @@ class UserHelper extends Helper
     /**
      * Get profile image URL with fallback to default avatar.
      *
-     * Convención: el valor en BD es siempre 'uploads/...' o vacío.
+     * Convención: el valor en BD es una clave S3 'profile_images/...' o vacío.
+     * La URL devuelta es la ruta estable de la app, que redirige 302 a una
+     * URL presignada de S3.
      *
-     * @param string|null $profileImage Profile image path from user entity
+     * @param string|null $profileImage Profile image S3 key from user entity
+     * @param int|null $userId User id that owns the image
      * @return string URL to profile image or default avatar
      */
-    public function profileImage(?string $profileImage): string
+    public function profileImage(?string $profileImage, ?int $userId = null): string
     {
-        if (empty($profileImage)) {
+        if (empty($profileImage) || $userId === null) {
             return $this->defaultAvatar();
         }
 
-        if (!str_starts_with($profileImage, 'uploads/')) {
+        if (!str_starts_with($profileImage, 'profile_images/')) {
             return $this->defaultAvatar();
         }
 
-        $normalizedPath = str_replace('/', DS, $profileImage);
-        $fullPath = WWW_ROOT . $normalizedPath;
-
-        if (file_exists($fullPath)) {
-            return '/' . str_replace('\\', '/', $profileImage);
-        }
-
-        return $this->defaultAvatar();
+        return '/profile-images/view/' . $userId;
     }
 
     /**
@@ -69,7 +65,7 @@ class UserHelper extends Helper
 
         $options = array_merge($defaults, $options);
         $imageUrl = $user && $user->profile_image
-            ? $this->profileImage($user->profile_image)
+            ? $this->profileImage($user->profile_image, (int)$user->id)
             : $this->defaultAvatar();
 
         $attributes = [];

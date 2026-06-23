@@ -128,6 +128,21 @@ Llamadas HTTP salientes (WhatsApp, n8n, Gmail webhooks) usan Circuit Breaker + R
 
 > Ajustes por tenant (tokens OAuth de Gmail, credenciales de integración, plantillas de email) se gestionan desde la interfaz `/admin`, persistidos en las tablas `system_settings` y `email_templates`.
 
+### Almacenamiento de archivos (AWS S3)
+
+Los adjuntos de tickets y las fotos de perfil se guardan en un bucket privado
+de S3 (con Block Public Access activado) y se sirven mediante URLs presignadas.
+Variables requeridas en `config/.env`:
+
+| Variable | Descripción |
+|---|---|
+| `AWS_ACCESS_KEY_ID` | Access key del usuario IAM (permisos mínimos: `s3:PutObject`, `s3:GetObject`, `s3:DeleteObject` sobre el bucket) |
+| `AWS_SECRET_ACCESS_KEY` | Secret key del usuario IAM |
+| `AWS_REGION` | Región del bucket (ej. `us-east-1`) |
+| `S3_BUCKET` | Nombre del bucket |
+
+En desarrollo se usa un bucket de desarrollo separado con las mismas variables.
+
 ---
 
 ## Comandos útiles
@@ -187,7 +202,7 @@ Dockerfile                  # Imagen Nginx + PHP-FPM
 
 - **Auditoría:** todos los módulos operativos escriben en su tabla `*_history` mediante `AuditBehavior`. No se debe omitir esta capa al mutar entidades.
 - **Notificaciones:** salen a través de `NotificationDispatcherTrait` + `EmailTemplateRenderer`, que orquestan email, WhatsApp y webhooks de n8n. Para tipos nuevos extender el renderer y las plantillas, no llamar integraciones desde controladores.
-- **Adjuntos:** uso compartido vía `GenericAttachmentTrait`. Almacenamiento en disco local bajo `webroot/uploads/attachments/{id}/`.
+- **Adjuntos:** uso compartido vía `GenericAttachmentTrait`. Almacenamiento en disco local bajo `webroot/uploads/attachments/{ticket_number}/`.
 - **Contadores del sidebar:** centralizados en `SidebarCountsService`. Reutilizarlo en lugar de consultar tablas desde las vistas.
 
 ---

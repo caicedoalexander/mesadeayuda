@@ -3,7 +3,9 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Service\Traits;
 
+use App\Model\Entity\Attachment;
 use App\Service\Traits\GenericAttachmentTrait;
+use Cake\Datasource\EntityInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -208,6 +210,30 @@ final class GenericAttachmentTraitTest extends TestCase
         $this->assertStringEndsWith('.pdf', $cleaned);
     }
 
+    // -------------------------------------------------------------------
+    // getWebUrl()
+    // -------------------------------------------------------------------
+
+    public function testGetWebUrlReturnsStableAppRouteForS3Keys(): void
+    {
+        $attachment = new Attachment([
+            'id' => 42,
+            'file_path' => 'attachments/1000/abc.pdf',
+        ]);
+
+        $this->assertSame('/attachments/view/42', $this->harness->webUrl($attachment));
+    }
+
+    public function testGetWebUrlReturnsNullForLegacyLocalPaths(): void
+    {
+        $attachment = new Attachment([
+            'id' => 42,
+            'file_path' => 'uploads/attachments/1000/abc.pdf',
+        ]);
+
+        $this->assertNull($this->harness->webUrl($attachment));
+    }
+
     private function makeHarness(): object
     {
         return new class {
@@ -221,6 +247,11 @@ final class GenericAttachmentTraitTest extends TestCase
             public function sanitize(string $filename): string
             {
                 return $this->sanitizeFilename($filename);
+            }
+
+            public function webUrl(EntityInterface $attachment): ?string
+            {
+                return $this->getWebUrl($attachment);
             }
         };
     }

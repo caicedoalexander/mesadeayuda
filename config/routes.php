@@ -64,6 +64,26 @@ return function (RouteBuilder $routes): void {
             '_name' => 'health_check'
         ]);
 
+        // Ruta estable de adjuntos: las URLs incrustadas en HTML guardado en
+        // BD (imágenes inline) apuntan aquí; la acción redirige 302 a una URL
+        // presignada de S3. NO cambiar este path sin migrar el HTML guardado.
+        $builder->connect(
+            '/attachments/view/{id}',
+            ['controller' => 'Tickets', 'action' => 'viewAttachment'],
+            ['_name' => 'attachment_view']
+        )
+            ->setPatterns(['id' => '\d+'])
+            ->setPass(['id']);
+
+        // Ruta estable de fotos de perfil → 302 a URL presignada de S3.
+        $builder->connect(
+            '/profile-images/view/{id}',
+            ['controller' => 'Users', 'action' => 'profileImage'],
+            ['_name' => 'profile_image_view']
+        )
+            ->setPatterns(['id' => '\d+'])
+            ->setPass(['id']);
+
         // Gmail OAuth callback (compat con configs legacy en Google Cloud Console)
         $builder->connect(
             '/oauth/gmail/callback',

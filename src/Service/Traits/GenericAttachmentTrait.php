@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Service\Traits;
 
+use App\Service\S3StorageService;
 use Cake\Datasource\EntityInterface;
 use Cake\Log\Log;
 use Cake\Utility\Text;
@@ -12,7 +13,7 @@ use Psr\Http\Message\UploadedFileInterface;
 /**
  * GenericAttachmentTrait
  *
- * Ticket attachment handling with security validation (local filesystem only).
+ * Ticket attachment handling with security validation (storage: AWS S3).
  *
  * Requires using class to have:
  * - fetchTable() method (from LocatorAwareTrait)
@@ -20,8 +21,7 @@ use Psr\Http\Message\UploadedFileInterface;
 trait GenericAttachmentTrait
 {
     private const ATTACHMENTS_TABLE = 'Attachments';
-    private const LOCAL_BASE = 'attachments';
-    private const UPLOAD_BASE_DIR = 'uploads' . DS . 'attachments';
+    private const STORAGE_KEY_PREFIX = 'attachments/';
 
     /**
      * Allowed file extensions with their valid MIME types as identified by
@@ -77,6 +77,24 @@ trait GenericAttachmentTrait
     private const MAX_FILE_SIZE = 10485760;
     private const MAX_IMAGE_SIZE = 5242880;
 
+    private ?S3StorageService $s3Storage = null;
+
+    /**
+     * Inyección para tests. En producción se construye lazy.
+     */
+    public function setS3Storage(S3StorageService $storage): void
+    {
+        $this->s3Storage = $storage;
+    }
+
+    /**
+     * Lazy getter for the S3 storage service instance.
+     */
+    protected function s3Storage(): S3StorageService
+    {
+        return $this->s3Storage ??= new S3StorageService();
+    }
+
     /**
      * Save uploaded file with robust security validation.
      *
@@ -126,25 +144,20 @@ trait GenericAttachmentTrait
         $filename = Text::uuid() . '.' . $extension;
         $entityNumber = (string)$entity->id;
 
-        $uploadDir = $this->getUploadDirectory($entityNumber);
-        if (!file_exists($uploadDir)) {
-            if (!mkdir($uploadDir, 0755, true)) {
-                Log::error('Failed to create ticket upload directory', ['dir' => $uploadDir]);
+        $key = $this->buildStorageKey($entityNumber, $filename);
 
-                return null;
-            }
+        $stream = $file->getStream();
+        if ($stream->isSeekable()) {
+            $stream->rewind();
         }
 
-        $fullPath = $uploadDir . DS . $filename;
-        try {
-            $file->moveTo($fullPath);
-        } catch (Exception $e) {
-            Log::error('Failed to move ticket file', ['error' => $e->getMessage()]);
+        if (!$this->s3Storage()->put($key, (string)$stream, (string)$mimeType)) {
+            Log::error('Failed to upload ticket file to S3', ['key' => $key]);
 
             return null;
         }
 
-        $filePath = $this->buildLocalPath($entityNumber, $filename);
+        $filePath = $key;
 
         $attachmentsTable = $this->fetchTable(self::ATTACHMENTS_TABLE);
 
@@ -168,9 +181,7 @@ trait GenericAttachmentTrait
             Log::error('Failed to save ticket attachment to database', [
                 'errors' => $attachment->getErrors(),
             ]);
-            if (file_exists($fullPath)) {
-                @unlink($fullPath);
-            }
+            $this->s3Storage()->delete($key);
 
             return null;
         }
@@ -179,22 +190,13 @@ trait GenericAttachmentTrait
     }
 
     /**
-     * @param string $entityNumber Ticket number
+     * @param string $entityNumber Ticket id
      * @param string $filename Stored filename
-     * @return string Relative path stored in DB
+     * @return string S3 key stored in attachments.file_path
      */
-    private function buildLocalPath(string $entityNumber, string $filename): string
+    private function buildStorageKey(string $entityNumber, string $filename): string
     {
-        return 'uploads/' . self::LOCAL_BASE . '/' . $entityNumber . '/' . $filename;
-    }
-
-    /**
-     * @param string $entityNumber Ticket number
-     * @return string Absolute upload directory
-     */
-    private function getUploadDirectory(string $entityNumber): string
-    {
-        return WWW_ROOT . self::UPLOAD_BASE_DIR . DS . $entityNumber;
+        return self::STORAGE_KEY_PREFIX . $entityNumber . '/' . $filename;
     }
 
     /**
@@ -306,23 +308,15 @@ trait GenericAttachmentTrait
         $uniqueFilename = Text::uuid() . '.' . $extension;
         $entityNumber = (string)$entity->id;
 
-        $uploadDir = $this->getUploadDirectory($entityNumber);
-        if (!file_exists($uploadDir)) {
-            if (!mkdir($uploadDir, 0755, true)) {
-                Log::error('Failed to create ticket upload directory', ['dir' => $uploadDir]);
+        $key = $this->buildStorageKey($entityNumber, $uniqueFilename);
 
-                return null;
-            }
-        }
-
-        $fullPath = $uploadDir . DS . $uniqueFilename;
-        if (file_put_contents($fullPath, $binaryContent) === false) {
-            Log::error('Failed to write ticket file', ['path' => $fullPath]);
+        if (!$this->s3Storage()->put($key, $binaryContent, $mimeType)) {
+            Log::error('Failed to upload ticket attachment to S3', ['key' => $key]);
 
             return null;
         }
 
-        $filePath = $this->buildLocalPath($entityNumber, $uniqueFilename);
+        $filePath = $key;
 
         $data = $this->buildAttachmentData(
             $entity->id,
@@ -352,7 +346,7 @@ trait GenericAttachmentTrait
             return $attachment;
         }
 
-        @unlink($fullPath);
+        $this->s3Storage()->delete($key);
 
         Log::error('Failed to save ticket attachment to database', [
             'errors' => $attachment->getErrors(),
@@ -373,10 +367,7 @@ trait GenericAttachmentTrait
             $attachmentsTable = $this->fetchTable(self::ATTACHMENTS_TABLE);
             $attachment = $attachmentsTable->get($attachmentId);
 
-            $fullPath = WWW_ROOT . $attachment->file_path;
-            if (file_exists($fullPath)) {
-                @unlink($fullPath);
-            }
+            $this->s3Storage()->delete((string)$attachment->file_path);
 
             return $attachmentsTable->delete($attachment);
         } catch (Exception $e) {
@@ -561,46 +552,50 @@ trait GenericAttachmentTrait
     }
 
     /**
-     * Get full filesystem path for an attachment.
-     *
-     * @param \Cake\Datasource\EntityInterface $attachment Attachment entity
-     * @return string|null Absolute path or null if file missing
-     */
-    public function getFullPath(EntityInterface $attachment): ?string
-    {
-        $fullPath = WWW_ROOT . $attachment->file_path;
-
-        return file_exists($fullPath) ? $fullPath : null;
-    }
-
-    /**
-     * Get web URL for an attachment (always relative, local filesystem).
+     * Ruta estable de la app para ver/incrustar un adjunto. NUNCA una URL
+     * presignada: estas URLs se guardan incrustadas en HTML en BD (imágenes
+     * inline) y no pueden expirar.
      *
      * @param \Cake\Datasource\EntityInterface $attachment Attachment entity
      * @return string|null Web URL
      */
     public function getWebUrl(EntityInterface $attachment): ?string
     {
-        if (!str_starts_with((string)$attachment->file_path, 'uploads/')) {
+        if (!str_starts_with((string)$attachment->file_path, self::STORAGE_KEY_PREFIX)) {
             return null;
         }
 
-        return '/' . str_replace(DS, '/', $attachment->file_path);
+        return '/attachments/view/' . $attachment->id;
     }
 
     /**
-     * Stream file content directly (for downloads).
+     * Stream del contenido del adjunto desde S3 (consumo server-side).
      *
      * @param \Cake\Datasource\EntityInterface $attachment Attachment entity
      * @return resource|null
      */
     public function getFileStream(EntityInterface $attachment)
     {
-        $fullPath = WWW_ROOT . $attachment->file_path;
-        if (file_exists($fullPath)) {
-            return fopen($fullPath, 'rb');
+        return $this->s3Storage()->getStream((string)$attachment->file_path);
+    }
+
+    /**
+     * URL presignada de S3 para servir el adjunto vía redirect 302.
+     *
+     * @param \Cake\Datasource\EntityInterface $attachment Attachment entity
+     * @param bool $inline True para disposición inline (imágenes en el navegador)
+     * @return string|null
+     */
+    public function getPresignedUrlFor(EntityInterface $attachment, bool $inline = false): ?string
+    {
+        if (!str_starts_with((string)$attachment->file_path, self::STORAGE_KEY_PREFIX)) {
+            return null;
         }
 
-        return null;
+        return $this->s3Storage()->presignedUrl(
+            (string)$attachment->file_path,
+            (string)$attachment->original_filename,
+            $inline,
+        );
     }
 }

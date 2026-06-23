@@ -103,6 +103,18 @@ trait TicketActionsTrait
         return $this->downloadTicketAttachment((int)$id);
     }
 
+    /**
+     * Ruta estable para imágenes inline y previsualizaciones
+     * (/attachments/view/{id}). Las URLs guardadas en HTML en BD apuntan
+     * aquí; la presignada se genera en cada request.
+     *
+     * @param string|null $id Attachment id
+     */
+    public function viewAttachment(?string $id = null)
+    {
+        return $this->downloadTicketAttachment((int)$id, inline: true);
+    }
+
     // endregion
 
     // region: Actions — protected workhorses
@@ -240,21 +252,24 @@ trait TicketActionsTrait
     }
 
     /**
+     * Sirve un adjunto vía redirect 302 a una URL presignada de S3.
+     * La autorización es la misma que el resto del módulo de tickets:
+     * usuario autenticado (Authentication en AppController).
+     *
      * @param int $attachmentId Attachment id
+     * @param bool $inline True para mostrar en el navegador (imágenes inline)
      */
-    protected function downloadTicketAttachment(int $attachmentId): Response
+    protected function downloadTicketAttachment(int $attachmentId, bool $inline = false): Response
     {
         $attachmentsTable = $this->fetchTable('Attachments');
         $attachment = $attachmentsTable->get($attachmentId);
-        $filePath = $this->getFullPath($attachment);
 
-        if (!$filePath || !file_exists($filePath)) {
+        $url = $this->getPresignedUrlFor($attachment, $inline);
+        if ($url === null) {
             throw new NotFoundException('Archivo no encontrado.');
         }
 
-        return $this->response
-            ->withFile($filePath, ['download' => true, 'name' => $attachment->original_filename])
-            ->withType($attachment->mime_type ?? 'application/octet-stream');
+        return $this->redirect($url);
     }
 
     /**

@@ -21,6 +21,7 @@ use Cake\Event\EventManagerInterface;
 use Cake\I18n\FrozenTime;
 use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
+use Throwable;
 
 /**
  * Orchestrates ticket pipeline operations: status transitions, assignment,
@@ -686,7 +687,7 @@ class TicketPipelineService
             $tag = $this->fetchTable('Tags')->get($tagId);
 
             return (string)($tag->name ?? "#{$tagId}");
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return "#{$tagId}";
         }
     }
@@ -701,7 +702,7 @@ class TicketPipelineService
             $name = trim((string)($user->name ?? ''));
 
             return $name === '' ? "user#{$userId}" : $name;
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return "user#{$userId}";
         }
     }
@@ -738,23 +739,19 @@ class TicketPipelineService
     }
 
     /**
-     * Best-effort removal of attachment files that were written to disk during
-     * a transaction that subsequently rolled back. Failures are logged but never
+     * Best-effort removal of attachment objects uploaded to S3 during a
+     * transaction that subsequently rolled back. Failures are logged but never
      * propagated — the caller's primary error is more important than cleanup.
      *
-     * @param array<int, string> $relativePaths Relative paths as stored in attachments.file_path
-     *        (e.g., "uploads/attachments/T-0001/uuid.pdf"). Resolved against WWW_ROOT.
+     * @param array<int, string> $storageKeys S3 keys as stored in attachments.file_path
+     *        (e.g., "attachments/1000/uuid.pdf").
      */
-    private function cleanupOrphanedFiles(array $relativePaths): void
+    private function cleanupOrphanedFiles(array $storageKeys): void
     {
-        foreach ($relativePaths as $relativePath) {
-            $absolute = WWW_ROOT . $relativePath;
-            if (!file_exists($absolute)) {
-                continue;
-            }
-            if (@unlink($absolute) === false) {
+        foreach ($storageKeys as $key) {
+            if (!$this->attachments->deleteStoredObject($key)) {
                 Log::warning('Failed to cleanup orphaned attachment after TX rollback', [
-                    'path' => $absolute,
+                    'key' => $key,
                 ]);
             }
         }

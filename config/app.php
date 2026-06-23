@@ -80,6 +80,18 @@ return [
     ],
 
     /*
+     * Almacenamiento de archivos en AWS S3 (adjuntos de tickets y fotos de
+     * perfil). Bucket privado; los archivos se sirven vía URL presignada.
+     * Credenciales SIEMPRE vía .env / app_local.php — nunca en system_settings.
+     */
+    'S3' => [
+        'key' => env('AWS_ACCESS_KEY_ID'),
+        'secret' => env('AWS_SECRET_ACCESS_KEY'),
+        'region' => env('AWS_REGION', 'us-east-1'),
+        'bucket' => env('S3_BUCKET'),
+    ],
+
+    /*
      * Apply timestamps with the last modified time to static assets (js, css, images).
      * Will append a querystring parameter containing the time the file was modified.
      * This is useful for busting browser caches.

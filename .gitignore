@@ -8,7 +8,7 @@
 client_secret.json
 /webroot/uploads/*
 .claude/settings.local.json
-.playwright-mcp/*
+.codegraph
 
 # OS generated files #
 ######################

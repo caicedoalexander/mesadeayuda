@@ -99,7 +99,14 @@ Cada API tiene su propio caso de uso y credenciales en `system_settings`.
 
 ### Attachments
 
-`GenericAttachmentTrait` is the shared upload/validation entry point (security tests in `tests/TestCase/Service/...`, commit da5a70d). Files land under `webroot/uploads/attachments/{id}/` (the ticket id); this path is volume-mounted in `docker-compose.yml` and must remain writable by the FPM user.
+`GenericAttachmentTrait` is the shared upload/validation entry point (security
+tests in `tests/TestCase/Service/...`). Files are stored in a private AWS S3
+bucket (`S3StorageService`, config via `.env`: `AWS_ACCESS_KEY_ID`,
+`AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `S3_BUCKET`); `attachments.file_path`
+holds the S3 key (`attachments/{ticket_id}/{uuid}.ext`). Files are served via
+stable app routes (`/attachments/view/{id}`, `/profile-images/view/{id}`) that
+302-redirect to short-lived presigned URLs — never embed presigned URLs in
+stored HTML.
 
 ### Sidebar counts
 

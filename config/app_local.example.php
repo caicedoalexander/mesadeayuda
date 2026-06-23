@@ -32,6 +32,17 @@ return [
     ],
 
     /*
+     * AWS S3 — bucket privado para adjuntos y fotos de perfil.
+     * Define estas variables en config/.env o reemplaza los env() aquí.
+     */
+    'S3' => [
+        'key' => env('AWS_ACCESS_KEY_ID'),
+        'secret' => env('AWS_SECRET_ACCESS_KEY'),
+        'region' => env('AWS_REGION', 'us-east-1'),
+        'bucket' => env('S3_BUCKET'),
+    ],
+
+    /*
      * Connection information used by the ORM to connect
      * to your application's datastores.
      *

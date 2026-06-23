@@ -121,6 +121,7 @@ class EmailService
         ?int $ticketId = null,
         ?string $gmailThreadId = null,
     ): bool {
+        $tempDir = null;
         try {
             $systemTitle = $this->getSettingValue(SettingKeys::SYSTEM_TITLE, CacheConstants::DEFAULT_SYSTEM_TITLE);
             $fromEmail = $this->getSettingValue(SettingKeys::GMAIL_USER_EMAIL, 'noreply@localhost');
@@ -141,10 +142,34 @@ class EmailService
             }
 
             $attachmentPaths = [];
-            foreach ($attachments as $attachment) {
-                $filePath = $this->getFullPath($attachment);
-                if (file_exists($filePath)) {
-                    $attachmentPaths[] = $filePath;
+            if ($attachments !== []) {
+                $tempDir = sys_get_temp_dir() . DS . 'mesa_att_' . bin2hex(random_bytes(8));
+                foreach ($attachments as $i => $attachment) {
+                    $stream = $this->getFileStream($attachment);
+                    if ($stream === null) {
+                        Log::warning('Skipping email attachment, S3 object unavailable', [
+                            'attachment_id' => $attachment->id ?? null,
+                        ]);
+                        continue;
+                    }
+                    // Subdirectorio por adjunto: basename() del path es el
+                    // nombre que verá el destinatario, y dos adjuntos pueden
+                    // llamarse igual.
+                    $itemDir = $tempDir . DS . $i;
+                    if (!is_dir($itemDir) && !mkdir($itemDir, 0700, true)) {
+                        fclose($stream);
+                        continue;
+                    }
+                    $localPath = $itemDir . DS . basename((string)$attachment->original_filename);
+                    $dest = fopen($localPath, 'wb');
+                    if ($dest === false) {
+                        fclose($stream);
+                        continue;
+                    }
+                    stream_copy_to_stream($stream, $dest);
+                    fclose($dest);
+                    fclose($stream);
+                    $attachmentPaths[] = $localPath;
                 }
             }
 
@@ -217,6 +242,16 @@ class EmailService
             ]);
 
             return false;
+        } finally {
+            if ($tempDir !== null && is_dir($tempDir)) {
+                foreach (glob($tempDir . DS . '*' . DS . '*') ?: [] as $f) {
+                    @unlink($f);
+                }
+                foreach (glob($tempDir . DS . '*') ?: [] as $d) {
+                    @rmdir($d);
+                }
+                @rmdir($tempDir);
+            }
         }
     }
 }
