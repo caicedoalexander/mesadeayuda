@@ -213,6 +213,8 @@ const chatModel = languageModel({
     name: 'OpenCode Zen Model',
     parameters: {
       model: { __rl: true, mode: 'id', value: 'opencode/qwen3.5-plus' },
+      // OpenCode Zen solo soporta /chat/completions, no la Responses API de OpenAI.
+      responsesApiEnabled: false,
       options: { baseURL: 'https://opencode.ai/zen/v1', temperature: 0.3 },
     },
     credentials: { openAiApi: newCredential('OpenCode Zen') },
