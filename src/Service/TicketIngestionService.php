@@ -22,6 +22,7 @@ use Cake\I18n\DateTime;
 use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
 use Exception;
+use Throwable;
 
 /**
  * Creates tickets and comments from external sources (Gmail today,
@@ -261,29 +262,50 @@ class TicketIngestionService
             return ['ticket' => null, 'created' => false];
         }
 
+        // History, attachments and notification are POST-PERSIST side effects:
+        // once the ticket row is committed the request has already succeeded,
+        // so none of them may discard it. Each runs best-effort and logs its
+        // own failure with the real exception detail in the message string.
+
         // History: initial creation entry. changed_by is NULL — actor is the
         // external messaging gateway, not a logged-in helpdesk user.
-        $this->logHistory(
-            'TicketHistory',
-            'ticket_id',
-            (int)$ticket->id,
-            'created',
-            null,
-            (string)$ticket->status,
-            null,
-            'Ticket creado desde WhatsApp (' . LogMasker::phone($payload->phoneNumber) . ')',
-        );
+        try {
+            $this->logHistory(
+                'TicketHistory',
+                'ticket_id',
+                (int)$ticket->id,
+                'created',
+                null,
+                (string)$ticket->status,
+                null,
+                'Ticket creado desde WhatsApp (' . LogMasker::phone($payload->phoneNumber) . ')',
+            );
+        } catch (Throwable $e) {
+            Log::warning(
+                'WhatsApp ticket history log failed: ' . $e->getMessage() . ' [' . $e::class . ']',
+                ['ticket_id' => $ticket->id],
+            );
+        }
 
         // Best-effort attachments: failures logged as warning, ticket still created.
         foreach ($payload->attachments as $attachment) {
             $this->downloadAndStoreWhatsappAttachment($ticket, $attachment, (int)$user->id);
         }
 
-        $this->eventManager->dispatch(new TicketCreated(
-            ticketId: (int)$ticket->id,
-            requesterId: (int)$ticket->requester_id,
-            source: TicketConstants::CHANNEL_WHATSAPP,
-        ));
+        // Notification dispatch is best-effort: a failing channel (e.g. Evolution
+        // API not configured) must never turn a created ticket into a 500.
+        try {
+            $this->eventManager->dispatch(new TicketCreated(
+                ticketId: (int)$ticket->id,
+                requesterId: (int)$ticket->requester_id,
+                source: TicketConstants::CHANNEL_WHATSAPP,
+            ));
+        } catch (Throwable $e) {
+            Log::warning(
+                'WhatsApp TicketCreated dispatch failed: ' . $e->getMessage() . ' [' . $e::class . ']',
+                ['ticket_id' => $ticket->id],
+            );
+        }
 
         Log::info('Created ticket from WhatsApp', [
             'ticket_id' => $ticket->id,
