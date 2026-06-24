@@ -159,11 +159,16 @@ final class WebhooksController extends Controller
                 'created' => $result['created'],
             ]);
         } catch (Throwable $e) {
-            Log::error('WhatsApp webhook import failed', [
-                'error' => $e->getMessage(),
-                'class' => $e::class,
-                'message_id' => $payload->messageId,
-            ]);
+            // Surface the real cause in the log MESSAGE: this app's file log
+            // writes the message string, not the PSR-3 context array, so a
+            // bare 'failed' message hides the exception. Keep the trace in
+            // context for engines that do serialize it.
+            Log::error(sprintf(
+                'WhatsApp webhook import failed: %s [%s] (message_id=%s)',
+                $e->getMessage(),
+                $e::class,
+                $payload->messageId,
+            ), ['trace' => $e->getTraceAsString()]);
 
             return $this->jsonError(500, 'ingest_failed');
         } finally {
