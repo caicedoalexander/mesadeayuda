@@ -212,13 +212,13 @@ const chatModel = languageModel({
   config: {
     name: 'OpenCode Zen Model',
     parameters: {
-      model: { __rl: true, mode: 'id', value: 'opencode/qwen3.5-plus' },
-      // OpenCode Zen solo soporta /chat/completions, no la Responses API de OpenAI.
-      responsesApiEnabled: false,
-      options: { baseURL: 'https://opencode.ai/zen/v1', temperature: 0.3 },
+      // Modelo elegido en la UI. El baseURL de OpenCode Zen
+      // (https://opencode.ai/zen/v1) vive en la credencial, no en el nodo.
+      model: { __rl: true, mode: 'list', value: 'gpt-5.4-nano', cachedResultName: 'gpt-5.4-nano' },
+      options: { temperature: 0.3 },
     },
     credentials: { openAiApi: newCredential('OpenCode Zen') },
-    position: [900, 150],
+    position: [912, 160],
   },
 });
 
@@ -276,8 +276,13 @@ const aiAgent = node({
       promptType: 'define',
       text: expr("{{ $('Parse Data').item.json.agentInput }}"),
       options: {
-        systemMessage: "Eres el asistente virtual de la Mesa de Ayuda de soporte interno. Conversas por WhatsApp en espanol, de forma cordial y concisa.\n\nTu UNICA funcion es ayudar al usuario a CREAR un ticket de soporte. No puedes consultar el estado de tickets existentes ni hacer otras gestiones; si te lo piden, explicalo con amabilidad y ofrece crear un ticket.\n\nFlujo que debes seguir:\n1. Saluda brevemente y pregunta en que puedes ayudar (si el usuario ya describio su problema, no repreguntes lo obvio).\n2. Asegurate de tener dos cosas: un ASUNTO corto (una frase) y una DESCRIPCION con el detalle suficiente para que soporte entienda el problema. Si falta detalle, pide lo minimo necesario, una pregunta a la vez.\n3. Si el usuario adjunto archivos, veras notas como \"[El usuario adjunto foto.jpg]\". Reconocelos; se incluiran automaticamente en el ticket. No pidas que reenvien archivos ya adjuntados.\n4. Antes de crear el ticket, RESUME el asunto y la descripcion y pide confirmacion explicita (por ejemplo: \"Confirmo la creacion del ticket con estos datos?\").\n5. Solo cuando el usuario confirme, usa la herramienta create_ticket con subject y description. NUNCA la uses sin confirmacion.\n6. Tras crear el ticket, comunica el numero de ticket que devuelve la herramienta y despidete ofreciendo ayuda futura.\n\nReglas:\n- No inventes datos. No pidas ni manejes numeros de telefono, IDs ni datos internos: el sistema los anade solo.\n- Si el usuario cambia un dato, actualizalo antes de confirmar.\n- Si la herramienta create_ticket devuelve un error, disculpate y pide que lo intente de nuevo en unos minutos.\n- Se breve: mensajes cortos, sin formato Markdown pesado (WhatsApp es texto plano).",
+        systemMessage: "Eres el asistente virtual de la Mesa de Ayuda de soporte interno. Conversas por WhatsApp en espanol, de forma cordial y concisa.\n\nTu UNICA funcion es ayudar al usuario a CREAR un ticket de soporte. No puedes consultar el estado de tickets existentes ni hacer otras gestiones; si te lo piden, explicalo con amabilidad y ofrece crear un ticket.\n\nFlujo que debes seguir:\n1. Saluda brevemente y pregunta en que puedes ayudar (si el usuario ya describio su problema, no repreguntes lo obvio).\n2. Asegurate de tener dos cosas: un ASUNTO corto (una frase) y una DESCRIPCION con el detalle suficiente para que soporte entienda el problema. Si falta detalle, pide lo minimo necesario, una pregunta a la vez.\n3. Cuando ya tengas asunto y descripcion, y ANTES de pedir confirmacion, ofrece UNA sola vez la opcion de adjuntar evidencia: pregunta si quiere enviar alguna imagen, captura de pantalla o archivo que ayude a soporte (por ejemplo: \"Quieres adjuntar alguna captura o foto del problema? Si no, seguimos.\"). Si responde que no o que no tiene, continua sin insistir.\n4. Si el usuario adjunta archivos, veras notas como \"[El usuario adjunto foto.jpg]\". Confirma que los recibiste; se incluiran automaticamente en el ticket. No pidas que reenvien archivos ya adjuntados.\n5. Antes de crear el ticket, RESUME el asunto y la descripcion (y menciona si hay adjuntos) y pide confirmacion explicita (por ejemplo: \"Confirmo la creacion del ticket con estos datos?\").\n6. Solo cuando el usuario confirme, usa la herramienta create_ticket con subject y description. NUNCA la uses sin confirmacion.\n7. Tras crear el ticket, comunica el numero de ticket que devuelve la herramienta y despidete ofreciendo ayuda futura.\n\nReglas:\n- No inventes datos. No pidas ni manejes numeros de telefono, IDs ni datos internos: el sistema los anade solo.\n- Ofrece adjuntar solo una vez; no conviertas cada mensaje en una peticion de archivos.\n- Si el usuario cambia un dato, actualizalo antes de confirmar.\n- Si la herramienta create_ticket devuelve un error, disculpate y pide que lo intente de nuevo en unos minutos.\n- Se breve: mensajes cortos, sin formato Markdown pesado (WhatsApp es texto plano).",
         maxIterations: 10,
+        // returnIntermediateSteps expone las tool-calls ejecutadas para que
+        // "Ticket Creado?" detecte si create_ticket realmente corrio. Streaming
+        // off: respondemos por HTTP, no por chat trigger.
+        returnIntermediateSteps: true,
+        enableStreaming: false,
       },
     },
     subnodes: { model: chatModel, memory: chatMemory, tools: [createTicketTool] },
@@ -308,6 +313,9 @@ const sendReply = node({
   output: [{ messages: [{ id: 'wamid.out' }] }],
 });
 
+// Solo corre cuando "Ticket Creado?" es verdadero, para que los adjuntos
+// sobrevivan entre turnos hasta que el ticket se crea de verdad (antes se
+// borraban en cada turno y se perdian si la confirmacion llegaba despues).
 const cleanupAttachments = node({
   type: 'n8n-nodes-base.redis',
   version: 1,
@@ -315,9 +323,26 @@ const cleanupAttachments = node({
     name: 'Limpiar Adjuntos',
     parameters: { operation: 'delete', key: expr("mesadeayuda:att:{{ $('Parse Data').item.json.phoneNumber }}") },
     credentials: { redis: newCredential('Redis') },
-    position: [1500, -100],
+    position: [2100, -200],
   },
   output: [{}],
+});
+
+// Detecta si el agente realmente ejecuto la tool create_ticket inspeccionando
+// intermediateSteps; gobierna la limpieza condicional de adjuntos.
+const ticketCreated = ifElse({
+  version: 2.3,
+  config: {
+    name: 'Ticket Creado?',
+    parameters: {
+      conditions: {
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose', version: 2 },
+        conditions: [{ id: 'ticketcreated', leftValue: expr("{{ JSON.stringify($('Agente Mesa de Ayuda').first().json.intermediateSteps || []) }}"), rightValue: 'create_ticket', operator: { type: 'string', operation: 'contains' } }],
+        combinator: 'and',
+      },
+    },
+    position: [1900, -96],
+  },
 });
 
 const unlock = node({
@@ -385,5 +410,5 @@ export default workflow('mesa-ayuda-whatsapp-bot', 'Mesa de Ayuda - WhatsApp Bot
   .to(parseAttachments)
   .to(aiAgent)
   .to(sendReply.onError(sendError.to(unlockOnError)))
-  .to(cleanupAttachments)
-  .to(unlock);
+  .to(unlock)
+  .to(ticketCreated.onTrue(cleanupAttachments));
