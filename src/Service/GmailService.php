@@ -63,7 +63,7 @@ class GmailService
      * Load Gmail configuration from database
      *
      * Centralized method to get Gmail config from system settings with automatic decryption.
-     * Used by TicketService, ImportGmailCommand, and any other class needing Gmail access.
+     * Used by ImportGmailCommand and any other class needing Gmail access.
      *
      * @return array Configuration array with 'client_secret' (decoded array) and 'refresh_token'
      */
