@@ -222,16 +222,16 @@ Orden seguro: eliminar primero los "padres" (`TicketCard`, `StatusTransition`, `
 
 > **Cómo usar:** marca `[x]` al completar cada ítem y actualiza el contador de **Progreso**. Tras **cada fase**, corre `composer cs-fix && composer cs-check && composer test` y haz commit antes de seguir. Trabaja en una rama (p. ej. `chore/dead-code-cleanup`). Nada aquí toca migraciones ni la BD.
 
-**Progreso global: 3 / 25**
+**Progreso global: 5 / 25**
 
 ### Fase 1 — Archivos completos · `safe` · alta confianza (máximo impacto, mínimo riesgo) ✅ _completada (rama `chore/dead-code-fase1`, 394 tests OK)_
 - [x] Eliminar `src/Utility/SettingsEncryptionTrait.php` (duplicado del activo `Service/Traits/`)
 - [x] Eliminar `src/Service/TicketService.php` (~1.042 LOC) y recortar el docblock obsoleto en `src/Service/GmailService.php:66`
 - [x] Eliminar `src/Service/NumberGenerationService.php`
 
-### Fase 2 — Subgrafo de email HTML muerto · `safe` · alta confianza
-- [ ] Eliminar las 10 clases de `src/Notification/Email/**`: `TicketCard`, `StatusTransition`, `CommentBlock`, `Greeting`, `CtaButton`, `InfoBox`, `Card`, `Pill`, `Avatar`, `PriorityArrow`
-- [ ] Eliminar sus tests compañeros bajo `tests/TestCase/Notification/Email/...` y reescribir el docblock obsoleto de `TemplateContext.php:14`
+### Fase 2 — Subgrafo de email HTML muerto · `safe` · alta confianza ✅ _completada (rama `chore/dead-code-fase1`, 360 tests OK)_
+- [x] Eliminar las 10 clases de `src/Notification/Email/**`: `TicketCard`, `StatusTransition`, `CommentBlock`, `Greeting`, `CtaButton`, `InfoBox`, `Card`, `Pill`, `Avatar`, `PriorityArrow`
+- [x] Eliminar sus tests compañeros bajo `tests/TestCase/Notification/Email/...` y reescribir el docblock obsoleto de `TemplateContext.php:14`
 
 ### Fase 3 — Métodos sin uso · `safe` · alta confianza
 - [ ] `Installer::setAppNameInFile` — `src/Console/Installer.php:234`
