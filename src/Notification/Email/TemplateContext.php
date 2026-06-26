@@ -11,9 +11,9 @@ use App\Model\Entity\User;
  * Input bag for EmailTemplate::render().
  *
  * Security contract: `$comment->body` MUST be already sanitized by
- * HtmlSanitizerTrait before reaching this VO. CommentBlock inserts it raw.
+ * HtmlSanitizerTrait before reaching this VO, since templates insert it raw.
  * All other string fields are treated as user-controlled text and escaped
- * inside the components with `htmlspecialchars`.
+ * with `htmlspecialchars`.
  */
 final readonly class TemplateContext
 {
