@@ -200,14 +200,6 @@ trait GenericAttachmentTrait
     }
 
     /**
-     * @return string Attachment table name
-     */
-    protected function getAttachmentTableName(): string
-    {
-        return self::ATTACHMENTS_TABLE;
-    }
-
-    /**
      * Build attachment data array.
      *
      * Defaults for $isInline (false) and $contentId (null) preserve callers

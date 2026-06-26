@@ -70,24 +70,4 @@ class TimeHumanHelper extends Helper
 
         return $date->i18nFormat('d MMMM, h:mm a', null, 'es_US');
     }
-
-    /**
-     * Solo hora
-     */
-    public function time(string|DateTimeInterface|null $date): string
-    {
-        if ($date === null) {
-            return '-';
-        }
-
-        if (!($date instanceof DateTime)) {
-            try {
-                $date = new DateTime($date);
-            } catch (Throwable $e) {
-                return (string)$date;
-            }
-        }
-
-        return $date->i18nFormat('h:mm a', null, 'es_US');
-    }
 }

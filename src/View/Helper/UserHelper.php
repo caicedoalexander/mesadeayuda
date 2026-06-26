@@ -77,48 +77,6 @@ class UserHelper extends Helper
     }
 
     /**
-     * Generate user avatar with name and optional profile image.
-     *
-     * @param \App\Model\Entity\User|null $user User entity
-     * @param array $options Options for display (size, showName, imgClass)
-     * @return string HTML for user avatar
-     */
-    public function avatar(?User $user, array $options = []): string
-    {
-        $defaults = [
-            'size' => 40,
-            'showName' => true,
-            'imgClass' => 'rounded-circle me-2',
-            'nameClass' => '',
-            'containerClass' => 'd-flex align-items-center',
-        ];
-
-        $options = array_merge($defaults, $options);
-
-        if (!$user) {
-            return '<span class="text-muted">Usuario desconocido</span>';
-        }
-
-        $imgOptions = [
-            'class' => $options['imgClass'],
-            'width' => $options['size'],
-            'height' => $options['size'],
-            'alt' => h($user->name),
-        ];
-
-        $html = '<div class="' . h($options['containerClass']) . '">';
-        $html .= $this->profileImageTag($user, $imgOptions);
-
-        if ($options['showName']) {
-            $html .= '<span class="' . h($options['nameClass']) . '">' . h($user->name) . '</span>';
-        }
-
-        $html .= '</div>';
-
-        return $html;
-    }
-
-    /**
      * Generate initials for fallback avatars. Accepts either a User entity or
      * a raw name string.
      *

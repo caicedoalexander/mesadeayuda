@@ -68,12 +68,6 @@ final class TicketConstants
         self::PRIORITY_ALTA  => 'Alta',
     ];
 
-    public const PRIORITY_COLORS = [
-        self::PRIORITY_BAJA  => '#6c757d',
-        self::PRIORITY_MEDIA => '#0dcaf0',
-        self::PRIORITY_ALTA  => '#ffc107',
-    ];
-
     public const COMMENT_PUBLIC   = 'public';
     public const COMMENT_INTERNAL = 'internal';
     public const COMMENT_SYSTEM   = 'system';

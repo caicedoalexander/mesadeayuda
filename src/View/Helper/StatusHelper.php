@@ -17,29 +17,11 @@ class StatusHelper extends Helper
 {
     /**
      * @param string $priority Priority key
-     * @return string Hex color (kept for non-badge consumers)
-     */
-    public function priorityColor(string $priority): string
-    {
-        return TicketConstants::PRIORITY_COLORS[strtolower($priority)] ?? '#6c757d';
-    }
-
-    /**
-     * @param string $priority Priority key
      * @return string Human-readable label
      */
     public function priorityLabel(string $priority): string
     {
         return TicketConstants::PRIORITY_LABELS[strtolower($priority)] ?? ucfirst($priority);
-    }
-
-    /**
-     * @param string $status Status key
-     * @return string Hex color (kept for non-badge consumers)
-     */
-    public function statusColor(string $status): string
-    {
-        return TicketConstants::STATUS_COLORS[strtolower($status)] ?? '#6c757d';
     }
 
     /**
