@@ -717,7 +717,7 @@ class GmailService
      * (our own outbound mail being re-fetched by the importer).
      *
      * Historical note: previous versions also treated an HMAC subject stamp
-     * (NotificationStamp) and a legacy X-Mesa-Ayuda-Notification header as
+     * and a legacy X-Mesa-Ayuda-Notification header as
      * sufficient by themselves. Both were unsafe: MUAs preserve the Subject
      * line when customers reply, so any client reply to a stamped notification
      * was misclassified as our own notification and silently discarded by the

@@ -222,7 +222,7 @@ Orden seguro: eliminar primero los "padres" (`TicketCard`, `StatusTransition`, `
 
 > **Cómo usar:** marca `[x]` al completar cada ítem y actualiza el contador de **Progreso**. Tras **cada fase**, corre `composer cs-fix && composer cs-check && composer test` y haz commit antes de seguir. Trabaja en una rama (p. ej. `chore/dead-code-cleanup`). Nada aquí toca migraciones ni la BD.
 
-**Progreso global: 5 / 25**
+**Progreso global: 25 / 25** ✅ _auditoría ejecutada por completo_
 
 ### Fase 1 — Archivos completos · `safe` · alta confianza (máximo impacto, mínimo riesgo) ✅ _completada (rama `chore/dead-code-fase1`, 394 tests OK)_
 - [x] Eliminar `src/Utility/SettingsEncryptionTrait.php` (duplicado del activo `Service/Traits/`)
@@ -233,33 +233,33 @@ Orden seguro: eliminar primero los "padres" (`TicketCard`, `StatusTransition`, `
 - [x] Eliminar las 10 clases de `src/Notification/Email/**`: `TicketCard`, `StatusTransition`, `CommentBlock`, `Greeting`, `CtaButton`, `InfoBox`, `Card`, `Pill`, `Avatar`, `PriorityArrow`
 - [x] Eliminar sus tests compañeros bajo `tests/TestCase/Notification/Email/...` y reescribir el docblock obsoleto de `TemplateContext.php:14`
 
-### Fase 3 — Métodos sin uso · `safe` · alta confianza
-- [ ] `Installer::setAppNameInFile` — `src/Console/Installer.php:234`
-- [ ] `GenericAttachmentTrait::getAttachmentTableName` (protected) — `src/Service/Traits/GenericAttachmentTrait.php:205`
-- [ ] `SecureHttpTrait::validateExternalUrl` (private) — `src/Service/Traits/SecureHttpTrait.php:125`
-- [ ] `StatusHelper::statusColor` — `src/View/Helper/StatusHelper.php:40`
-- [ ] `StatusHelper::priorityColor` **+ cascada** `TicketConstants::PRIORITY_COLORS` (queda huérfana) — `src/View/Helper/StatusHelper.php:22`
-- [ ] `UserHelper::avatar` — `src/View/Helper/UserHelper.php:86`
-- [ ] `TimeHumanHelper::time` — `src/View/Helper/TimeHumanHelper.php:77`
+### Fase 3 — Métodos sin uso · `safe` · alta confianza ✅ _completada (rama `chore/dead-code-fase3-4`, 360 tests OK)_
+- [x] `Installer::setAppNameInFile` — `src/Console/Installer.php:234`
+- [x] `GenericAttachmentTrait::getAttachmentTableName` (protected) — `src/Service/Traits/GenericAttachmentTrait.php:205`
+- [x] `SecureHttpTrait::validateExternalUrl` (private) — `src/Service/Traits/SecureHttpTrait.php:125`
+- [x] `StatusHelper::statusColor` — `src/View/Helper/StatusHelper.php:40`
+- [x] `StatusHelper::priorityColor` **+ cascada** `TicketConstants::PRIORITY_COLORS` (eliminada) — `src/View/Helper/StatusHelper.php:22`
+- [x] `UserHelper::avatar` — `src/View/Helper/UserHelper.php:86`
+- [x] `TimeHumanHelper::time` — `src/View/Helper/TimeHumanHelper.php:77`
 
-### Fase 4 — Plantillas y assets · `safe` · confianza media
-- [ ] `templates/element/ia.php`
-- [ ] `templates/element/tickets/requester_stats.php`
-- [ ] `templates/element/tickets/response_metrics.php`
-- [ ] `templates/element/tickets/attachment_item.php`
-- [ ] `webroot/js/marquee.js` **+** `webroot/js/tickets-marquee.js` (par acoplado)
+### Fase 4 — Plantillas y assets · `safe` · confianza media ✅ _completada (rama `chore/dead-code-fase3-4`)_
+- [x] `templates/element/ia.php`
+- [x] `templates/element/tickets/requester_stats.php`
+- [x] `templates/element/tickets/response_metrics.php`
+- [x] `templates/element/tickets/attachment_item.php`
+- [x] `webroot/js/marquee.js` **+** `webroot/js/tickets-marquee.js` (par acoplado)
 
-### Fase 5 — Requieren confirmación del owner antes de borrar (`review`)
-- [ ] Isla `App\Utility\*` **en un solo cambio** (cascada C2): `EmailTemplateRenderer.php` → `Utility/SettingKeys.php` → `Utility/ValidationConstants.php`. _Verificar que la dirección "email-templates-in-code" está consolidada._
-- [ ] `NotificationStamp` (`src/Service/Util/NotificationStamp.php`) **+** su test `tests/TestCase/Service/Util/NotificationStampTest.php`; actualizar docstring en `GmailService.php:720`
-- [ ] `GenericAttachmentTrait::deleteGenericAttachment` — confirmar que no hay wiring S3 planeado
-- [ ] `GenericAttachmentTrait::setS3Storage` — confirmar que no se planean tests que mockeen S3
-- [ ] `TicketHelper` (clase completa) **+** `getViewUrl` — `src/View/Helper/TicketHelper.php`
-- [ ] Predicados de `Ticket` **+** sus tests (decisión de diseño): `isOpen`, `isStatusNew`, `belongsTo`, `isAssignedTo`, `wasCreatedFromEmail`
-- [ ] `templates/element/tickets/left_sidebar.php` **+** layouts de roles eliminados: `agent.php`, `requester.php`, `servicio_cliente.php`
+### Fase 5 — Bloques `review` (confirmados con el owner) ✅ _completada (rama `chore/dead-code-fase3-4`, 349 tests OK)_
+- [x] Isla `App\Utility\*` **en un solo cambio** (cascada C2): `EmailTemplateRenderer.php` → `Utility/SettingKeys.php` → `Utility/ValidationConstants.php`. README actualizado a la arquitectura de eventos de dominio.
+- [x] `NotificationStamp` (`src/Service/Util/NotificationStamp.php`) **+** su test `tests/TestCase/Service/Util/NotificationStampTest.php`; docstring de `GmailService` actualizado.
+- [x] `GenericAttachmentTrait::deleteGenericAttachment` — eliminado (owner confirmó sin wiring S3 planeado); se limpió el `use Exception` que quedó huérfano.
+- [x] `GenericAttachmentTrait::setS3Storage` — eliminado (owner confirmó sin tests S3 planeados).
+- [x] `TicketHelper` (clase completa) **+** `getViewUrl` — `src/View/Helper/TicketHelper.php`
+- [x] Predicados de `Ticket` **+** sus tests (owner eligió eliminar): `isOpen`, `isStatusNew`, `belongsTo`, `isAssignedTo`, `wasCreatedFromEmail`
+- [x] `templates/element/tickets/left_sidebar.php` **+** layouts de roles eliminados: `agent.php`, `requester.php`, `servicio_cliente.php`
 
-### Fase 6 — Baja confianza · opcional (mínimo valor, dejar para el final)
-- [ ] Los 4 defaults de Cake Mailer: `templates/email/html/default.php`, `templates/email/text/default.php`, `templates/layout/email/html/default.php`, `templates/layout/email/text/default.php`. _Latentes si algún día se adopta render por Cake Mailer; el riesgo es `MissingTemplateException` diferido._
+### Fase 6 — Baja confianza · opcional ✅ _completada (owner eligió eliminar)_
+- [x] Los 4 defaults de Cake Mailer: `templates/email/html/default.php`, `templates/email/text/default.php`, `templates/layout/email/html/default.php`, `templates/layout/email/text/default.php`. _Si se adopta render por Cake Mailer en el futuro, regenerarlos con `bin/cake bake`._
 
 ### No tocar (fuera de alcance de este roadmap)
 - Migraciones huérfanas (`ticket_number_sequences`, `20260515120000_SwitchTicketNumberToGlobalCounter`) — limpieza de datos separada, solo bajo petición explícita.

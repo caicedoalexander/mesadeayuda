@@ -201,7 +201,7 @@ Dockerfile                  # Imagen Nginx + PHP-FPM
 ### Convenciones transversales
 
 - **Auditoría:** todos los módulos operativos escriben en su tabla `*_history` mediante `AuditBehavior`. No se debe omitir esta capa al mutar entidades.
-- **Notificaciones:** salen a través de `NotificationDispatcherTrait` + `EmailTemplateRenderer`, que orquestan email, WhatsApp y webhooks de n8n. Para tipos nuevos extender el renderer y las plantillas, no llamar integraciones desde controladores.
+- **Notificaciones:** los servicios publican eventos de dominio (`App\Domain\Event\*`) que `TicketNotificationListener` enruta a estrategias (`App\Notification\Strategy\*`) y canales (`EmailChannel`, `WhatsappChannel`). Para tipos nuevos, definir el evento + su estrategia y suscribirlo; no llamar integraciones desde controladores.
 - **Adjuntos:** uso compartido vía `GenericAttachmentTrait`. Almacenamiento en disco local bajo `webroot/uploads/attachments/{ticket_number}/`.
 - **Contadores del sidebar:** centralizados en `SidebarCountsService`. Reutilizarlo en lugar de consultar tablas desde las vistas.
 

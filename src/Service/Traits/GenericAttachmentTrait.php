@@ -7,7 +7,6 @@ use App\Service\S3StorageService;
 use Cake\Datasource\EntityInterface;
 use Cake\Log\Log;
 use Cake\Utility\Text;
-use Exception;
 use Psr\Http\Message\UploadedFileInterface;
 
 /**
@@ -78,14 +77,6 @@ trait GenericAttachmentTrait
     private const MAX_IMAGE_SIZE = 5242880;
 
     private ?S3StorageService $s3Storage = null;
-
-    /**
-     * Inyección para tests. En producción se construye lazy.
-     */
-    public function setS3Storage(S3StorageService $storage): void
-    {
-        $this->s3Storage = $storage;
-    }
 
     /**
      * Lazy getter for the S3 storage service instance.
@@ -197,14 +188,6 @@ trait GenericAttachmentTrait
     private function buildStorageKey(string $entityNumber, string $filename): string
     {
         return self::STORAGE_KEY_PREFIX . $entityNumber . '/' . $filename;
-    }
-
-    /**
-     * @return string Attachment table name
-     */
-    protected function getAttachmentTableName(): string
-    {
-        return self::ATTACHMENTS_TABLE;
     }
 
     /**
@@ -353,31 +336,6 @@ trait GenericAttachmentTrait
         ]);
 
         return null;
-    }
-
-    /**
-     * Delete attachment file and database record.
-     *
-     * @param int $attachmentId Attachment ID
-     * @return bool True on success
-     */
-    public function deleteGenericAttachment(int $attachmentId): bool
-    {
-        try {
-            $attachmentsTable = $this->fetchTable(self::ATTACHMENTS_TABLE);
-            $attachment = $attachmentsTable->get($attachmentId);
-
-            $this->s3Storage()->delete((string)$attachment->file_path);
-
-            return $attachmentsTable->delete($attachment);
-        } catch (Exception $e) {
-            Log::error('Failed to delete ticket attachment', [
-                'attachment_id' => $attachmentId,
-                'error' => $e->getMessage(),
-            ]);
-
-            return false;
-        }
     }
 
     /**

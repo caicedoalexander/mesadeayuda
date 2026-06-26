@@ -117,17 +117,6 @@ trait SecureHttpTrait
     }
 
     /**
-     * Backwards-compatible wrapper that returns only the error message.
-     *
-     * @param string $url URL to validate
-     * @return string|null Error message if invalid, null if valid
-     */
-    private function validateExternalUrl(string $url): ?string
-    {
-        return $this->resolveAndValidateUrl($url)['error'];
-    }
-
-    /**
      * Check if an IP address is in a private/internal range
      *
      * @param string $ip IP address to check

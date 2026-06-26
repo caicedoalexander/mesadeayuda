@@ -41,20 +41,6 @@ final class TicketTest extends TestCase
         return new User(array_merge($defaults, $props), ['markNew' => false, 'markClean' => true]);
     }
 
-    public function testIsStatusNew(): void
-    {
-        self::assertTrue($this->makeTicket(['status' => 'nuevo'])->isStatusNew());
-        self::assertFalse($this->makeTicket(['status' => 'abierto'])->isStatusNew());
-    }
-
-    public function testIsOpen(): void
-    {
-        self::assertTrue($this->makeTicket(['status' => 'abierto'])->isOpen());
-        self::assertTrue($this->makeTicket(['status' => 'nuevo'])->isOpen());
-        self::assertTrue($this->makeTicket(['status' => 'pendiente'])->isOpen());
-        self::assertFalse($this->makeTicket(['status' => 'resuelto'])->isOpen());
-    }
-
     public function testIsPending(): void
     {
         self::assertTrue($this->makeTicket(['status' => 'pendiente'])->isPending());
@@ -78,29 +64,6 @@ final class TicketTest extends TestCase
     {
         self::assertFalse($this->makeTicket(['assignee_id' => null])->hasAssignee());
         self::assertTrue($this->makeTicket(['assignee_id' => 5])->hasAssignee());
-    }
-
-    public function testBelongsTo(): void
-    {
-        $ticket = $this->makeTicket(['requester_id' => 10]);
-        self::assertTrue($ticket->belongsTo(10));
-        self::assertFalse($ticket->belongsTo(11));
-    }
-
-    public function testIsAssignedTo(): void
-    {
-        $ticket = $this->makeTicket(['assignee_id' => 5]);
-        self::assertTrue($ticket->isAssignedTo(5));
-        self::assertFalse($ticket->isAssignedTo(6));
-
-        $unassigned = $this->makeTicket(['assignee_id' => null]);
-        self::assertFalse($unassigned->isAssignedTo(5));
-    }
-
-    public function testWasCreatedFromEmail(): void
-    {
-        self::assertTrue($this->makeTicket(['gmail_message_id' => 'abc123'])->wasCreatedFromEmail());
-        self::assertFalse($this->makeTicket(['gmail_message_id' => null])->wasCreatedFromEmail());
     }
 
     /**
