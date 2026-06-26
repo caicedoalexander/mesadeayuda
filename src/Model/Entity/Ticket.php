@@ -94,28 +94,6 @@ class Ticket extends Entity
     /**
      * @return bool
      */
-    public function isOpen(): bool
-    {
-        return in_array($this->status, TicketConstants::OPEN_STATUSES, true);
-    }
-
-    /**
-     * Domain status check for the "nuevo" lifecycle state.
-     *
-     * Named `isStatusNew` (not `isNew`) to avoid shadowing
-     * `Cake\Datasource\EntityInterface::isNew()`, which returns the
-     * persistence flag for unsaved records.
-     *
-     * @return bool
-     */
-    public function isStatusNew(): bool
-    {
-        return $this->status === TicketConstants::STATUS_NUEVO;
-    }
-
-    /**
-     * @return bool
-     */
     public function isPending(): bool
     {
         return $this->status === TicketConstants::STATUS_PENDIENTE;
@@ -142,32 +120,6 @@ class Ticket extends Entity
     public function hasAssignee(): bool
     {
         return $this->assignee_id !== null;
-    }
-
-    /**
-     * @param int $userId User id to compare against requester
-     * @return bool
-     */
-    public function belongsTo(int $userId): bool
-    {
-        return $this->requester_id === $userId;
-    }
-
-    /**
-     * @param int $userId User id to compare against assignee
-     * @return bool
-     */
-    public function isAssignedTo(int $userId): bool
-    {
-        return $this->assignee_id === $userId;
-    }
-
-    /**
-     * @return bool
-     */
-    public function wasCreatedFromEmail(): bool
-    {
-        return $this->gmail_message_id !== null;
     }
 
     // endregion
