@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Controller\Trait;
 
 use App\Service\Exception\UnauthorizedAssignmentException;
+use App\Service\TicketPipelineService;
 use Cake\Http\Response;
 use Cake\Log\Log;
 use Exception;
@@ -168,7 +169,7 @@ trait TicketBulkTrait
         foreach ($entityIds as $entityId) {
             try {
                 $result = $service->addTag($entityId, $tagId, $userId);
-                if ($result['success'] || $result['message'] === \App\Service\TicketPipelineService::MESSAGE_TAG_ALREADY_ADDED) {
+                if ($result['success'] || $result['message'] === TicketPipelineService::MESSAGE_TAG_ALREADY_ADDED) {
                     $successCount++;
                 } else {
                     $errorCount++;
