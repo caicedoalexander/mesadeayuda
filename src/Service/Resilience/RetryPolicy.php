@@ -11,6 +11,12 @@ namespace App\Service\Resilience;
  */
 final readonly class RetryPolicy
 {
+    /**
+     * @param int $maxAttempts Maximum number of attempts.
+     * @param int $baseDelayMs Base delay before the first retry, in ms.
+     * @param float $backoffMultiplier Exponential backoff multiplier.
+     * @param int $jitterMs Maximum random jitter added per retry, in ms.
+     */
     public function __construct(
         public int $maxAttempts = 3,
         public int $baseDelayMs = 200,

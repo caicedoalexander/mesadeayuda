@@ -16,23 +16,36 @@ use Generator;
  */
 final class TicketStatusChangedStrategy extends AbstractTicketStrategy
 {
+    /**
+     * @inheritDoc
+     */
     public function supports(EventInterface $event): bool
     {
         return $event instanceof TicketStatusChanged;
     }
 
+    /**
+     * @inheritDoc
+     */
     public function buildMessages(EventInterface $event): iterable
     {
         return $this->safeBuild(fn(): Generator => $this->doBuild($event), $event);
     }
 
+    /**
+     * @param \Cake\Event\EventInterface $event Domain event to render messages for.
+     * @return \Generator
+     */
     private function doBuild(EventInterface $event): Generator
     {
         if (!$event instanceof TicketStatusChanged) {
             return;
         }
 
-        $ticket = $this->fetchTable('Tickets')->get($event->ticketId, contain: ['Requesters', 'Assignees', 'Attachments']);
+        $ticket = $this->fetchTable('Tickets')->get(
+            $event->ticketId,
+            contain: ['Requesters', 'Assignees', 'Attachments'],
+        );
 
         if (empty($ticket->requester->email)) {
             return;

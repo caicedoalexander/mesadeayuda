@@ -44,7 +44,11 @@ class UserHelper extends Helper
      */
     public function defaultAvatar(): string
     {
-        return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"%3E%3Ccircle cx="20" cy="20" r="20" fill="%23cbd5e1"/%3E%3Cpath d="M20 20a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4.42 0-8 2.24-8 5v3h16v-3c0-2.76-3.58-5-8-5z" fill="%23475569"/%3E%3C/svg%3E';
+        return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"'
+            . ' width="40" height="40" viewBox="0 0 40 40"%3E'
+            . '%3Ccircle cx="20" cy="20" r="20" fill="%23cbd5e1"/%3E'
+            . '%3Cpath d="M20 20a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4.42 0-8 2.24-8 5v3h16v-3c0-2.76-3.58-5-8-5z"'
+            . ' fill="%23475569"/%3E%3C/svg%3E';
     }
 
     /**

@@ -23,16 +23,26 @@ use Generator;
  */
 final class TicketCreatedStrategy extends AbstractTicketStrategy
 {
+    /**
+     * @inheritDoc
+     */
     public function supports(EventInterface $event): bool
     {
         return $event instanceof TicketCreated;
     }
 
+    /**
+     * @inheritDoc
+     */
     public function buildMessages(EventInterface $event): iterable
     {
         return $this->safeBuild(fn(): Generator => $this->doBuild($event), $event);
     }
 
+    /**
+     * @param \Cake\Event\EventInterface $event Domain event to render messages for.
+     * @return \Generator
+     */
     private function doBuild(EventInterface $event): Generator
     {
         if (!$event instanceof TicketCreated) {

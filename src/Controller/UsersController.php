@@ -47,7 +47,12 @@ class UsersController extends AppController
             $target = $this->request->getQuery('redirect');
 
             // Validate redirect is a safe internal path (prevent open redirect)
-            if (!$target || !is_string($target) || !preg_match('#^/[a-zA-Z0-9]#', $target) || str_contains($target, '//')) {
+            if (
+                !$target
+                || !is_string($target)
+                || !preg_match('#^/[a-zA-Z0-9]#', $target)
+                || str_contains($target, '//')
+            ) {
                 $target = $this->getDefaultRedirectForRole($user->get('role'));
             }
 

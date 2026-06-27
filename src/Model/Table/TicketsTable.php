@@ -163,7 +163,10 @@ class TicketsTable extends Table
      */
     public function buildRules(RulesChecker $rules): RulesChecker
     {
-        $rules->add($rules->isUnique(['gmail_message_id'], ['allowMultipleNulls' => true]), ['errorField' => 'gmail_message_id']);
+        $rules->add(
+            $rules->isUnique(['gmail_message_id'], ['allowMultipleNulls' => true]),
+            ['errorField' => 'gmail_message_id'],
+        );
         $rules->add($rules->existsIn(['requester_id'], 'Requesters'), ['errorField' => 'requester_id']);
 
         // Allow null assignee_id (unassigned tickets)

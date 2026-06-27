@@ -420,7 +420,12 @@ class TicketIngestionService
         // cid: references against local URLs, then re-sanitize and re-save.
         // See audit CRIT-4 (F1+F2+G1).
         if (!empty($emailData['inline_images'])) {
-            $cidMap = $this->attachments->processInlineImages($ticket, $emailData['inline_images'], (int)$user->id, (int)$comment->id);
+            $cidMap = $this->attachments->processInlineImages(
+                $ticket,
+                $emailData['inline_images'],
+                (int)$user->id,
+                (int)$comment->id,
+            );
             if ($cidMap !== []) {
                 $rewritten = $this->rewriteCidReferences($rawBody, $cidMap);
                 $rewrittenSanitized = $this->sanitizeHtml($rewritten);

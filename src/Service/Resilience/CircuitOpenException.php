@@ -12,6 +12,10 @@ use RuntimeException;
  */
 final class CircuitOpenException extends RuntimeException
 {
+    /**
+     * @param string $host Host whose breaker is open.
+     * @param int $secondsOpen Seconds elapsed since the breaker opened.
+     */
     public function __construct(
         public readonly string $host,
         public readonly int $secondsOpen,

@@ -14,6 +14,12 @@ use Cake\Event\EventInterface;
  */
 class TagsController extends AppController
 {
+    /**
+     * Before filter - require admin role
+     *
+     * @param \Cake\Event\EventInterface<\Cake\Controller\Controller> $event Event.
+     * @return \Cake\Http\Response|null|void
+     */
     public function beforeFilter(EventInterface $event)
     {
         parent::beforeFilter($event);
@@ -23,6 +29,8 @@ class TagsController extends AppController
 
     /**
      * List all tags
+     *
+     * @return \Cake\Http\Response|null|void Renders view
      */
     public function index()
     {
@@ -59,6 +67,8 @@ class TagsController extends AppController
 
     /**
      * Add tag
+     *
+     * @return \Cake\Http\Response|null|void Renders view
      */
     public function add()
     {
@@ -82,8 +92,11 @@ class TagsController extends AppController
 
     /**
      * Edit tag
+     *
+     * @param string|null $id Tag id
+     * @return \Cake\Http\Response|null|void Renders view
      */
-    public function edit($id = null)
+    public function edit(?string $id = null)
     {
         $tagsTable = $this->fetchTable('Tags');
         $tag = $tagsTable->get($id);
@@ -105,8 +118,11 @@ class TagsController extends AppController
 
     /**
      * Delete tag
+     *
+     * @param string|null $id Tag id
+     * @return \Cake\Http\Response Redirect response
      */
-    public function delete($id = null)
+    public function delete(?string $id = null)
     {
         $this->request->allowMethod(['post', 'delete']);
 

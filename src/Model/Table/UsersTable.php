@@ -63,7 +63,7 @@ class UsersTable extends Table
     public function validationDefault(Validator $validator): Validator
     {
         $validator
-            ->email('email', false, 'Debe ser un correo electrónico válido')  // false = less strict, allows localhost
+            ->email('email', false, 'Debe ser un correo electrónico válido') // false = less strict, allows localhost
             ->requirePresence('email', 'create')
             ->notEmptyString('email')
             ->add('email', 'unique', [

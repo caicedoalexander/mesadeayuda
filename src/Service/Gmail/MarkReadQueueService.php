@@ -26,10 +26,19 @@ final class MarkReadQueueService
     public const MAX_ATTEMPTS = 3;
     public const DEFAULT_BATCH = 20;
 
+    /**
+     * @param \Cake\ORM\Table $table Queue table (real ORM Table in production, test double in tests).
+     */
     public function __construct(private readonly Table $table)
     {
     }
 
+    /**
+     * @param string $gmailMessageId Gmail message id to (re)enqueue.
+     * @param string|null $error Last error message (truncated on store).
+     * @param string $category Failure category.
+     * @return void
+     */
     public function enqueue(string $gmailMessageId, ?string $error, string $category): void
     {
         $existing = $this->findByMessageId($gmailMessageId);
@@ -105,6 +114,10 @@ final class MarkReadQueueService
         return ['processed' => $processed, 'retried' => $retried, 'failed' => $failed, 'dropped' => $dropped];
     }
 
+    /**
+     * @param string $gmailMessageId Gmail message id to look up.
+     * @return object|null Matching row entity, or null when absent.
+     */
     private function findByMessageId(string $gmailMessageId): ?object
     {
         // Production path uses ORM; the test-only anonymous Table holds rows in a public array.
@@ -142,6 +155,10 @@ final class MarkReadQueueService
         return $rows;
     }
 
+    /**
+     * @param string|null $error Error message to truncate.
+     * @return string|null Error truncated to 255 chars, or null.
+     */
     private function truncateError(?string $error): ?string
     {
         if ($error === null) {

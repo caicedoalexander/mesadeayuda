@@ -22,6 +22,11 @@ final class CircuitBreaker
     private const STATE_OPEN = 'open';
     private const STATE_HALF_OPEN = 'half_open';
 
+    /**
+     * @param string $cacheConfig Cache config name used to persist breaker state.
+     * @param int $failureThreshold Failures before the breaker opens.
+     * @param int $cooldownSeconds Seconds the breaker stays open before probing.
+     */
     public function __construct(
         private readonly string $cacheConfig,
         private readonly int $failureThreshold = 5,
@@ -29,6 +34,10 @@ final class CircuitBreaker
     ) {
     }
 
+    /**
+     * @param string $host Remote host to check.
+     * @return bool True when a request may proceed.
+     */
     public function isAvailable(string $host): bool
     {
         $state = $this->readState($host);
@@ -55,6 +64,10 @@ final class CircuitBreaker
         return true;
     }
 
+    /**
+     * @param string $host Remote host that responded successfully.
+     * @return void
+     */
     public function recordSuccess(string $host): void
     {
         $state = $this->readState($host);
@@ -70,6 +83,10 @@ final class CircuitBreaker
         }
     }
 
+    /**
+     * @param string $host Remote host that failed.
+     * @return void
+     */
     public function recordFailure(string $host): void
     {
         $state = $this->readState($host);
@@ -131,6 +148,10 @@ final class CircuitBreaker
         Cache::write($this->keyFor($host), $state, $this->cacheConfig);
     }
 
+    /**
+     * @param string $host Remote host to build a cache key for.
+     * @return string Cache key for this host's breaker state.
+     */
     private function keyFor(string $host): string
     {
         return 'cb_' . preg_replace('/[^a-z0-9_.-]/i', '_', $host);

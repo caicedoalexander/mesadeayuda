@@ -12,6 +12,12 @@ final class TicketCommentAdded extends DomainEvent
 {
     public const NAME = 'Ticket.commentAdded';
 
+    /**
+     * @param int $ticketId Ticket the comment belongs to.
+     * @param int $commentId Comment that was added.
+     * @param int $actorId User that added the comment.
+     * @param bool $isPublic Whether the comment is public.
+     */
     public function __construct(
         public readonly int $ticketId,
         public readonly int $commentId,

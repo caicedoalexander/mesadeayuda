@@ -12,15 +12,24 @@ use Cake\Log\Log;
  */
 final class EmailChannel implements NotificationChannel
 {
+    /**
+     * @param \App\Service\EmailService $emailService Service that dispatches rendered emails.
+     */
     public function __construct(private readonly EmailService $emailService)
     {
     }
 
+    /**
+     * @inheritDoc
+     */
     public function name(): string
     {
         return 'email';
     }
 
+    /**
+     * @inheritDoc
+     */
     public function send(NotificationMessage $message): bool
     {
         if ($message->channel !== 'email') {

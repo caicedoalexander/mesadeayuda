@@ -12,6 +12,10 @@ use Exception;
 
 class TestEmailCommand extends Command
 {
+    /**
+     * @param \Cake\Console\ConsoleOptionParser $parser The parser to be defined
+     * @return \Cake\Console\ConsoleOptionParser The built parser.
+     */
     public function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
     {
         $parser->addArgument('ticket_id', [
@@ -22,6 +26,11 @@ class TestEmailCommand extends Command
         return $parser;
     }
 
+    /**
+     * @param \Cake\Console\Arguments $args Command arguments
+     * @param \Cake\Console\ConsoleIo $io Console io
+     * @return int|null Exit code
+     */
     public function execute(Arguments $args, ConsoleIo $io): ?int
     {
         $ticketId = (int)$args->getArgument('ticket_id');

@@ -15,6 +15,13 @@ final class TicketResponded extends DomainEvent
 {
     public const NAME = 'Ticket.responded';
 
+    /**
+     * @param int $ticketId Ticket that was responded to.
+     * @param int $commentId Comment added as part of the response.
+     * @param string $oldStatus Status before the transition.
+     * @param string $newStatus Status after the transition.
+     * @param int|null $actorId User that responded, or null for system.
+     */
     public function __construct(
         public readonly int $ticketId,
         public readonly int $commentId,

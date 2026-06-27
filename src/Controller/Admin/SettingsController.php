@@ -32,6 +32,11 @@ class SettingsController extends AppController
 {
     private SettingsService $settingsService;
 
+    /**
+     * Initialization hook method.
+     *
+     * @return void
+     */
     public function initialize(): void
     {
         parent::initialize();
@@ -174,7 +179,11 @@ class SettingsController extends AppController
                 $tokenPersisted = false;
 
                 if (isset($tokens['refresh_token'])) {
-                    if ($this->settingsService->saveSetting(SettingKeys::GMAIL_REFRESH_TOKEN, $tokens['refresh_token'])) {
+                    $refreshTokenSaved = $this->settingsService->saveSetting(
+                        SettingKeys::GMAIL_REFRESH_TOKEN,
+                        $tokens['refresh_token'],
+                    );
+                    if ($refreshTokenSaved) {
                         $tokenPersisted = true;
                         $this->Flash->success('Gmail autorizado exitosamente.');
                         Log::info('Gmail OAuth completed successfully');
@@ -345,17 +354,34 @@ class SettingsController extends AppController
 
     // Redirect legacy routes to new controllers
 
+    /**
+     * Redirect legacy route to EmailTemplates::index
+     *
+     * @return \Cake\Http\Response Redirect response
+     */
     public function emailTemplates()
     {
         return $this->redirect(['controller' => 'EmailTemplates', 'action' => 'index', 'prefix' => 'Admin']);
     }
 
-    public function editTemplate($id = null)
+    /**
+     * Redirect legacy route to EmailTemplates::edit
+     *
+     * @param string|null $id Email template id
+     * @return \Cake\Http\Response Redirect response
+     */
+    public function editTemplate(?string $id = null)
     {
         return $this->redirect(['controller' => 'EmailTemplates', 'action' => 'edit', $id, 'prefix' => 'Admin']);
     }
 
-    public function previewTemplate($id = null)
+    /**
+     * Redirect legacy route to EmailTemplates::preview
+     *
+     * @param string|null $id Email template id
+     * @return \Cake\Http\Response Redirect response
+     */
+    public function previewTemplate(?string $id = null)
     {
         return $this->redirect(['controller' => 'EmailTemplates', 'action' => 'preview', $id, 'prefix' => 'Admin']);
     }
@@ -444,22 +470,44 @@ class SettingsController extends AppController
         $this->set(compact('user'));
     }
 
+    /**
+     * Redirect legacy route to Tags::index
+     *
+     * @return \Cake\Http\Response Redirect response
+     */
     public function tags()
     {
         return $this->redirect(['controller' => 'Tags', 'action' => 'index', 'prefix' => 'Admin']);
     }
 
+    /**
+     * Redirect legacy route to Tags::add
+     *
+     * @return \Cake\Http\Response Redirect response
+     */
     public function addTag()
     {
         return $this->redirect(['controller' => 'Tags', 'action' => 'add', 'prefix' => 'Admin']);
     }
 
-    public function editTag($id = null)
+    /**
+     * Redirect legacy route to Tags::edit
+     *
+     * @param string|null $id Tag id
+     * @return \Cake\Http\Response Redirect response
+     */
+    public function editTag(?string $id = null)
     {
         return $this->redirect(['controller' => 'Tags', 'action' => 'edit', $id, 'prefix' => 'Admin']);
     }
 
-    public function deleteTag($id = null)
+    /**
+     * Redirect legacy route to Tags::delete
+     *
+     * @param string|null $id Tag id
+     * @return \Cake\Http\Response Redirect response
+     */
+    public function deleteTag(?string $id = null)
     {
         return $this->redirect(['controller' => 'Tags', 'action' => 'delete', $id, 'prefix' => 'Admin']);
     }

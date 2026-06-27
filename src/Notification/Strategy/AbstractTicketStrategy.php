@@ -26,10 +26,16 @@ abstract class AbstractTicketStrategy implements TicketNotificationStrategy
     protected ?NotificationRenderer $renderer = null;
     protected ?TemplateRegistry $templates = null;
 
+    /**
+     * @param \App\Service\Dto\SystemConfig|null $config System configuration projection.
+     */
     public function __construct(protected readonly ?SystemConfig $config = null)
     {
     }
 
+    /**
+     * @inheritDoc
+     */
     abstract public function supports(EventInterface $event): bool;
 
     /**
@@ -37,11 +43,17 @@ abstract class AbstractTicketStrategy implements TicketNotificationStrategy
      */
     abstract public function buildMessages(EventInterface $event): iterable;
 
+    /**
+     * @return \App\Service\Renderer\NotificationRenderer
+     */
     protected function renderer(): NotificationRenderer
     {
         return $this->renderer ??= new NotificationRenderer();
     }
 
+    /**
+     * @return \App\Notification\Email\TemplateRegistry
+     */
     protected function templates(): TemplateRegistry
     {
         return $this->templates ??= new TemplateRegistry();
@@ -79,6 +91,9 @@ abstract class AbstractTicketStrategy implements TicketNotificationStrategy
         return $filtered;
     }
 
+    /**
+     * @return string
+     */
     protected function gmailUserEmail(): string
     {
         $settings = $this->config?->toSettingsArray() ?? [];

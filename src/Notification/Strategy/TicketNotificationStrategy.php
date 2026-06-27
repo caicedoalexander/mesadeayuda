@@ -16,6 +16,10 @@ use Cake\Event\EventInterface;
  */
 interface TicketNotificationStrategy
 {
+    /**
+     * @param \Cake\Event\EventInterface $event Domain event to evaluate.
+     * @return bool
+     */
     public function supports(EventInterface $event): bool;
 
     /**

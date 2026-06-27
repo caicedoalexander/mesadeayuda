@@ -18,16 +18,26 @@ use Generator;
  */
 final class TicketCommentAddedStrategy extends AbstractTicketStrategy
 {
+    /**
+     * @inheritDoc
+     */
     public function supports(EventInterface $event): bool
     {
         return $event instanceof TicketCommentAdded;
     }
 
+    /**
+     * @inheritDoc
+     */
     public function buildMessages(EventInterface $event): iterable
     {
         return $this->safeBuild(fn(): Generator => $this->doBuild($event), $event);
     }
 
+    /**
+     * @param \Cake\Event\EventInterface $event Domain event to render messages for.
+     * @return \Generator
+     */
     private function doBuild(EventInterface $event): Generator
     {
         if (!$event instanceof TicketCommentAdded) {
@@ -38,7 +48,10 @@ final class TicketCommentAddedStrategy extends AbstractTicketStrategy
             return;
         }
 
-        $ticket = $this->fetchTable('Tickets')->get($event->ticketId, contain: ['Requesters', 'Assignees', 'Attachments']);
+        $ticket = $this->fetchTable('Tickets')->get(
+            $event->ticketId,
+            contain: ['Requesters', 'Assignees', 'Attachments'],
+        );
         $comment = $this->fetchTable('TicketComments')->get($event->commentId, contain: ['Users']);
 
         if (empty($ticket->requester->email)) {

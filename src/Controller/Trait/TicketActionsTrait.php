@@ -21,7 +21,7 @@ trait TicketActionsTrait
     /**
      * @param string|null $id Ticket id
      */
-    public function addComment(?string $id = null)
+    public function addComment(?string $id = null): Response
     {
         return $this->addTicketComment((int)$id);
     }
@@ -29,7 +29,7 @@ trait TicketActionsTrait
     /**
      * @param string|null $id Ticket id
      */
-    public function assign(?string $id = null)
+    public function assign(?string $id = null): Response
     {
         return $this->assignTicket((int)$id, $this->request->getData('assignee_id'));
     }
@@ -37,7 +37,7 @@ trait TicketActionsTrait
     /**
      * @param string|null $id Ticket id
      */
-    public function changeStatus(?string $id = null)
+    public function changeStatus(?string $id = null): Response
     {
         return $this->changeTicketStatus((int)$id, $this->request->getData('status'));
     }
@@ -45,7 +45,7 @@ trait TicketActionsTrait
     /**
      * @param string|null $id Ticket id
      */
-    public function changePriority(?string $id = null)
+    public function changePriority(?string $id = null): Response
     {
         return $this->changeTicketPriority((int)$id, $this->request->getData('priority'));
     }
@@ -53,14 +53,17 @@ trait TicketActionsTrait
     /**
      * @param string|null $id Ticket id
      */
-    public function addTag(?string $id = null)
+    public function addTag(?string $id = null): Response
     {
         $this->request->allowMethod(['post']);
 
         $tagId = (int)$this->request->getData('tag_id');
         $result = $this->ticketPipeline->addTag((int)$id, $tagId, $this->getCurrentUserId());
 
-        $this->Flash->{$result['success'] ? 'success' : ($result['message'] === TicketPipelineService::MESSAGE_TAG_ALREADY_ADDED ? 'warning' : 'error')}($result['message']);
+        $flashType = $result['success']
+            ? 'success'
+            : ($result['message'] === TicketPipelineService::MESSAGE_TAG_ALREADY_ADDED ? 'warning' : 'error');
+        $this->Flash->{$flashType}($result['message']);
 
         return $this->redirect(['action' => 'view', $id]);
     }
@@ -69,7 +72,7 @@ trait TicketActionsTrait
      * @param string|null $id Ticket id
      * @param string|null $tagId Tag id
      */
-    public function removeTag(?string $id = null, ?string $tagId = null)
+    public function removeTag(?string $id = null, ?string $tagId = null): Response
     {
         $this->request->allowMethod(['post', 'delete']);
 
@@ -83,14 +86,17 @@ trait TicketActionsTrait
     /**
      * @param string|null $id Ticket id
      */
-    public function addFollower(?string $id = null)
+    public function addFollower(?string $id = null): Response
     {
         $this->request->allowMethod(['post']);
 
         $userId = (int)$this->request->getData('user_id');
         $result = $this->ticketPipeline->addFollower((int)$id, $userId, $this->getCurrentUserId());
 
-        $this->Flash->{$result['success'] ? 'success' : ($result['message'] === 'Este usuario ya está siguiendo el ticket.' ? 'warning' : 'error')}($result['message']);
+        $flashType = $result['success']
+            ? 'success'
+            : ($result['message'] === 'Este usuario ya está siguiendo el ticket.' ? 'warning' : 'error');
+        $this->Flash->{$flashType}($result['message']);
 
         return $this->redirect(['action' => 'view', $id]);
     }
@@ -98,7 +104,7 @@ trait TicketActionsTrait
     /**
      * @param string|null $id Attachment id
      */
-    public function downloadAttachment(?string $id = null)
+    public function downloadAttachment(?string $id = null): Response
     {
         return $this->downloadTicketAttachment((int)$id);
     }
@@ -110,7 +116,7 @@ trait TicketActionsTrait
      *
      * @param string|null $id Attachment id
      */
-    public function viewAttachment(?string $id = null)
+    public function viewAttachment(?string $id = null): Response
     {
         return $this->downloadTicketAttachment((int)$id, inline: true);
     }
@@ -119,9 +125,14 @@ trait TicketActionsTrait
 
     // region: Actions — protected workhorses
 
+    /**
+     * @param int $entityId Ticket id
+     * @param mixed $assigneeId Raw assignee id from the request
+     * @param string $redirectAction Action to redirect to on completion
+     */
     protected function assignTicket(
         int $entityId,
-        $assigneeId,
+        mixed $assigneeId,
         string $redirectAction = 'index',
     ): Response {
         $this->request->allowMethod(['post', 'put']);
@@ -285,7 +296,11 @@ trait TicketActionsTrait
         return (int)$user->get('id');
     }
 
-    protected function normalizeAssigneeId($value): ?int
+    /**
+     * @param mixed $value Raw assignee id from the request
+     * @return int|null
+     */
+    protected function normalizeAssigneeId(mixed $value): ?int
     {
         if ($value === '' || $value === null || $value === '0' || $value === 0) {
             return null;

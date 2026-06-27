@@ -482,7 +482,13 @@ class TicketPipelineService
             "Asignado a {$newAssigneeName}",
         );
 
-        $this->comments->addComment($entity->id, $userId, "Asignado a {$newAssigneeName}", TicketConstants::COMMENT_INTERNAL, true);
+        $this->comments->addComment(
+            $entity->id,
+            $userId,
+            "Asignado a {$newAssigneeName}",
+            TicketConstants::COMMENT_INTERNAL,
+            true,
+        );
 
         $this->eventManager->dispatch(new TicketAssigned(
             ticketId: (int)$entity->id,
@@ -716,8 +722,12 @@ class TicketPipelineService
      * @param mixed $entity Ticket entity
      * @return array
      */
-    private function buildResponseResult(bool $hasComment, bool $hasStatusChange, int $uploadedCount, mixed $entity): array
-    {
+    private function buildResponseResult(
+        bool $hasComment,
+        bool $hasStatusChange,
+        int $uploadedCount,
+        mixed $entity,
+    ): array {
         $successMessage = '';
         if ($hasComment && $hasStatusChange) {
             $successMessage = 'Comentario agregado y estado actualizado exitosamente.';

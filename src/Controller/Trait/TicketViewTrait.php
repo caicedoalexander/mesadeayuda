@@ -22,7 +22,7 @@ trait TicketViewTrait
      * @param string|null $id Ticket id.
      * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
      */
-    public function view(?string $id = null)
+    public function view(?string $id = null): ?Response
     {
         return $this->viewTicket((int)$id, [
             'lazyLoadHistory' => true,

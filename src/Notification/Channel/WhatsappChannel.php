@@ -12,15 +12,24 @@ use Cake\Log\Log;
  */
 final class WhatsappChannel implements NotificationChannel
 {
+    /**
+     * @param \App\Service\WhatsappService $whatsappService Service that delivers WhatsApp messages.
+     */
     public function __construct(private readonly WhatsappService $whatsappService)
     {
     }
 
+    /**
+     * @inheritDoc
+     */
     public function name(): string
     {
         return 'whatsapp';
     }
 
+    /**
+     * @inheritDoc
+     */
     public function send(NotificationMessage $message): bool
     {
         if ($message->channel !== 'whatsapp') {

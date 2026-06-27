@@ -199,11 +199,15 @@ class GmailService
 
                 if (isset($token['error'])) {
                     Log::error('OAuth token refresh failed', ['error' => $token]);
-                    throw new GmailAuthenticationException('Gmail authentication failed: ' . ($token['error_description'] ?? $token['error']));
+                    throw new GmailAuthenticationException(
+                        'Gmail authentication failed: ' . ($token['error_description'] ?? $token['error']),
+                    );
                 }
             } catch (Exception $e) {
                 Log::error('Failed to refresh OAuth token: ' . $e->getMessage());
-                throw new GmailAuthenticationException('Gmail authentication failed. Please re-authenticate in Admin Settings.');
+                throw new GmailAuthenticationException(
+                    'Gmail authentication failed. Please re-authenticate in Admin Settings.',
+                );
             }
         }
     }
@@ -922,8 +926,13 @@ class GmailService
      * @param array $options Additional options: 'from', 'cc', 'bcc', 'replyTo', 'headers'
      * @return string|null RFC Message-ID assigned by Gmail on success, null on failure
      */
-    public function sendEmail(string|array $to, string $subject, string $htmlBody, array $attachments = [], array $options = []): ?string
-    {
+    public function sendEmail(
+        string|array $to,
+        string $subject,
+        string $htmlBody,
+        array $attachments = [],
+        array $options = [],
+    ): ?string {
         try {
             $service = $this->getService();
 
@@ -1038,8 +1047,14 @@ class GmailService
      * @param array $options Additional options (from, cc, bcc, replyTo, headers)
      * @return string MIME message
      */
-    private function createMimeMessage(string|array $to, string $subject, string $htmlBody, array $attachments, string $boundary, array $options = []): string
-    {
+    private function createMimeMessage(
+        string|array $to,
+        string $subject,
+        string $htmlBody,
+        array $attachments,
+        string $boundary,
+        array $options = [],
+    ): string {
         // Build From header
         if (!empty($options['from'])) {
             if (is_array($options['from'])) {

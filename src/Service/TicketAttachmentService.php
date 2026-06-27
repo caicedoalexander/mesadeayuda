@@ -47,8 +47,12 @@ class TicketAttachmentService
      * @param int|null $commentId Optional comment ID to associate attachments with
      * @return void
      */
-    public function processEmailAttachments(EntityInterface $ticket, array $attachments, int $userId, ?int $commentId = null): void
-    {
+    public function processEmailAttachments(
+        EntityInterface $ticket,
+        array $attachments,
+        int $userId,
+        ?int $commentId = null,
+    ): void {
         assert($ticket instanceof Ticket);
 
         if ($attachments === []) {
@@ -113,8 +117,12 @@ class TicketAttachmentService
      * @param int|null $commentId Optional comment to associate inline images with (null for ticket-level)
      * @return array<string, string> Map content_id => '/attachments/view/{id}'
      */
-    public function processInlineImages(EntityInterface $ticket, array $inlineImages, int $userId, ?int $commentId = null): array
-    {
+    public function processInlineImages(
+        EntityInterface $ticket,
+        array $inlineImages,
+        int $userId,
+        ?int $commentId = null,
+    ): array {
         assert($ticket instanceof Ticket);
         if ($inlineImages === []) {
             return [];

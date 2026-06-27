@@ -9,10 +9,10 @@ namespace App\Constants;
  */
 final class TicketConstants
 {
-    public const STATUS_NUEVO     = 'nuevo';
-    public const STATUS_ABIERTO   = 'abierto';
+    public const STATUS_NUEVO = 'nuevo';
+    public const STATUS_ABIERTO = 'abierto';
     public const STATUS_PENDIENTE = 'pendiente';
-    public const STATUS_RESUELTO  = 'resuelto';
+    public const STATUS_RESUELTO = 'resuelto';
 
     public const STATUSES = [
         self::STATUS_NUEVO,
@@ -32,29 +32,29 @@ final class TicketConstants
     ];
 
     public const STATUS_LABELS = [
-        self::STATUS_NUEVO     => 'Nuevo',
-        self::STATUS_ABIERTO   => 'Abierto',
+        self::STATUS_NUEVO => 'Nuevo',
+        self::STATUS_ABIERTO => 'Abierto',
         self::STATUS_PENDIENTE => 'Pendiente',
-        self::STATUS_RESUELTO  => 'Resuelto',
+        self::STATUS_RESUELTO => 'Resuelto',
     ];
 
     public const STATUS_COLORS = [
-        self::STATUS_NUEVO     => '#ffc107',
-        self::STATUS_ABIERTO   => '#dc3545',
+        self::STATUS_NUEVO => '#ffc107',
+        self::STATUS_ABIERTO => '#dc3545',
         self::STATUS_PENDIENTE => '#0d6efd',
-        self::STATUS_RESUELTO  => '#198754',
+        self::STATUS_RESUELTO => '#198754',
     ];
 
     public const STATUS_ICONS = [
-        self::STATUS_NUEVO     => 'bi-circle-fill',
-        self::STATUS_ABIERTO   => 'bi-circle-fill',
+        self::STATUS_NUEVO => 'bi-circle-fill',
+        self::STATUS_ABIERTO => 'bi-circle-fill',
         self::STATUS_PENDIENTE => 'bi-circle-fill',
-        self::STATUS_RESUELTO  => 'bi-circle-fill',
+        self::STATUS_RESUELTO => 'bi-circle-fill',
     ];
 
-    public const PRIORITY_BAJA  = 'baja';
+    public const PRIORITY_BAJA = 'baja';
     public const PRIORITY_MEDIA = 'media';
-    public const PRIORITY_ALTA  = 'alta';
+    public const PRIORITY_ALTA = 'alta';
 
     public const PRIORITIES = [
         self::PRIORITY_BAJA,
@@ -63,23 +63,23 @@ final class TicketConstants
     ];
 
     public const PRIORITY_LABELS = [
-        self::PRIORITY_BAJA  => 'Baja',
+        self::PRIORITY_BAJA => 'Baja',
         self::PRIORITY_MEDIA => 'Media',
-        self::PRIORITY_ALTA  => 'Alta',
+        self::PRIORITY_ALTA => 'Alta',
     ];
 
-    public const COMMENT_PUBLIC   = 'public';
+    public const COMMENT_PUBLIC = 'public';
     public const COMMENT_INTERNAL = 'internal';
-    public const COMMENT_SYSTEM   = 'system';
+    public const COMMENT_SYSTEM = 'system';
 
     public const COMMENT_TYPES = [self::COMMENT_PUBLIC, self::COMMENT_INTERNAL];
 
     public const ALL_COMMENT_TYPES = [self::COMMENT_PUBLIC, self::COMMENT_INTERNAL, self::COMMENT_SYSTEM];
 
-    public const CHANNEL_EMAIL    = 'email';
+    public const CHANNEL_EMAIL = 'email';
     public const CHANNEL_WHATSAPP = 'whatsapp';
-    public const CHANNEL_WEB      = 'web';
-    public const CHANNEL_API      = 'api';
+    public const CHANNEL_WEB = 'web';
+    public const CHANNEL_API = 'api';
 
     public const CHANNELS = [
         self::CHANNEL_EMAIL,

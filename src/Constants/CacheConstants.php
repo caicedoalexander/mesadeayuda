@@ -8,8 +8,8 @@ namespace App\Constants;
  */
 final class CacheConstants
 {
-    public const CACHE_SETTINGS   = 'system_settings';
-    public const CACHE_CONFIG     = '_cake_core_';
+    public const CACHE_SETTINGS = 'system_settings';
+    public const CACHE_CONFIG = '_cake_core_';
     public const CACHE_RESILIENCE = 'resilience';
 
     public const DEFAULT_SYSTEM_TITLE = 'Mesa de Ayuda';

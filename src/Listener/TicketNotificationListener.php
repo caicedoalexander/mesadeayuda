@@ -53,6 +53,10 @@ final class TicketNotificationListener implements EventListenerInterface
         ];
     }
 
+    /**
+     * @param \Cake\Event\EventInterface $event Domain event to forward.
+     * @return void
+     */
     public function forward(EventInterface $event): void
     {
         try {
@@ -65,6 +69,9 @@ final class TicketNotificationListener implements EventListenerInterface
         }
     }
 
+    /**
+     * @return \App\Service\TicketNotificationService Lazily-built notification dispatcher.
+     */
     private function notifications(): TicketNotificationService
     {
         return $this->notifications ??= ($this->notificationsFactory)();

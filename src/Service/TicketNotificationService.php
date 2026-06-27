@@ -41,6 +41,13 @@ class TicketNotificationService
         }
     }
 
+    /**
+     * Route a domain event to every supporting strategy and deliver the
+     * resulting messages through their matching channels.
+     *
+     * @param \Cake\Event\EventInterface $event Domain event to dispatch.
+     * @return void
+     */
     public function dispatch(EventInterface $event): void
     {
         foreach ($this->strategies as $strategy) {

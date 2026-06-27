@@ -5,6 +5,8 @@ namespace App\Controller\Trait;
 
 use App\Constants\RoleConstants;
 use App\Constants\TicketConstants;
+use Authentication\IdentityInterface;
+use Cake\ORM\Query\SelectQuery;
 
 /**
  * Listing region for TicketsController: index action and filter helpers.
@@ -124,8 +126,18 @@ trait TicketListingTrait
         $this->set($viewVars);
     }
 
-    private function applyRoleBasedFilters($query, $user, ?string $userRole, string $tableAlias): void
-    {
+    /**
+     * @param \Cake\ORM\Query\SelectQuery $query Tickets query being built
+     * @param \Authentication\IdentityInterface|null $user Authenticated identity
+     * @param string|null $userRole Role of the authenticated user
+     * @param string $tableAlias Tickets table alias
+     */
+    private function applyRoleBasedFilters(
+        SelectQuery $query,
+        ?IdentityInterface $user,
+        ?string $userRole,
+        string $tableAlias,
+    ): void {
         // Antes filtrábamos por requester_id cuando el rol era 'requester'.
         // 'external' no inicia sesión, así que esa rama es código muerto.
         // El método se conserva como punto de extensión para filtros por rol

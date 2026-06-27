@@ -49,11 +49,23 @@ class EmailService
         $this->comments = $comments;
     }
 
+    /**
+     * Resolve a system setting value as a string, falling back to a default.
+     *
+     * @param string $key Setting key to resolve.
+     * @param string $default Value returned when the setting is absent.
+     * @return string
+     */
     private function getSettingValue(string $key, string $default = ''): string
     {
         return $this->resolveSettingValue($key, $default);
     }
 
+    /**
+     * Lazily build the Gmail transport from database-backed configuration.
+     *
+     * @return \App\Service\GmailService
+     */
     private function getGmailService(): GmailService
     {
         if ($this->gmailService === null) {
@@ -108,6 +120,22 @@ class EmailService
         );
     }
 
+    /**
+     * Build and deliver an email through the Gmail API transport.
+     *
+     * @param string $to Primary recipient email address.
+     * @param string $subject Email subject line.
+     * @param string $body Rendered HTML body.
+     * @param array $attachments Attachment entities to download from S3 and attach.
+     * @param array $additionalTo Extra To recipients as ['email' => ..., 'name' => ...] entries.
+     * @param array $additionalCc Cc recipients as ['email' => ..., 'name' => ...] entries.
+     * @param string|null $inReplyTo RFC 5322 In-Reply-To message id.
+     * @param string|null $referencesHeader RFC 5322 References header chain.
+     * @param int|null $commentId Originating ticket_comment id to persist the outbound Message-ID onto.
+     * @param int|null $ticketId Originating ticket id used when no comment exists yet.
+     * @param string|null $gmailThreadId Gmail thread id used for conversation grouping.
+     * @return bool
+     */
     private function sendEmail(
         string $to,
         string $subject,

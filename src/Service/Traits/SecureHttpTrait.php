@@ -186,8 +186,13 @@ trait SecureHttpTrait
      * @param array{ok: bool, error: ?string, host: ?string, port: ?int, ip: ?string} $resolution
      * @return array{success: bool, http_code: int, response: string|null, error: string|null, curl_errno: int}
      */
-    private function executeRawCurlPost(string $url, string $jsonPayload, array $headers, int $timeout, array $resolution): array
-    {
+    private function executeRawCurlPost(
+        string $url,
+        string $jsonPayload,
+        array $headers,
+        int $timeout,
+        array $resolution,
+    ): array {
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);

@@ -280,7 +280,8 @@ class N8nService
             } else {
                 return [
                     'success' => false,
-                    'message' => 'Error al conectar con n8n: ' . ($response['error'] ?? 'HTTP ' . ($response['http_code'] ?? 'unknown')),
+                    'message' => 'Error al conectar con n8n: '
+                        . ($response['error'] ?? 'HTTP ' . ($response['http_code'] ?? 'unknown')),
                 ];
             }
         } catch (Exception $e) {

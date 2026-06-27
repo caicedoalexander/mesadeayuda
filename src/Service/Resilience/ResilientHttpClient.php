@@ -51,7 +51,13 @@ final class ResilientHttpClient
             throw new CircuitOpenException($host, $seconds);
         }
 
-        $result = ['success' => false, 'http_code' => 0, 'response' => null, 'error' => 'no attempt', 'curl_errno' => 0];
+        $result = [
+            'success' => false,
+            'http_code' => 0,
+            'response' => null,
+            'error' => 'no attempt',
+            'curl_errno' => 0,
+        ];
         for ($attempt = 1; $attempt <= $this->retryPolicy->maxAttempts; $attempt++) {
             $result = $executor();
 
