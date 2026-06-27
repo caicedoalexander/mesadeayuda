@@ -234,6 +234,69 @@ final class GenericAttachmentTraitTest extends TestCase
         $this->assertNull($this->harness->webUrl($attachment));
     }
 
+    // -------------------------------------------------------------------
+    // reconcileFilenameToContent() — content-truth for mail attachments
+    // -------------------------------------------------------------------
+
+    public function testReconcileRewritesGifAnnouncedAsPng(): void
+    {
+        // Outlook names inline signature images "image.png" regardless of the
+        // real format. These bytes are a GIF; the declared .png must be
+        // corrected to .gif instead of the attachment being dropped — this is
+        // the root cause of signatures disappearing from Outlook-sourced mail.
+        $gif = base64_decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+
+        $this->assertSame(
+            ['image.gif', 'image/gif'],
+            $this->harness->reconcile('image.png', $gif),
+        );
+    }
+
+    public function testReconcileKeepsCorrectlyNamedPng(): void
+    {
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
+
+        $this->assertSame(
+            ['photo.png', 'image/png'],
+            $this->harness->reconcile('photo.png', $png),
+        );
+    }
+
+    public function testReconcileKeepsJpegDeclaredExtension(): void
+    {
+        // A correctly named JPEG keeps its declared extension (not forced to a
+        // single canonical alias) so round-trips are lossless.
+        $jpeg = base64_decode('/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgKCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACP/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AfwD/2Q==');
+
+        $this->assertSame(
+            ['photo.jpg', 'image/jpeg'],
+            $this->harness->reconcile('photo.jpg', $jpeg),
+        );
+    }
+
+    public function testReconcilePreservesOfficeXlsxWithZipContent(): void
+    {
+        // Office Open XML packages sniff as application/zip. The declared .xlsx
+        // is authoritative; its canonical office MIME is pinned so the file
+        // still downloads/opens as a spreadsheet.
+        $emptyZip = "PK\x05\x06" . str_repeat("\x00", 18);
+
+        $this->assertSame(
+            ['Libro17.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+            $this->harness->reconcile('Libro17.xlsx', $emptyZip),
+        );
+    }
+
+    public function testReconcileRejectsExecutableDisguisedAsImage(): void
+    {
+        // Security: a hostile sender renames an opaque binary to image.png.
+        // The type is decided on content, so the disguised binary is rejected
+        // (finfo reports application/octet-stream, not on the allowlist).
+        $binary = "\x7fELF\x02\x01\x01\x00" . str_repeat("\x00", 16);
+
+        $this->assertNull($this->harness->reconcile('image.png', $binary));
+    }
+
     private function makeHarness(): object
     {
         return new class {
@@ -252,6 +315,14 @@ final class GenericAttachmentTraitTest extends TestCase
             public function webUrl(EntityInterface $attachment): ?string
             {
                 return $this->getWebUrl($attachment);
+            }
+
+            /**
+             * @return array{0: string, 1: string}|null
+             */
+            public function reconcile(string $filename, string $content): ?array
+            {
+                return $this->reconcileFilenameToContent($filename, $content);
             }
         };
     }

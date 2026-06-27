@@ -266,6 +266,23 @@ trait GenericAttachmentTrait
         ?string $contentId = null,
     ): ?EntityInterface {
         $filename = $this->sanitizeFilename($filename);
+
+        // Decide the type from the bytes, not the sender-supplied name. Mail
+        // clients (Outlook) mislabel inline images — a GIF sent as "image.png" —
+        // which the declared-extension MIME check would reject, silently
+        // dropping signatures and embedded images. Reconcile the filename to
+        // the real content (and reject content whose real type isn't allowed).
+        $reconciled = $this->reconcileFilenameToContent($filename, $binaryContent);
+        if ($reconciled === null) {
+            Log::error('Ticket attachment rejected: content type not on allowlist', [
+                'filename' => $filename,
+                'claimed_mime' => $mimeType,
+            ]);
+
+            return null;
+        }
+        [$filename, $mimeType] = $reconciled;
+
         $size = strlen($binaryContent);
 
         $validation = $this->validateFile($filename, $size, $mimeType);
@@ -486,6 +503,99 @@ trait GenericAttachmentTrait
         }
 
         return false;
+    }
+
+    /**
+     * Reconcile a mail-supplied filename against the real bytes.
+     *
+     * Mail clients — Outlook most notably — name inline images and some
+     * attachments generically ("image.png", "image001.png") regardless of the
+     * real format, so the declared extension cannot be trusted. The bytes are
+     * sniffed with finfo and:
+     *   - the declared filename is kept when the content confirms its extension
+     *     (including the Office Open XML → application/zip case);
+     *   - otherwise the extension is rewritten to the canonical one for the
+     *     real content type (e.g. a GIF announced as .png becomes .gif), so the
+     *     attachment is no longer wrongly dropped as a MIME mismatch.
+     *
+     * Returns null when the real content type is not on the allowlist
+     * (executables, opaque binaries, scripts) so the caller rejects it. This is
+     * STRICTLY SAFER than a declared-extension check: the decision is made on
+     * content, never on the hostile sender's filename. Used only on the email
+     * ingest path; form uploads keep the stricter declared-extension contract.
+     *
+     * @param string $filename Sanitized, mail-supplied filename
+     * @param string $binaryContent Raw bytes already downloaded
+     * @return array{0: string, 1: string}|null [reconciledFilename, realMime], or null to reject
+     */
+    private function reconcileFilenameToContent(string $filename, string $binaryContent): ?array
+    {
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        if ($finfo === false) {
+            Log::warning('finfo not available; cannot reconcile email attachment type');
+
+            return null;
+        }
+
+        $actualMime = finfo_buffer($finfo, $binaryContent);
+
+        if ($actualMime === false) {
+            return null;
+        }
+
+        $declaredExt = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+
+        if (isset(self::ALLOWED_TYPES[$declaredExt])) {
+            $allowed = self::ALLOWED_TYPES[$declaredExt];
+
+            // Office Open XML packages sniff as application/zip. Trust the
+            // declared office extension and pin its canonical (non-zip) MIME so
+            // the file downloads/opens correctly.
+            if ($actualMime === 'application/zip' && in_array($declaredExt, ['docx', 'xlsx', 'pptx'], true)) {
+                return [$filename, $allowed[0]];
+            }
+
+            // Declared extension already matches the real bytes — keep as-is.
+            if (in_array($actualMime, $allowed, true)) {
+                return [$filename, $actualMime];
+            }
+        }
+
+        // Declared extension is wrong or untrusted: derive it from the bytes.
+        $canonicalExt = $this->canonicalExtensionForMime($actualMime);
+        if ($canonicalExt === null) {
+            return null;
+        }
+
+        $base = pathinfo($filename, PATHINFO_FILENAME);
+        if ($base === '') {
+            $base = 'file';
+        }
+
+        return [$base . '.' . $canonicalExt, $actualMime];
+    }
+
+    /**
+     * First allowlisted extension whose MIME set contains $mime, or null when
+     * the MIME is not allowed. application/zip resolves to 'zip' (not the Office
+     * aliases) so a bare zip keeps a sensible extension.
+     *
+     * @param string $mime Real MIME type as reported by finfo
+     * @return string|null Canonical extension or null when the MIME is not allowed
+     */
+    private function canonicalExtensionForMime(string $mime): ?string
+    {
+        if ($mime === 'application/zip') {
+            return 'zip';
+        }
+
+        foreach (self::ALLOWED_TYPES as $ext => $mimes) {
+            if (in_array($mime, $mimes, true)) {
+                return $ext;
+            }
+        }
+
+        return null;
     }
 
     /**
