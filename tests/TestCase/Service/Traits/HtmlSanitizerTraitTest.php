@@ -113,6 +113,14 @@ final class HtmlSanitizerTraitTest extends TestCase
         $this->assertLessThanOrEqual(1000, strlen($result));
     }
 
+    public function testSanitizePreservesBasicTypography(): void
+    {
+        $out = $this->harness->sanitize('<p style="color:rgb(34,34,34);text-align:center">x</p>');
+
+        $this->assertStringContainsString('color:rgb(34,34,34)', $out);
+        $this->assertStringContainsString('text-align:center', $out);
+    }
+
     private function makeHarness(): object
     {
         return new class {
@@ -121,6 +129,11 @@ final class HtmlSanitizerTraitTest extends TestCase
             public function truncate(string $html, int $max): string
             {
                 return $this->truncateSanitizedHtml($html, $max);
+            }
+
+            public function sanitize(string $html): string
+            {
+                return $this->sanitizeHtml($html);
             }
         };
     }
